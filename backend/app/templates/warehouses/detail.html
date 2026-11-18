@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}{{ warehouse.name }} - KTM-WDC Facility{% endblock %}
+{% block page_title %}Facility Profile & Technical Specifications{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="glass-card mb-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h3 class="fw-bold kwdc-serif text-slate-900 mb-1">{{ warehouse.name }}</h3>
+                    <div class="text-muted fs-7"><i class="fa-solid fa-location-dot text-danger me-1"></i> {{ warehouse.address or warehouse.location }}</div>
+                </div>
+                <span class="badge bg-success-subtle text-success fs-7">Approved Facility</span>
+            </div>
+
+            <p class="text-secondary fs-7 mb-4">{{ warehouse.description }}</p>
+
+            <h6 class="fw-bold text-uppercase fs-8 text-muted mb-3">Facility Specifications & Amenities</h6>
+            <div class="row g-3">
+                <div class="col-sm-6 col-md-4">
+                    <div class="p-3 rounded-3 bg-light">
+                        <div class="text-muted fs-8">Total Covered Area</div>
+                        <div class="fw-bold fs-6">{{ "{:,.0f}".format(warehouse.area_sqft) }} sqft ({{ "{:,.1f}".format(warehouse.area_sqm or 0) }} sqm)</div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="p-3 rounded-3 bg-light">
+                        <div class="text-muted fs-8">Tariff / SqFt</div>
+                        <div class="fw-bold fs-6 text-success">Rs. {{ warehouse.price_per_sqft }} / month</div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="p-3 rounded-3 bg-light">
+                        <div class="text-muted fs-8">Cold Storage</div>
+                        <div class="fw-bold fs-6">
+                            {% if warehouse.cold_storage %}
+                            {{ warehouse.temperature_min }}°C to {{ warehouse.temperature_max }}°C
+                            {% else %}
+                            Ambient
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="p-3 rounded-3 bg-light">
+                        <div class="text-muted fs-8">CCTV Surveillance</div>
+                        <div class="fw-bold fs-6">{{ warehouse.cctv_count }} High-Res Cameras</div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="p-3 rounded-3 bg-light">
+                        <div class="text-muted fs-8">Security Personnel</div>
+                        <div class="fw-bold fs-6">{{ warehouse.guards_count }} Guards on Duty</div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="p-3 rounded-3 bg-light">
+                        <div class="text-muted fs-8">Kataho Grid Code</div>
+                        <div class="fw-bold fs-6"><code>{{ warehouse.kataho_code or 'KTM-KLM-01' }}</code></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lease Request Sidebar -->
+    <div class="col-lg-4">
+        <div class="glass-card">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-file-contract text-warning me-2"></i> Reserve Storage Space</h5>
+            <form action="/warehouses/{{ warehouse.id }}/request" method="post">
+                <div class="mb-3">
+                    <label class="form-label fs-7 fw-bold">Required Space (sqft)</label>
+                    <input type="number" name="space_required" class="form-control" placeholder="Min. 500 sqft" min="100" max="{{ warehouse.area_sqft }}" required>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fs-7 fw-bold">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fs-7 fw-bold">End Date</label>
+                        <input type="date" name="end_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fs-7 fw-bold">Intended Cargo / Purpose</label>
+                    <textarea name="purpose" class="form-control" rows="3" placeholder="e.g. FMCG dry cargo, electronics packaging"></textarea>
+                </div>
+                <button type="submit" class="btn btn-kwdc w-100 py-2">
+                    <i class="fa-solid fa-paper-plane me-2"></i> Submit Lease Application
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

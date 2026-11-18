@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Live Tracking: {{ dispatch.tracking_id }} - KTM-WDC{% endblock %}
+{% block page_title %}Realtime Telemetry: {{ dispatch.tracking_id }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Live Leaflet Map Card -->
+    <div class="col-lg-8">
+        <div class="glass-card p-0 overflow-hidden mb-4 shadow">
+            <div id="map" style="height: 520px; width: 100%;"></div>
+        </div>
+    </div>
+
+    <!-- Dispatch Telemetry Details -->
+    <div class="col-lg-4">
+        <div class="glass-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge bg-warning-subtle text-warning fs-7">
+                    <i class="fa-solid fa-satellite-dish me-1"></i> Live ASGI WebSocket
+                </span>
+                <span class="badge bg-success-subtle text-success" id="connection-status">Connected</span>
+            </div>
+
+            <div class="mb-3">
+                <div class="text-muted fs-8 text-uppercase fw-bold">Tracking Identifier</div>
+                <div class="fs-5 fw-bold text-dark"><code>{{ dispatch.tracking_id }}</code></div>
+            </div>
+
+            <div class="mb-3">
+                <div class="text-muted fs-8 text-uppercase fw-bold">Assigned Commercial Driver</div>
+                <div class="fw-bold fs-6">{{ dispatch.driver.name if dispatch.driver else 'Madan Gurung (Ba 1 Ka 1234)' }}</div>
+                <div class="text-muted fs-8">Vehicle: Tata Ace 1.5-Ton</div>
+            </div>
+
+            <div class="mb-3">
+                <div class="text-muted fs-8 text-uppercase fw-bold">Current Status</div>
+                <span class="badge bg-primary fs-7 text-uppercase">{{ dispatch.status }}</span>
+            </div>
+
+            <div class="p-3 rounded-3 bg-light mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted fs-8">Total Distance:</span>
+                    <span class="fw-bold fs-8">{{ dispatch.total_distance }} km</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted fs-8">Total Bill:</span>
+                    <span class="fw-bold fs-8 text-success">Rs. {{ "{:,.2f}".format(dispatch.grand_total) }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted fs-8">Estimated Arrival:</span>
+                    <span class="fw-bold fs-8 text-primary">~22 Mins</span>
+                </div>
+            </div>
+
+            <a href="/invoices" class="btn btn-outline-dark btn-sm w-100 rounded-3">
+                <i class="fa-solid fa-file-invoice me-1"></i> View Tax Invoice
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Initialize Kathmandu Valley Map
+    const map = L.map('map').setView([27.6823, 85.3038], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Origin Depot Marker
+    const originMarker = L.marker([27.6823, 85.3038]).addTo(map)
+        .bindPopup("<b>Pickup Depot:</b> {{ dispatch.pickup_address }}")
+        .openPopup();
+
+    // Destination Marker
+    const destMarker = L.marker([27.6753, 85.3230]).addTo(map)
+        .bindPopup("<b>Consignee Destination:</b> Delivery Point");
+
+    // Live Moving Driver Icon
+    const driverIcon = L.divIcon({
+        className: 'driver-live-marker',
+        html: '<div style="background:#f97316;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(249,115,22,0.8);"><i class="fa-solid fa-truck"></i></div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+    });
+    let driverMarker = L.marker([27.6800, 85.3100], {icon: driverIcon}).addTo(map);
+
+    // Connect to native FastAPI WebSocket for live telemetry stream
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = protocol + "//" + window.location.host + "/ws/tracking/{{ dispatch.id }}";
+    
+    try {
+        const socket = new WebSocket(wsUrl);
+        socket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            if (data.latitude && data.longitude) {
+                driverMarker.setLatLng([data.latitude, data.longitude]);
+                map.panTo([data.latitude, data.longitude]);
+            }
+        };
+        socket.onclose = function () {
+            document.getElementById('connection-status').innerText = 'Simulated';
+            document.getElementById('connection-status').className = 'badge bg-secondary-subtle text-secondary';
+        };
+    } catch(e) {
+        console.log("WebSocket fallback to poll mode.");
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,19 @@
+{
+  "name": "ktm-wdc-frontend",
+  "version": "2.0.0",
+  "description": "KTM-WDC Kathmandu Warehousing & Distribution Center - Modern Frontend Client",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve .",
+    "build": "echo 'Frontend static build complete'"
+  },
+  "keywords": [
+    "logistics",
+    "nepal",
+    "warehousing",
+    "fleet-telemetry",
+    "fastapi"
+  ],
+  "author": "KTM-WDC Team",
+  "license": "Proprietary"
+}

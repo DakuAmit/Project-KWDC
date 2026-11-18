@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}KTM-WDC{% endblock %} - Kathmandu Warehousing & Distribution Center</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- KTM-WDC Apple Cupertino Frosted Glassmorphism Styling -->
+    <style>
+        :root {
+            --primary: #f97316;
+            --primary-hover: #ea580c;
+            --sidebar-bg: #0f172a;
+            --card-glass: rgba(255, 255, 255, 0.85);
+            --border-glass: rgba(226, 232, 240, 0.8);
+        }
+        * {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        h1, h2, h3, .kwdc-serif {
+            font-family: 'Newsreader', Georgia, serif;
+        }
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 270px;
+            background: var(--sidebar-bg);
+            color: #cbd5e1;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            overflow-y: auto;
+            border-right: 1px solid #1e293b;
+            transition: all 0.3s ease;
+        }
+        .sidebar-brand {
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .sidebar-brand img, .sidebar-brand .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #f97316, #fb923c);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+        }
+        .sidebar-section {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #64748b;
+            font-weight: 800;
+            padding: 20px 20px 8px;
+        }
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 18px;
+            margin: 3px 12px;
+            color: #94a3b8;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13.5px;
+            transition: all 0.2s ease;
+        }
+        .sidebar-link:hover, .sidebar-link.active {
+            color: #ffffff;
+            background: rgba(249, 115, 22, 0.15);
+        }
+        .sidebar-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 15px;
+        }
+        .main-wrapper {
+            margin-left: 270px;
+            padding: 24px 32px;
+            min-height: 100vh;
+        }
+        .topbar {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
+        }
+        .glass-card {
+            background: var(--card-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+            margin-bottom: 24px;
+        }
+        .btn-kwdc {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: white;
+            font-weight: 600;
+            border-radius: 10px;
+            padding: 9px 20px;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(249, 115, 22, 0.3);
+        }
+        .btn-kwdc:hover {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            color: white;
+            transform: translateY(-1px);
+        }
+        .badge-role {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            text-transform: uppercase;
+        }
+        .badge-admin { background: #fee2e2; color: #dc2626; }
+        .badge-client { background: #e0f2fe; color: #0284c7; }
+        .badge-driver { background: #fef3c7; color: #d97706; }
+        .badge-property_owner { background: #dcfce7; color: #16a34a; }
+        .badge-equipment_owner { background: #f3e8ff; color: #9333ea; }
+        .badge-security_agency { background: #e2e8f0; color: #475569; }
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .main-wrapper { margin-left: 0; padding: 16px; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{% if user %}
+<!-- Authenticated Sidebar -->
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="logo-icon"><i class="fa-solid fa-cube"></i></div>
+        <div>
+            <div class="fw-bold text-white fs-6">KTM-WDC</div>
+            <div class="text-xs text-muted" style="font-size: 11px;">Nepal Logistics Core</div>
+        </div>
+    </div>
+
+    <div class="sidebar-section">Main Portal</div>
+    <a href="/dashboard" class="sidebar-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+    <a href="/warehouses" class="sidebar-link"><i class="fa-solid fa-warehouse"></i> Warehouses</a>
+    <a href="/dispatch" class="sidebar-link"><i class="fa-solid fa-truck-fast"></i> Dispatches</a>
+    <a href="/pickup" class="sidebar-link"><i class="fa-solid fa-box-open"></i> Doorstep Pickups</a>
+    <a href="/stock" class="sidebar-link"><i class="fa-solid fa-boxes-stacked"></i> Stock & QR Boxes</a>
+
+    {% if user.role == 'admin' %}
+    <div class="sidebar-section">Super Administration</div>
+    <a href="/admin" class="sidebar-link"><i class="fa-solid fa-shield-halved"></i> Admin Console</a>
+    <a href="/admin/users" class="sidebar-link"><i class="fa-solid fa-users"></i> User Directory</a>
+    <a href="/admin/margins" class="sidebar-link"><i class="fa-solid fa-chart-line"></i> Margin Tiers</a>
+    {% endif %}
+
+    {% if user.role == 'driver' or user.is_driver %}
+    <div class="sidebar-section">Driver Telemetry</div>
+    <a href="/driver/dashboard" class="sidebar-link"><i class="fa-solid fa-truck-arrow-right"></i> Driver Jobs</a>
+    <a href="/driver/rates" class="sidebar-link"><i class="fa-solid fa-tag"></i> Distance Rates</a>
+    {% endif %}
+
+    {% if user.role == 'property_owner' or user.is_property_owner %}
+    <div class="sidebar-section">Property Owner</div>
+    <a href="/property-owner/dashboard" class="sidebar-link"><i class="fa-solid fa-building"></i> My Properties</a>
+    <a href="/warehouses/create" class="sidebar-link"><i class="fa-solid fa-plus-circle"></i> List Warehouse</a>
+    {% endif %}
+
+    {% if user.role == 'equipment_owner' or user.is_equipment_owner %}
+    <div class="sidebar-section">Heavy Equipment</div>
+    <a href="/equipment-owner/dashboard" class="sidebar-link"><i class="fa-solid fa-tractor"></i> Machinery Catalog</a>
+    {% endif %}
+
+    {% if user.role == 'security_agency' %}
+    <div class="sidebar-section">Security Dispatch</div>
+    <a href="/security/dashboard" class="sidebar-link"><i class="fa-solid fa-user-shield"></i> Security Posts</a>
+    <a href="/security/incidents" class="sidebar-link"><i class="fa-solid fa-triangle-exclamation"></i> Incidents</a>
+    {% endif %}
+
+    <div class="sidebar-section">Finance & AI</div>
+    <a href="/invoices" class="sidebar-link"><i class="fa-solid fa-file-invoice-dollar"></i> 13% VAT Invoices</a>
+    <a href="/payment/history" class="sidebar-link"><i class="fa-solid fa-receipt"></i> Payment Records</a>
+
+    <div style="padding: 24px 16px;">
+        <form action="/logout" method="post">
+            <button type="submit" class="btn btn-outline-danger w-100 btn-sm rounded-3">
+                <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign Out
+            </button>
+        </form>
+    </div>
+</aside>
+{% endif %}
+
+<!-- Main Content Area -->
+<div class="{% if user %}main-wrapper{% else %}container py-4{% endif %}">
+    {% if user %}
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="d-flex align-items-center gap-3">
+            <h4 class="mb-0 fw-bold">{% block page_title %}Overview{% endblock %}</h4>
+            <span class="badge badge-role badge-{{ user.role }}">{{ user.role.replace('_', ' ') }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-end d-none d-sm-block">
+                <div class="fw-bold text-dark fs-6">{{ user.name }}</div>
+                <div class="text-muted" style="font-size: 12px;">{{ user.email }}</div>
+            </div>
+            <div class="rounded-circle bg-warning text-dark fw-bold d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                {{ user.name[0] }}
+            </div>
+        </div>
+    </header>
+    {% endif %}
+
+    <!-- Flash message or alert -->
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert">
+        <i class="fa-solid fa-circle-exclamation me-2"></i> {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+    {% if message %}
+    <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i> {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</div>
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

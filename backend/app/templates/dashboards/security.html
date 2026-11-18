@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Security Agency Portal - KTM-WDC{% endblock %}
+{% block page_title %}Licensed Security Agency Deployments{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Active Guard Posts -->
+    <div class="col-lg-7">
+        <div class="glass-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-user-shield text-danger me-2"></i> Security Post Assignments</h5>
+                <button class="btn btn-sm btn-kwdc" onclick="alert('Deploy guard dialog.')">
+                    <i class="fa-solid fa-plus me-1"></i> Deploy Guard
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr>
+                            <th>Warehouse Depot</th>
+                            <th>Guard Name</th>
+                            <th>Shift Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        {% for asgn in assignments %}
+                        <tr>
+                            <td class="fw-bold">{{ asgn.warehouse.name if asgn.warehouse else 'Kalimati Cold Store' }}</td>
+                            <td>Ram Bahadur Guard</td>
+                            <td><span class="badge bg-light text-dark border">Day Shift (12h)</span></td>
+                            <td><span class="badge bg-success-subtle text-success">On Duty</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">No active guard postings found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Incidents Log -->
+    <div class="col-lg-5">
+        <div class="glass-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i> Incident Response Log</h5>
+                <button class="btn btn-sm btn-outline-danger" onclick="alert('File Incident modal.')">Report Incident</button>
+            </div>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item bg-transparent px-0 py-2.5">
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-bold fs-7 text-danger">Unauthorized Perimeter Entry</span>
+                        <span class="badge bg-warning-subtle text-warning fs-8">Investigating</span>
+                    </div>
+                    <div class="text-muted fs-8">Kalimati West Gate | Station Notified: Kalimati Police (500m)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
