@@ -15,6 +15,18 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./kwdc.db")
     KWDC_DEMO_PASSWORD: str = os.getenv("KWDC_DEMO_PASSWORD", "KwdcNew2026!")
 
+    # Email Service Configuration (Supports both Gmail/Custom SMTP and Resend)
+    MAIL_DRIVER: str = os.getenv("MAIL_DRIVER", "smtp")  # 'smtp' (Gmail/No domain) or 'resend'
+    
+    # SMTP / Gmail (No domain required - uses your personal or company Gmail)
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
+    SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "KTM-WDC Logistics")
+    SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+
     # Resend Email Configuration
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
     RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "KTM-WDC <onboarding@resend.dev>")

@@ -1,5 +1,9 @@
 import os
 import logging
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 from typing import Optional, List, Union
 import httpx
 
@@ -11,37 +15,65 @@ class EmailService:
     RESEND_API_URL = "https://api.resend.com/emails"
 
     @classmethod
-    def send_email(
+    def send_via_smtp(
         cls,
-        to: Union[str, List[str]],
+        recipients: List[str],
         subject: str,
         html_content: str,
         text_content: Optional[str] = None
     ) -> dict:
         """
-        Sends transactional email via Resend REST API using httpx.
-        Falls back gracefully with logging if RESEND_API_KEY is not configured yet.
+        Sends email via standard SMTP (e.g. Gmail using Google App Password).
+        Requires NO custom domain and sends to ANY recipient.
         """
-        recipients = [to] if isinstance(to, str) else to
-        api_key = settings.RESEND_API_KEY.strip()
+        sender_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USER
+        sender_name = settings.SMTP_FROM_NAME or "KTM-WDC Logistics"
+        
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = formataddr((sender_name, sender_email))
+        msg["To"] = ", ".join(recipients)
 
-        if not api_key:
-            logger.warning(
-                f"⚠️ [EmailService] RESEND_API_KEY is not configured. "
-                f"Simulating email dispatch to: {recipients} | Subject: '{subject}'"
-            )
-            return {
-                "id": "simulated_dev_id",
-                "status": "simulated",
-                "to": recipients,
-                "subject": subject
-            }
+        if text_content:
+            msg.attach(MIMEText(text_content, "plain", "utf-8"))
+        if html_content:
+            msg.attach(MIMEText(html_content, "html", "utf-8"))
 
+        try:
+            port = settings.SMTP_PORT
+            if port == 465:
+                server = smtplib.SMTP_SSL(settings.SMTP_HOST, port, timeout=12.0)
+            else:
+                server = smtplib.SMTP(settings.SMTP_HOST, port, timeout=12.0)
+                if settings.SMTP_USE_TLS:
+                    server.starttls()
+            
+            if settings.SMTP_USER and settings.SMTP_PASSWORD:
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            
+            server.sendmail(sender_email, recipients, msg.as_string())
+            server.quit()
+            logger.info(f"✅ [EmailService:SMTP] Dispatched email to {recipients} | Subject: '{subject}'")
+            return {"status": "sent", "driver": "smtp", "recipients": recipients}
+        except Exception as e:
+            logger.error(f"❌ [EmailService:SMTP] Failed to send email via SMTP: {str(e)}")
+            return {"error": str(e), "driver": "smtp"}
+
+    @classmethod
+    def send_via_resend(
+        cls,
+        recipients: List[str],
+        subject: str,
+        html_content: str,
+        text_content: Optional[str] = None
+    ) -> dict:
+        """
+        Sends email via Resend REST API using httpx.
+        """
         headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {settings.RESEND_API_KEY.strip()}",
             "Content-Type": "application/json"
         }
-
         payload = {
             "from": settings.RESEND_FROM_EMAIL,
             "to": recipients,
@@ -53,19 +85,53 @@ class EmailService:
 
         try:
             with httpx.Client(timeout=10.0) as client:
-                response = client.post(cls.RESEND_API_URL, headers=headers, json=payload)
-                if response.status_code in [200, 201]:
-                    data = response.json()
-                    logger.info(f"✅ [EmailService] Email sent successfully via Resend. ID: {data.get('id')}")
+                res = client.post(cls.RESEND_API_URL, headers=headers, json=payload)
+                if res.status_code in [200, 201]:
+                    data = res.json()
+                    logger.info(f"✅ [EmailService:Resend] Email sent. ID: {data.get('id')}")
                     return data
                 else:
-                    logger.error(
-                        f"❌ [EmailService] Resend API error ({response.status_code}): {response.text}"
-                    )
-                    return {"error": response.text, "status_code": response.status_code}
+                    logger.error(f"❌ [EmailService:Resend] API Error ({res.status_code}): {res.text}")
+                    return {"error": res.text, "status_code": res.status_code, "driver": "resend"}
         except Exception as e:
-            logger.error(f"❌ [EmailService] Network exception while contacting Resend: {str(e)}")
-            return {"error": str(e)}
+            logger.error(f"❌ [EmailService:Resend] Exception: {str(e)}")
+            return {"error": str(e), "driver": "resend"}
+
+    @classmethod
+    def send_email(
+        cls,
+        to: Union[str, List[str]],
+        subject: str,
+        html_content: str,
+        text_content: Optional[str] = None
+    ) -> dict:
+        """
+        Intelligent multi-provider email sender.
+        1. If SMTP_USER and SMTP_PASSWORD are set (e.g. Gmail): uses Gmail SMTP (no domain required!).
+        2. Else if RESEND_API_KEY is configured: uses Resend REST API.
+        3. Else: simulates email in development mode with clear console logging.
+        """
+        recipients = [to] if isinstance(to, str) else to
+
+        # 1. Prefer SMTP if configured (no domain required)
+        if settings.SMTP_USER and settings.SMTP_PASSWORD:
+            return cls.send_via_smtp(recipients, subject, html_content, text_content)
+
+        # 2. Resend API
+        if settings.RESEND_API_KEY.strip():
+            return cls.send_via_resend(recipients, subject, html_content, text_content)
+
+        # 3. Development simulation fallback
+        logger.warning(
+            f"⚠️ [EmailService:Simulated] Neither SMTP nor Resend is configured. "
+            f"Simulating email dispatch to: {recipients} | Subject: '{subject}'"
+        )
+        return {
+            "id": "simulated_dev_id",
+            "status": "simulated",
+            "to": recipients,
+            "subject": subject
+        }
 
     @classmethod
     def send_verification_email(cls, to_email: str, name: str, token: str, base_url: str = "") -> dict:
@@ -104,7 +170,7 @@ class EmailService:
                 </div>
                 <div class="footer">
                     Kathmandu Warehousing & Distribution Center &bull; Kathmandu, Nepal<br>
-                    Secured with Resend &bull; &copy; 2026 KTM-WDC
+                    &copy; 2026 KTM-WDC Commercial Logistics
                 </div>
             </div>
         </body>
@@ -149,7 +215,7 @@ class EmailService:
                 </div>
                 <div class="footer">
                     Kathmandu Warehousing & Distribution Center &bull; Kathmandu, Nepal<br>
-                    Secured with Resend &bull; &copy; 2026 KTM-WDC
+                    &copy; 2026 KTM-WDC Commercial Logistics
                 </div>
             </div>
         </body>
