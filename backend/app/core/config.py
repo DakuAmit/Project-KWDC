@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./kwdc.db")
     KWDC_DEMO_PASSWORD: str = os.getenv("KWDC_DEMO_PASSWORD", "KwdcNew2026!")
 
+    # Superadmin Credentials (Configured in Vercel Environment Variables)
+    ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")
+    ADMIN_NAME: str = os.getenv("ADMIN_NAME", "System Superadmin")
+    ADMIN_PHONE: str = os.getenv("ADMIN_PHONE", "9800000000")
+
     # Email Service Configuration (Supports both Gmail/Custom SMTP and Resend)
     MAIL_DRIVER: str = os.getenv("MAIL_DRIVER", "smtp")  # 'smtp' (Gmail/No domain) or 'resend'
     

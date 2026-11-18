@@ -160,9 +160,13 @@ def api_register(payload: RegisterRequest, request: Request, db: Session = Depen
     verification_token = secrets.token_urlsafe(32)
     role_normalized = payload.role.strip().lower()
     
+    # Restrict public self-registration to customer and partner roles only (Super Admin is seeded via env vars)
+    ALLOWED_PUBLIC_ROLES = {"client", "property_owner", "driver", "equipment_owner", "security_agency"}
+    if role_normalized not in ALLOWED_PUBLIC_ROLES:
+        role_normalized = "client"
+
     # Generate human-readable user code
     prefix_map = {
-        "admin": "ADM",
         "client": "CLI",
         "driver": "DRV",
         "property_owner": "PRO",
@@ -171,8 +175,6 @@ def api_register(payload: RegisterRequest, request: Request, db: Session = Depen
     }
     prefix = prefix_map.get(role_normalized, "USR")
     user_code = f"{prefix}-{secrets.randbelow(89999) + 10000}"
-
-    is_admin_user = (role_normalized == "admin")
 
     new_user = User(
         name=payload.name.strip(),
@@ -183,7 +185,7 @@ def api_register(payload: RegisterRequest, request: Request, db: Session = Depen
         address=payload.address.strip() if payload.address else None,
         user_code=user_code,
         is_active=True,
-        is_admin=is_admin_user,
+        is_admin=False,
         is_driver=(role_normalized == "driver"),
         is_property_owner=(role_normalized == "property_owner"),
         is_equipment_owner=(role_normalized == "equipment_owner"),

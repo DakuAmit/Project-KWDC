@@ -1,7 +1,9 @@
 import os
+from datetime import datetime
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import SessionLocal, Base, engine
+from app.core.security import hash_password
 from app.models.user import User
 from app.models.finance import MarginTier, Invoice
 from app.models.warehouse import Warehouse
@@ -35,6 +37,46 @@ def purge_demo_data(db: Session):
             db.delete(u)
         db.commit()
         print("✅ Demo data successfully removed. System is clean for real registrations.")
+
+def ensure_superadmin(db: Session):
+    """
+    Ensures the Superadmin account configured via Vercel Environment Variables
+    (ADMIN_EMAIL, ADMIN_PASSWORD) exists and is up to date.
+    """
+    admin_email = settings.ADMIN_EMAIL.strip().lower()
+    admin_password = settings.ADMIN_PASSWORD.strip()
+
+    if not admin_email or not admin_password:
+        return
+
+    admin_user = db.query(User).filter(User.email == admin_email).first()
+    if not admin_user:
+        admin_user = User(
+            name=settings.ADMIN_NAME or "System Superadmin",
+            email=admin_email,
+            password=hash_password(admin_password),
+            phone=settings.ADMIN_PHONE or "9800000000",
+            role="admin",
+            is_admin=True,
+            is_active=True,
+            user_code="ADM-001",
+            email_verified_at=datetime.utcnow()
+        )
+        db.add(admin_user)
+        db.commit()
+        print(f"👑 Superadmin created from environment variables: {admin_email}")
+    else:
+        # Keep admin privileges and synchronize credentials from environment variables
+        admin_user.is_admin = True
+        admin_user.role = "admin"
+        admin_user.password = hash_password(admin_password)
+        admin_user.is_active = True
+        if settings.ADMIN_NAME:
+            admin_user.name = settings.ADMIN_NAME
+        if settings.ADMIN_PHONE:
+            admin_user.phone = settings.ADMIN_PHONE
+        db.commit()
+        print(f"👑 Superadmin synchronized from environment variables: {admin_email}")
 
 def seed_essential_system_config(db: Session):
     """
@@ -82,6 +124,9 @@ def seed_database():
         # Purge any dummy demo accounts
         purge_demo_data(db)
         
+        # Ensure Superadmin configured in environment variables exists
+        ensure_superadmin(db)
+
         # Seed core operational config
         seed_essential_system_config(db)
     finally:
