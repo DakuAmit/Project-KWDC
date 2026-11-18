@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -12,7 +11,7 @@ from app.models.logistics import DispatchOrder
 from app.models.finance import Invoice, MarginTier
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)

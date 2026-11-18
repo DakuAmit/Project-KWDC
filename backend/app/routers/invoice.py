@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Response, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,7 +8,7 @@ from app.models.finance import Invoice
 from app.services.invoice_service import InvoiceService
 
 router = APIRouter(prefix="/invoices", tags=["Tax Invoices"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)

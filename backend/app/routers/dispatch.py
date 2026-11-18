@@ -1,7 +1,6 @@
 import uuid
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -13,7 +12,7 @@ from app.services.invoice_service import InvoiceService
 from app.schemas.dispatch import PriceCalculateRequest, PriceCalculateResponse
 
 router = APIRouter(prefix="/dispatch", tags=["Freight Dispatch"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)

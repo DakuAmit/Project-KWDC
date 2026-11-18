@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -11,7 +10,7 @@ from app.models.finance import Invoice, Transaction
 from app.services.payment_service import PaymentService
 
 router = APIRouter(prefix="/payment", tags=["Payment Suite"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/history", response_class=HTMLResponse)

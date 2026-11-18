@@ -4,7 +4,6 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 
 from app.core.config import settings
 from app.core.database import Base, engine
@@ -29,12 +28,12 @@ from app.routers import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure tables exist and seed demo database on startup
-    Base.metadata.create_all(bind=engine)
+    # Ensure tables exist and seed superadmin on startup
     try:
+        Base.metadata.create_all(bind=engine)
         seed_database()
     except Exception as e:
-        print(f"Database seeder note: {e}")
+        print(f"Database initialization note: {e}")
     yield
 
 app = FastAPI(
@@ -80,7 +79,7 @@ app.include_router(payment_router)
 app.include_router(ai_router)
 app.include_router(websocket_router)
 
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @app.exception_handler(404)
 async def custom_404_handler(request: Request, exc):

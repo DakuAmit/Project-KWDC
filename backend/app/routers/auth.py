@@ -2,7 +2,6 @@ import secrets
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Request, Form, Response, HTTPException, status, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -27,7 +26,7 @@ from app.schemas.auth import (
 from app.services.email_service import EmailService
 
 router = APIRouter(tags=["Authentication"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, db: Session = Depends(get_db)):

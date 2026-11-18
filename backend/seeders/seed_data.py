@@ -10,6 +10,21 @@ from app.models.warehouse import Warehouse
 from app.models.logistics import Vehicle, DriverRate, DispatchOrder, DeliveryStop
 from app.models.equipment import Equipment
 from app.models.security_agency import SecurityAgency, SecurityPersonnel, SecurityAssignment
+from sqlalchemy import text
+
+def ensure_schema_migrations():
+    """Applies any incremental column migrations to existing production tables."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("""
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(255);
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token VARCHAR(255);
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_expires_at TIMESTAMP;
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;
+            """))
+            conn.commit()
+    except Exception as e:
+        print(f"Schema migration note: {e}")
 
 def purge_demo_data(db: Session):
     """
@@ -119,6 +134,7 @@ def seed_essential_system_config(db: Session):
 
 def seed_database():
     Base.metadata.create_all(bind=engine)
+    ensure_schema_migrations()
     db = SessionLocal()
     try:
         # Purge any dummy demo accounts

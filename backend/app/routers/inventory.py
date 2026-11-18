@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,7 +8,7 @@ from app.models.inventory import Stock, Box
 from app.services.qr_service import QRService
 
 router = APIRouter(tags=["Inventory & QR Tracking"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("/stock", response_class=HTMLResponse)
 def list_stock(request: Request, db: Session = Depends(get_db)):

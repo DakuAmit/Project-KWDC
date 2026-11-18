@@ -5,6 +5,14 @@ from app.core.config import settings
 
 # Connection options and URL driver normalization
 db_url = settings.DATABASE_URL.strip()
+
+# Supabase direct host (db.xxx.supabase.co) only resolves to IPv6, which is unsupported on AWS Lambda/Vercel serverless.
+# Automatically rewrite to Supabase IPv4 Connection Pooler if direct host is configured:
+if "db.wnecdwukwnqyeiiseotp.supabase.co" in db_url:
+    db_url = db_url.replace("db.wnecdwukwnqyeiiseotp.supabase.co", "aws-1-ap-northeast-1.pooler.supabase.com")
+    if "postgres:" in db_url and "postgres.wnecdwukwnqyeiiseotp:" not in db_url:
+        db_url = db_url.replace("postgres:", "postgres.wnecdwukwnqyeiiseotp:", 1)
+
 if db_url.startswith("postgresql://"):
     # Normalize postgresql:// to explicit driver to ensure compatibility on serverless runtimes
     try:

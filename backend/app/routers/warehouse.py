@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -9,7 +8,7 @@ from app.core.security import get_current_user_from_request
 from app.models.warehouse import Warehouse, WarehouseRequest
 
 router = APIRouter(prefix="/warehouses", tags=["Warehouses"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)

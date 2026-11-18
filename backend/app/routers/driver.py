@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -8,7 +7,7 @@ from app.core.security import get_current_user_from_request
 from app.models.logistics import DispatchOrder
 
 router = APIRouter(prefix="/driver", tags=["Driver Portal"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("/dashboard", response_class=HTMLResponse)
 def driver_dashboard(request: Request, db: Session = Depends(get_db)):

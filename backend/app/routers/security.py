@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -8,7 +7,7 @@ from app.core.security import get_current_user_from_request
 from app.models.security_agency import SecurityAssignment, SecurityIncident
 
 router = APIRouter(prefix="/security", tags=["Security Agency"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("/dashboard", response_class=HTMLResponse)
 def security_dashboard(request: Request, db: Session = Depends(get_db)):

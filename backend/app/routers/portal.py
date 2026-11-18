@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,7 +8,7 @@ from app.models.logistics import DispatchOrder
 from app.models.finance import Invoice
 
 router = APIRouter(tags=["Portal"])
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templates import templates
 
 @router.get("/", response_class=HTMLResponse)
 def index_page(request: Request, db: Session = Depends(get_db)):
