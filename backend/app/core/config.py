@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./kwdc.db")
     KWDC_DEMO_PASSWORD: str = os.getenv("KWDC_DEMO_PASSWORD", "KwdcNew2026!")
 
+    # Resend Email Configuration
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "KTM-WDC <onboarding@resend.dev>")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
+
     # AI Configuration
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "free")

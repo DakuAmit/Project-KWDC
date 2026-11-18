@@ -27,6 +27,9 @@ class User(Base):
     two_factor_secret = Column(String(255), nullable=True)
     two_factor_confirmed = Column(Boolean, default=False)
     date_of_birth = Column(DateTime, nullable=True)
+    email_verification_token = Column(String(255), nullable=True)
+    reset_password_token = Column(String(255), nullable=True)
+    reset_password_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

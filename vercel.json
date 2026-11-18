@@ -73,6 +73,18 @@
       "dest": "/frontend/register.html"
     },
     {
+      "src": "/forgot-password",
+      "dest": "/frontend/forgot-password.html"
+    },
+    {
+      "src": "/reset-password",
+      "dest": "/frontend/reset-password.html"
+    },
+    {
+      "src": "/verify-email",
+      "dest": "/frontend/verify-email.html"
+    },
+    {
       "src": "/dashboard",
       "dest": "/frontend/dashboard.html"
     },

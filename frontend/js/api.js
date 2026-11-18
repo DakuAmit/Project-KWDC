@@ -69,11 +69,17 @@ const KWDC_API = {
     },
 
     async register(userData) {
-        const res = await this.request('/register', {
+        const res = await this.request('/api/auth/register', {
             method: 'POST',
             body: JSON.stringify(userData)
         });
-        return res;
+        if (res && res.ok) {
+            const data = await res.json();
+            this.setToken(data.access_token);
+            this.setUser(data.user);
+            return data;
+        }
+        return null;
     },
 
     async calculatePrice(distance, vehicleType = 'truck', stopsCount = 1) {
