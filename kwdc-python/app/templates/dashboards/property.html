@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Property Owner Portal - KTM-WDC{% endblock %}
+{% block page_title %}Warehouse & Commercial Property Assets{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Property Portfolio Overview -->
+    <div class="col-md-4">
+        <div class="glass-card mb-0">
+            <span class="text-muted fs-7 text-uppercase fw-bold">Listed Properties</span>
+            <div class="fs-2 fw-bold text-dark mt-1">{{ warehouses|length }} Units</div>
+            <div class="text-success fs-8 mt-1"><i class="fa-solid fa-circle-check"></i> 100% Occupancy Target</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card mb-0">
+            <span class="text-muted fs-7 text-uppercase fw-bold">Active Space Requests</span>
+            <div class="fs-2 fw-bold text-dark mt-1">2 Pending</div>
+            <div class="text-warning fs-8 mt-1"><i class="fa-solid fa-clock"></i> Requires Lease Approval</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card mb-0">
+            <span class="text-muted fs-7 text-uppercase fw-bold">Monthly Rental Cashflow</span>
+            <div class="fs-2 fw-bold text-success mt-1">Rs. 320,000</div>
+            <div class="text-muted fs-8 mt-1">Direct Bank / NepalPay QR</div>
+        </div>
+    </div>
+</div>
+
+<!-- My Warehouses Table -->
+<div class="glass-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0"><i class="fa-solid fa-warehouse text-primary me-2"></i> Managed Storage Facilities</h5>
+        <a href="/warehouses/create" class="btn btn-kwdc btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> List New Facility
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light fs-8 text-uppercase">
+                <tr>
+                    <th>Facility Name</th>
+                    <th>City / Location</th>
+                    <th>Total Capacity</th>
+                    <th>Rate / sqft</th>
+                    <th>Cold Storage</th>
+                    <th>Approval Status</th>
+                </tr>
+            </thead>
+            <tbody class="fs-7">
+                {% for wh in warehouses %}
+                <tr>
+                    <td class="fw-bold"><a href="/warehouses/{{ wh.id }}" class="text-dark text-decoration-none">{{ wh.name }}</a></td>
+                    <td>{{ wh.location }}</td>
+                    <td>{{ "{:,.0f}".format(wh.area_sqft) }} sqft</td>
+                    <td class="text-success fw-bold">Rs. {{ wh.price_per_sqft }}</td>
+                    <td>
+                        {% if wh.cold_storage %}
+                        <span class="badge bg-info-subtle text-info"><i class="fa-solid fa-snowflake me-1"></i> Active ({{ wh.temperature_min }}°C)</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">Ambient</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge bg-success-subtle text-success">{{ wh.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No warehouses registered under your account.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

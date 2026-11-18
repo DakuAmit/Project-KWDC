@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Super Admin Console - KTM-WDC{% endblock %}
+{% block page_title %}Platform Administration & Governance{% endblock %}
+
+{% block content %}
+<!-- Metric KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="glass-card mb-0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted fs-7 fw-bold text-uppercase">Total Users</span>
+                <span class="badge bg-primary-subtle text-primary rounded-pill"><i class="fa-solid fa-users"></i></span>
+            </div>
+            <div class="fs-3 fw-bold text-dark">{{ stats.total_users }}</div>
+            <div class="text-success fs-8 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> Active across Nepal</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="glass-card mb-0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted fs-7 fw-bold text-uppercase">Commercial Warehouses</span>
+                <span class="badge bg-success-subtle text-success rounded-pill"><i class="fa-solid fa-warehouse"></i></span>
+            </div>
+            <div class="fs-3 fw-bold text-dark">{{ stats.total_warehouses }}</div>
+            <div class="text-muted fs-8 mt-1">Verified facilities</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="glass-card mb-0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted fs-7 fw-bold text-uppercase">Freight Dispatches</span>
+                <span class="badge bg-warning-subtle text-warning rounded-pill"><i class="fa-solid fa-truck-fast"></i></span>
+            </div>
+            <div class="fs-3 fw-bold text-dark">{{ stats.total_dispatches }}</div>
+            <div class="text-info fs-8 mt-1"><i class="fa-solid fa-satellite-dish"></i> Live GPS tracking</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="glass-card mb-0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted fs-7 fw-bold text-uppercase">13% VAT Collected</span>
+                <span class="badge bg-danger-subtle text-danger rounded-pill"><i class="fa-solid fa-file-invoice"></i></span>
+            </div>
+            <div class="fs-3 fw-bold text-dark">Rs. {{ "{:,.2f}".format(stats.total_tax) }}</div>
+            <div class="text-muted fs-8 mt-1">Inland Revenue compliant</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Active Margin Tiers -->
+    <div class="col-lg-6">
+        <div class="glass-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-chart-line text-warning me-2"></i> Administrative Margin Tiers</h5>
+                <span class="badge bg-dark rounded-pill">Active Rules</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr>
+                            <th>Distance Band</th>
+                            <th>Margin Type</th>
+                            <th>Applied Value</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        {% for tier in margin_tiers %}
+                        <tr>
+                            <td class="fw-bold">{{ tier.name }}</td>
+                            <td>{{ tier.margin_type }}</td>
+                            <td class="text-success fw-bold">{{ tier.margin_value }}%</td>
+                            <td><span class="badge bg-success-subtle text-success">Active</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted">No custom margin tiers configured.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Audits & Pending Verifications -->
+    <div class="col-lg-6">
+        <div class="glass-card h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-shield-check text-success me-2"></i> Pending Asset Verifications</h5>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-3">
+                    <div>
+                        <div class="fw-bold">Balkumari Warehouse (Lalitpur)</div>
+                        <div class="text-muted fs-8">8,000 sqft facility submitted by Gita Adhikari</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-3">Approve</button>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-3">
+                    <div>
+                        <div class="fw-bold">Heavy Crane 20-Ton (Hino 300)</div>
+                        <div class="text-muted fs-8">Vehicle BA 1 KA 9012 submitted by Krishna Tamang</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-3">Approve</button>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-3">
+                    <div>
+                        <div class="fw-bold">Nepal Suraksha Agency Pvt Ltd</div>
+                        <div class="text-muted fs-8">Security agency license #SEC-2026-NP submitted</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-3">Approve</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

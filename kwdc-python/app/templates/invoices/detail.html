@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Tax Invoice {{ invoice.invoice_number }} - KTM-WDC{% endblock %}
+{% block page_title %}Tax Invoice (कर बिजक) #{{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="glass-card shadow-lg p-4 p-md-5 mb-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+                <div>
+                    <h3 class="fw-bold kwdc-serif text-slate-900 mb-1">KTM-WDC LOGISTICS</h3>
+                    <div class="text-muted fs-7">Kathmandu Warehousing & Distribution Center Pvt. Ltd.</div>
+                    <div class="text-muted fs-8">PAN / VAT Number: 601234567 | IRD Approved Schedule 13</div>
+                </div>
+                <div class="text-end">
+                    <span class="badge {% if invoice.payment_status == 'paid' %}bg-success text-white{% else %}bg-danger text-white{% endif %} fs-6 mb-2 px-3 py-2 text-uppercase">
+                        {{ invoice.payment_status }}
+                    </span>
+                    <div class="text-muted fs-8">Invoice Date: {{ invoice.created_at.strftime('%Y-%m-%d') if invoice.created_at else '2026-11-18' }}</div>
+                    <div class="text-muted fs-8">Due Date: {{ invoice.due_date or 'On Delivery' }}</div>
+                </div>
+            </div>
+
+            <!-- Billed To -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="text-muted fs-8 text-uppercase fw-bold mb-1">Billed To (Client):</div>
+                    <div class="fw-bold fs-6">{{ invoice.user.name if invoice.user else 'Valued Client' }}</div>
+                    <div class="text-muted fs-7">{{ invoice.user.email if invoice.user else 'contact@client.test' }}</div>
+                    <div class="text-muted fs-7">{{ invoice.billing_address or 'Kathmandu, Nepal' }}</div>
+                    <div class="text-muted fs-8">Buyer PAN: <code>{{ invoice.pan_number or 'N/A' }}</code></div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="text-muted fs-8 text-uppercase fw-bold mb-1">Cryptographic IRD Verification QR:</div>
+                    {% if invoice.qr_code %}
+                    <img src="{{ invoice.qr_code }}" alt="Invoice Verification QR" style="width: 100px; height: 100px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Financial Table -->
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr>
+                            <th>S.N.</th>
+                            <th>Description of Service</th>
+                            <th class="text-end">Taxable Amount (NPR)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        <tr>
+                            <td>1</td>
+                            <td>Commercial {{ invoice.order_type.title() if invoice.order_type else 'Logistics' }} Service & Handling</td>
+                            <td class="text-end">Rs. {{ "{:,.2f}".format(invoice.subtotal) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" class="text-end fw-bold">Taxable Subtotal:</td>
+                            <td class="text-end fw-bold">Rs. {{ "{:,.2f}".format(invoice.subtotal) }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="text-end fw-bold text-danger">Inland Revenue 13% VAT:</td>
+                            <td class="text-end fw-bold text-danger">Rs. {{ "{:,.2f}".format(invoice.tax_amount) }}</td>
+                        </tr>
+                        <tr class="table-light">
+                            <td colspan="2" class="text-end fw-bold fs-6">Grand Total (कुल जम्मा):</td>
+                            <td class="text-end fw-bold fs-5 text-success">Rs. {{ "{:,.2f}".format(invoice.grand_total) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center pt-3 border-top">
+                <a href="/invoices/{{ invoice.id }}/download" class="btn btn-outline-danger">
+                    <i class="fa-solid fa-file-pdf me-2"></i> Download Official Tax PDF
+                </a>
+
+                {% if invoice.payment_status != 'paid' %}
+                <div class="d-flex gap-2">
+                    <form action="/payment/esewa/init" method="post">
+                        <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                        <button type="submit" class="btn btn-success fw-bold px-3">
+                            <i class="fa-solid fa-wallet me-1"></i> Pay via eSewa
+                        </button>
+                    </form>
+                    <form action="/payment/khalti/init" method="post">
+                        <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                        <button type="submit" class="btn text-white fw-bold px-3" style="background:#5c2d91;">
+                            <i class="fa-solid fa-mobile-screen me-1"></i> Pay via Khalti
+                        </button>
+                    </form>
+                    <a href="/payment/history" class="btn btn-outline-dark">
+                        <i class="fa-solid fa-qrcode me-1"></i> Bank QR
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
