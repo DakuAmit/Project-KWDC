@@ -1,111 +1,31 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "fastapi"
     },
-    {
-      "src": "frontend/**",
-      "use": "@vercel/static"
+    "backend": {
+      "root": "backend",
+      "framework": "fastapi"
+    },
+    "kwdc-python": {
+      "root": "kwdc-python",
+      "framework": "fastapi"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/index.py"
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "backend"
+      }
     },
     {
-      "src": "/docs",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/openapi.json",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/ws/(.*)",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/css/(.*)",
-      "dest": "/frontend/css/$1"
-    },
-    {
-      "src": "/js/(.*)",
-      "dest": "/frontend/js/$1"
-    },
-    {
-      "src": "/images/(.*)",
-      "dest": "/frontend/images/$1"
-    },
-    {
-      "src": "/flags/(.*)",
-      "dest": "/frontend/flags/$1"
-    },
-    {
-      "src": "/build/(.*)",
-      "dest": "/frontend/build/$1"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/frontend/favicon.ico"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/frontend/manifest.json"
-    },
-    {
-      "src": "/sw.js",
-      "dest": "/frontend/sw.js"
-    },
-    {
-      "src": "/offline.html",
-      "dest": "/frontend/offline.html"
-    },
-    {
-      "src": "/login",
-      "dest": "/frontend/login.html"
-    },
-    {
-      "src": "/register",
-      "dest": "/frontend/register.html"
-    },
-    {
-      "src": "/dashboard",
-      "dest": "/frontend/dashboard.html"
-    },
-    {
-      "src": "/warehouses",
-      "dest": "/frontend/warehouses.html"
-    },
-    {
-      "src": "/dispatch",
-      "dest": "/frontend/dispatch.html"
-    },
-    {
-      "src": "/tracking",
-      "dest": "/frontend/tracking.html"
-    },
-    {
-      "src": "/invoices",
-      "dest": "/frontend/invoices.html"
-    },
-    {
-      "src": "/privacy-policy",
-      "dest": "/frontend/privacy.html"
-    },
-    {
-      "src": "/terms-of-service",
-      "dest": "/frontend/terms.html"
-    },
-    {
-      "src": "/",
-      "dest": "/frontend/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
     }
   ]
 }
