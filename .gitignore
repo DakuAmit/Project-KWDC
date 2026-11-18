@@ -1,0 +1,51 @@
+# Environments & Secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Cache
+.pytest_cache/
+.coverage
+htmlcov/
+test.db
+
+# Databases (Local SQLite)
+*.db
+*.sqlite
+*.sqlite3
+backend/kwdc.db
+
+# Vercel
+.vercel/
+
+# OS Specific
+.DS_Store
+Thumbs.db

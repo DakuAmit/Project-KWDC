@@ -322,14 +322,17 @@ def seed_database():
         db.add(stop)
         db.commit()
 
-        # Seed Invoice
+        print("✅ Seeded Sample Dispatch #TRK-KWDC-9812")
+
+    if client_u and db.query(Invoice).count() == 0:
+        order = db.query(DispatchOrder).first()
         qr_data = QRService.generate_qr_base64("https://kwdc.gov.np/verify/INV-2026-0012")
         inv = Invoice(
             user_id=client_u.id,
             client_id=client_u.id,
             invoice_number="INV-2026-0012",
             order_type="dispatch",
-            order_id=order.id,
+            order_id=order.id if order else 1,
             amount=2578.66,
             subtotal=2282.00,
             tax_rate=13.00,
@@ -343,7 +346,7 @@ def seed_database():
         )
         db.add(inv)
         db.commit()
-        print("✅ Seeded Sample Dispatch #TRK-KWDC-9812 & 13% VAT Tax Invoice #INV-2026-0012")
+        print("✅ Seeded 13% VAT Tax Invoice #INV-2026-0012")
 
     db.close()
     print("==================================================")

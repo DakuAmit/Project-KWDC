@@ -22,7 +22,6 @@ Project-KWDC/
 │   │   └── seed_data.py        # Demo dataset auto-seeder
 │   ├── tests/
 │   │   └── test_api.py         # Pytest verification suite
-│   ├── requirements.txt
 │   └── run.py                  # Local backend server runner
 │
 ├── frontend/                   # Decoupled Modern Client Application

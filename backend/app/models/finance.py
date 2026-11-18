@@ -32,7 +32,7 @@ class Invoice(Base):
     payment_due_date = Column(Date, nullable=True)
     paid_at = Column(DateTime, nullable=True)
     payment_method = Column(String(50), nullable=True)
-    qr_code = Column(String(255), nullable=True)
+    qr_code = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
     

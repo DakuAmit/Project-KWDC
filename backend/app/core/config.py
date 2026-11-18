@@ -2,7 +2,7 @@ import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="allow")
+    model_config = SettingsConfigDict(env_file=(".env", "../.env"), env_file_encoding="utf-8", extra="allow")
 
     PROJECT_NAME: str = "KTM-WDC (Kathmandu Warehousing & Distribution Center)"
     ENVIRONMENT: str = "development"

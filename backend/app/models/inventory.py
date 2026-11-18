@@ -33,7 +33,7 @@ class Stock(Base):
     expiry_date = Column(Date, nullable=True)
     received_date = Column(Date, nullable=False)
     
-    qr_code = Column(String(255), nullable=True)
+    qr_code = Column(Text, nullable=True)
     qr_code_data = Column(Text, nullable=True)
     
     purchase_price = Column(Numeric(10, 2), nullable=True)
