@@ -20,6 +20,9 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
+    from app.core.database import Base, engine
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
     seed_database()
 
 def test_ping():

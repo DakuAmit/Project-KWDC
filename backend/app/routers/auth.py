@@ -172,6 +172,8 @@ def api_register(payload: RegisterRequest, request: Request, db: Session = Depen
     prefix = prefix_map.get(role_normalized, "USR")
     user_code = f"{prefix}-{secrets.randbelow(89999) + 10000}"
 
+    is_admin_user = (role_normalized == "admin")
+
     new_user = User(
         name=payload.name.strip(),
         email=payload.email.strip().lower(),
@@ -181,7 +183,7 @@ def api_register(payload: RegisterRequest, request: Request, db: Session = Depen
         address=payload.address.strip() if payload.address else None,
         user_code=user_code,
         is_active=True,
-        is_admin=(role_normalized == "admin"),
+        is_admin=is_admin_user,
         is_driver=(role_normalized == "driver"),
         is_property_owner=(role_normalized == "property_owner"),
         is_equipment_owner=(role_normalized == "equipment_owner"),
