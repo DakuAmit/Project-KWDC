@@ -16,11 +16,14 @@ from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
+    RegisterResponse,
     TokenResponse,
     UserResponse,
     ForgotPasswordRequest,
     ResetPasswordRequest,
     VerifyEmailRequest,
+    VerifyCodeRequest,
+    ResendCodeRequest,
     MessageResponse
 )
 from app.services.email_service import EmailService
@@ -147,6 +150,13 @@ def api_login(payload: LoginRequest, response: Response, db: Session = Depends(g
     if not user or not verify_password(payload.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
+    # Require email verification for non-admin accounts
+    if not user.is_admin and user.role != "admin" and user.email_verified_at is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Your email address has not been verified yet. Please check your inbox for the 6-digit verification code or click 'Resend Code'."
+        )
+    
     token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
@@ -157,13 +167,14 @@ def api_login(payload: LoginRequest, response: Response, db: Session = Depends(g
     )
     return {"access_token": token, "token_type": "bearer", "user": user}
 
-@router.post("/api/auth/register", response_model=TokenResponse)
-def api_register(payload: RegisterRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+@router.post("/api/auth/register", response_model=RegisterResponse)
+def api_register(payload: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="An account with this email address already exists.")
 
-    verification_token = secrets.token_urlsafe(32)
+    # Generate 6-digit numeric verification OTP code
+    verification_code = f"{secrets.randbelow(900000) + 100000}"
     role_normalized = payload.role.strip().lower()
     
     # Restrict public self-registration to customer and partner roles only (Super Admin is seeded via env vars)
@@ -195,22 +206,65 @@ def api_register(payload: RegisterRequest, request: Request, response: Response,
         is_driver=(role_normalized == "driver"),
         is_property_owner=(role_normalized == "property_owner"),
         is_equipment_owner=(role_normalized == "equipment_owner"),
-        email_verification_token=verification_token,
+        email_verification_token=verification_code,
+        email_verified_at=None,
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    # Dispatch welcome & email verification via Resend
+    # Dispatch verification email with the 6-digit code
     base_url = str(request.base_url).rstrip("/")
-    EmailService.send_verification_email(
+    email_res = EmailService.send_verification_code_email(
         to_email=new_user.email,
         name=new_user.name,
-        token=verification_token,
+        code=verification_code,
         base_url=base_url
     )
 
-    token = create_access_token({"sub": str(new_user.id), "email": new_user.email, "role": new_user.role})
+    code_preview = None
+    if "error" in email_res or email_res.get("status") == "simulated":
+        code_preview = verification_code
+
+    return {
+        "status": "pending_verification",
+        "message": f"Verification code sent to {new_user.email}. Please enter the 6-digit code to activate your account.",
+        "email": new_user.email,
+        "requires_verification": True,
+        "verification_code_preview": code_preview
+    }
+
+@router.post("/api/auth/verify-code")
+def api_verify_code(payload: VerifyCodeRequest, response: Response, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    code_clean = payload.code.strip()
+
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="No registered account found with this email address.")
+
+    if user.email_verified_at:
+        token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
+        response.set_cookie(key=settings.SESSION_COOKIE_NAME, value=token, httponly=True, max_age=86400, samesite="lax")
+        return {
+            "status": "verified",
+            "message": "Account already verified. Welcome back!",
+            "access_token": token,
+            "token_type": "bearer",
+            "user": user,
+            "role": user.role,
+            "dashboard_url": f"/dashboard.html?role={user.role}"
+        }
+
+    if not user.email_verification_token or user.email_verification_token.strip() != code_clean:
+        raise HTTPException(status_code=400, detail="Invalid verification code. Please check your email or click 'Resend Code'.")
+
+    user.email_verified_at = datetime.utcnow()
+    user.email_verification_token = None
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
         value=token,
@@ -218,20 +272,77 @@ def api_register(payload: RegisterRequest, request: Request, response: Response,
         max_age=86400,
         samesite="lax"
     )
-    return {"access_token": token, "token_type": "bearer", "user": new_user}
+    return {
+        "status": "verified",
+        "message": "Email verified successfully! Welcome to KTM-WDC.",
+        "access_token": token,
+        "token_type": "bearer",
+        "user": user,
+        "role": user.role,
+        "dashboard_url": f"/dashboard.html?role={user.role}"
+    }
+
+@router.post("/api/auth/resend-code")
+def api_resend_code(payload: ResendCodeRequest, request: Request, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="No registered account found with this email address.")
+
+    if user.email_verified_at:
+        return {"status": "already_verified", "message": "This email is already verified. You can sign in directly."}
+
+    new_code = f"{secrets.randbelow(900000) + 100000}"
+    user.email_verification_token = new_code
+    db.commit()
+
+    base_url = str(request.base_url).rstrip("/")
+    email_res = EmailService.send_verification_code_email(
+        to_email=user.email,
+        name=user.name,
+        code=new_code,
+        base_url=base_url
+    )
+
+    code_preview = None
+    if "error" in email_res or email_res.get("status") == "simulated":
+        code_preview = new_code
+
+    return {
+        "status": "sent",
+        "message": f"A new 6-digit verification code has been dispatched to {user.email}.",
+        "verification_code_preview": code_preview
+    }
 
 @router.get("/api/auth/verify-email")
-def api_verify_email(token: str = Query(...), db: Session = Depends(get_db)):
-    if not token:
-        raise HTTPException(status_code=400, detail="Missing verification token.")
-    user = db.query(User).filter(User.email_verification_token == token).first()
+def api_verify_email(token: Optional[str] = Query(None), code: Optional[str] = Query(None), email: Optional[str] = Query(None), response: Response = None, db: Session = Depends(get_db)):
+    search_val = (code or token or "").strip()
+    if not search_val:
+        raise HTTPException(status_code=400, detail="Missing verification token or code.")
+    
+    query = db.query(User).filter(User.email_verification_token == search_val)
+    if email:
+        query = query.filter(User.email == email.strip().lower())
+    user = query.first()
+    
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
 
     user.email_verified_at = datetime.utcnow()
     user.email_verification_token = None
     db.commit()
-    return {"message": "Email verified successfully! You may now access all features.", "status": "success"}
+    db.refresh(user)
+
+    access_token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
+    if response:
+        response.set_cookie(key=settings.SESSION_COOKIE_NAME, value=access_token, httponly=True, max_age=86400, samesite="lax")
+    return {
+        "message": "Email verified successfully! You may now access all features.",
+        "status": "success",
+        "access_token": access_token,
+        "user": user,
+        "dashboard_url": f"/dashboard.html?role={user.role}"
+    }
 
 @router.post("/api/auth/forgot-password", response_model=MessageResponse)
 def api_forgot_password(payload: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):

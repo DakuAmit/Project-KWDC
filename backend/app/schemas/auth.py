@@ -48,6 +48,20 @@ class ResetPasswordRequest(BaseModel):
 class VerifyEmailRequest(BaseModel):
     token: str
 
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+class ResendCodeRequest(BaseModel):
+    email: str
+
+class RegisterResponse(BaseModel):
+    status: str
+    message: str
+    email: str
+    requires_verification: bool = True
+    verification_code_preview: Optional[str] = None
+
 class MessageResponse(BaseModel):
     message: str
     status: str = "success"

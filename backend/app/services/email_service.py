@@ -134,6 +134,60 @@ class EmailService:
         }
 
     @classmethod
+    def send_verification_code_email(cls, to_email: str, name: str, code: str, base_url: str = "") -> dict:
+        origin = base_url or settings.FRONTEND_URL or "https://project-kwdc.vercel.app"
+        verify_url = f"{origin}/verify-email?code={code}&email={to_email}"
+
+        subject = f"Your KTM-WDC Verification Code: {code}"
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; margin: 0; padding: 24px; }}
+                .container {{ max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }}
+                .header {{ background: linear-gradient(135deg, #f97316, #ea580c); padding: 32px; text-align: center; color: #ffffff; }}
+                .content {{ padding: 32px; color: #334155; line-height: 1.6; font-size: 15px; }}
+                .code-box {{ background: #fff7ed; border: 2px dashed #f97316; border-radius: 14px; padding: 20px 32px; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #c2410c; text-align: center; margin: 24px 0; }}
+                .btn {{ display: inline-block; background: #f97316; color: #ffffff !important; font-weight: 600; padding: 12px 28px; border-radius: 10px; text-decoration: none; margin: 16px 0; }}
+                .footer {{ background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1 style="margin: 0; font-size: 24px; letter-spacing: -0.5px;">KTM-WDC</h1>
+                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 14px;">Nepal Commercial Logistics Platform</p>
+                </div>
+                <div class="content">
+                    <h2 style="color: #0f172a; margin-top: 0;">Welcome, {name}!</h2>
+                    <p>Thank you for registering on the KTM-WDC platform. Please enter the following 6-digit verification code to activate your account and access your commercial logistics cockpit:</p>
+                    
+                    <div class="code-box">
+                        {code}
+                    </div>
+                    
+                    <p style="text-align: center; font-size: 13px; color: #64748b; margin-top: 8px;">
+                        This verification code is valid for 15 minutes.
+                    </p>
+                    
+                    <div style="text-align: center; margin-top: 24px;">
+                        <a href="{verify_url}" class="btn" target="_blank">Verify in One Click</a>
+                    </div>
+                </div>
+                <div class="footer">
+                    Kathmandu Warehousing & Distribution Center &bull; Kathmandu, Nepal<br>
+                    &copy; 2026 KTM-WDC Commercial Logistics
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        text = f"Welcome to KTM-WDC, {name}!\n\nYour 6-digit verification code is: {code}\n\nVerify online: {verify_url}\n\nValid for 15 minutes."
+        return cls.send_email(to_email, subject, html, text)
+
+    @classmethod
     def send_verification_email(cls, to_email: str, name: str, token: str, base_url: str = "") -> dict:
         origin = base_url or settings.FRONTEND_URL or "https://project-kwdc.vercel.app"
         verify_url = f"{origin}/verify-email?token={token}"

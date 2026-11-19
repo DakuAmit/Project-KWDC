@@ -46,9 +46,38 @@ def test_real_user_registration_and_email_dispatch():
     })
     assert response.status_code == 200
     data = response.json()
+    assert data["status"] == "pending_verification"
+    assert data["email"] == "contact@himalayancargo.np"
+    assert data["requires_verification"] is True
+
+def test_login_blocked_before_verification():
+    # Attempting to sign in before email verification must return 403
+    response = client.post("/api/auth/login", json={
+        "email": "contact@himalayancargo.np",
+        "password": "SecurePassword2026!"
+    })
+    assert response.status_code == 403
+    assert "not been verified" in response.json()["detail"]
+
+def test_email_verification_flow():
+    db = SessionLocal()
+    user = db.query(User).filter(User.email == "contact@himalayancargo.np").first()
+    code = user.email_verification_token
+    db.close()
+
+    assert code is not None
+    assert len(code) == 6  # 6-digit numeric OTP
+
+    # Test 6-digit code verification endpoint
+    response = client.post("/api/auth/verify-code", json={
+        "email": "contact@himalayancargo.np",
+        "code": code
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "verified"
     assert "access_token" in data
     assert data["user"]["email"] == "contact@himalayancargo.np"
-    assert data["user"]["role"] == "client"
 
 def test_real_user_login():
     response = client.post("/api/auth/login", json={
@@ -59,18 +88,6 @@ def test_real_user_login():
     data = response.json()
     assert "access_token" in data
     assert data["user"]["role"] == "client"
-
-def test_email_verification_flow():
-    db = SessionLocal()
-    user = db.query(User).filter(User.email == "contact@himalayancargo.np").first()
-    token = user.email_verification_token
-    db.close()
-
-    assert token is not None
-
-    response = client.get(f"/api/auth/verify-email?token={token}")
-    assert response.status_code == 200
-    assert "Email verified successfully" in response.json()["message"]
 
 def test_forgot_and_reset_password_flow():
     # 1. Request password reset

@@ -64,6 +64,12 @@ const KWDC_API = {
             this.setToken(data.access_token);
             this.setUser(data.user);
             return data;
+        } else if (res) {
+            const data = await res.json().catch(() => ({}));
+            const err = new Error(data.detail || 'Invalid email address or password.');
+            err.status = res.status;
+            err.data = data;
+            throw err;
         }
         return null;
     },
@@ -73,13 +79,39 @@ const KWDC_API = {
             method: 'POST',
             body: JSON.stringify(userData)
         });
-        if (res && res.ok) {
+        if (res) {
             const data = await res.json();
-            this.setToken(data.access_token);
-            this.setUser(data.user);
-            return data;
+            return { ok: res.ok, status: res.status, data };
         }
-        return null;
+        return { ok: false, data: null };
+    },
+
+    async verifyCode(email, code) {
+        const res = await this.request('/api/auth/verify-code', {
+            method: 'POST',
+            body: JSON.stringify({ email, code })
+        });
+        if (res) {
+            const data = await res.json();
+            if (res.ok && data.access_token) {
+                this.setToken(data.access_token);
+                this.setUser(data.user);
+            }
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async resendCode(email) {
+        const res = await this.request('/api/auth/resend-code', {
+            method: 'POST',
+            body: JSON.stringify({ email })
+        });
+        if (res) {
+            const data = await res.json();
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
     },
 
     getDashboardUrl(role) {

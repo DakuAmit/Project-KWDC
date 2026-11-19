@@ -153,7 +153,12 @@ document.getElementById('login-form').addEventListener('submit', async function(
             btn.innerHTML = '<i class="fa-solid fa-right-to-bracket me-2"></i> Sign In';
         }
     } catch(err) {
-        errBox.innerText = (err && err.message) ? err.message : 'Unable to connect to KTM-WDC server. Please check your network.';
+        const msg = (err && err.message) ? err.message : 'Unable to connect to KTM-WDC server. Please check your network.';
+        if (msg.includes('not been verified') || msg.includes('verification')) {
+            errBox.innerHTML = `${msg} <br><a href="/verify-email.html?email=${encodeURIComponent(email)}" class="alert-link fw-bold text-decoration-underline mt-2 d-inline-block"><i class="fa-solid fa-envelope-circle-check me-1"></i> Click here to enter verification code</a>`;
+        } else {
+            errBox.innerText = msg;
+        }
         errBox.classList.remove('d-none');
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-right-to-bracket me-2"></i> Sign In';

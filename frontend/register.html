@@ -142,11 +142,9 @@ document.getElementById('reg-form').addEventListener('submit', async function(e)
         });
         const data = await res.json();
 
-        if (res.ok && data.access_token) {
-            KWDC_API.setToken(data.access_token);
-            KWDC_API.setUser(data.user);
-            const userRole = (data.user && data.user.role) ? data.user.role : role;
-            window.location.href = KWDC_API.getDashboardUrl(userRole) + '&registered=true';
+        if (res.ok) {
+            // Forward user directly to 6-digit email verification screen
+            window.location.href = `/verify-email.html?email=${encodeURIComponent(email)}&new=true`;
         } else {
             errBox.innerText = data.detail || 'Registration failed. Please check your information.';
             errBox.classList.remove('d-none');
