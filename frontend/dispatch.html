@@ -77,16 +77,16 @@
 
                     <div class="mb-3">
                         <label class="form-label fs-7 fw-bold">Pickup Street Address / Depot</label>
-                        <input type="text" id="pickup_address" class="form-control" placeholder="e.g. Kalimati Fruit & Vegetable Market, Ward 14, Kathmandu" value="Kalimati Wholesale Terminal, Kathmandu" required>
+                        <input type="text" id="pickup_address" class="form-control" placeholder="e.g. Kalimati Fruit & Vegetable Market, Ward 14, Kathmandu" required>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fs-7 fw-bold">Pickup Contact Person</label>
-                            <input type="text" id="pickup_person" class="form-control" value="Sita Thapa" required>
+                            <input type="text" id="pickup_person" class="form-control" placeholder="Sender / Contact Name" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fs-7 fw-bold">Pickup Contact Phone</label>
-                            <input type="tel" id="pickup_phone" class="form-control" value="9801112233" required>
+                            <input type="tel" id="pickup_phone" class="form-control" placeholder="e.g. 98XXXXXXXX" required>
                         </div>
                     </div>
                 </div>
@@ -106,7 +106,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fs-7 fw-bold">Transit Distance (km)</label>
-                            <input type="number" step="0.5" min="1" id="distance" class="form-control" value="18.5" oninput="calculate()" required>
+                            <input type="number" step="0.5" min="1" id="distance" class="form-control" placeholder="Enter distance in km (e.g. 15.5)" oninput="calculate()" required>
                         </div>
                     </div>
                 </div>
@@ -117,15 +117,15 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fs-7 fw-bold">Consignee Name</label>
-                            <input type="text" id="drop_name" class="form-control" value="Balkumari Wholesale Depot" required>
+                            <input type="text" id="drop_name" class="form-control" placeholder="Consignee / Business Name" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fs-7 fw-bold">Consignee Phone</label>
-                            <input type="tel" id="drop_phone" class="form-control" value="9802223344" required>
+                            <input type="tel" id="drop_phone" class="form-control" placeholder="e.g. 98XXXXXXXX" required>
                         </div>
                         <div class="col-12">
                             <label class="form-label fs-7 fw-bold">Drop-Off Destination Street Address</label>
-                            <input type="text" id="drop_address" class="form-control" value="Ring Road Junction, Balkumari, Lalitpur" required>
+                            <input type="text" id="drop_address" class="form-control" placeholder="Delivery street address, ward, city" required>
                         </div>
                     </div>
                 </div>
@@ -136,24 +136,24 @@
                     <div class="p-3 rounded-3 bg-light mb-3">
                         <div class="d-flex justify-content-between mb-2 fs-7">
                             <span class="text-muted">Base Driver Tariff:</span>
-                            <span class="fw-bold" id="res-base">Rs. 2,037.50</span>
+                            <span class="fw-bold" id="res-base">Rs. 0.00</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2 fs-7">
-                            <span class="text-muted">Admin Margin (11-50km = 12%):</span>
-                            <span class="fw-bold" id="res-margin">Rs. 244.50</span>
+                            <span class="text-muted">Admin Margin:</span>
+                            <span class="fw-bold" id="res-margin">Rs. 0.00 (0%)</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2 fs-7">
                             <span class="text-muted">Taxable Subtotal:</span>
-                            <span class="fw-bold" id="res-subtotal">Rs. 2,282.00</span>
+                            <span class="fw-bold" id="res-subtotal">Rs. 0.00</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2 fs-7">
                             <span class="text-muted">Inland Revenue 13% VAT:</span>
-                            <span class="fw-bold text-danger" id="res-vat">Rs. 296.66</span>
+                            <span class="fw-bold text-danger" id="res-vat">Rs. 0.00</span>
                         </div>
                         <hr>
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="fw-bold fs-6">Grand Total:</span>
-                            <span class="fw-bold fs-4 text-success" id="res-grand">Rs. 2,578.66</span>
+                            <span class="fw-bold fs-4 text-success" id="res-grand">Rs. 0.00</span>
                         </div>
                     </div>
                 </div>
@@ -171,6 +171,13 @@
 let assignedWarehousesList = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const user = KWDC_API.getUser();
+    if (user) {
+        const personInput = document.getElementById('pickup_person');
+        const phoneInput = document.getElementById('pickup_phone');
+        if (personInput && !personInput.value && user.name) personInput.value = user.name;
+        if (phoneInput && !phoneInput.value && user.phone) phoneInput.value = user.phone;
+    }
     await initAssignedWarehouses();
     await calculate();
 });
@@ -224,16 +231,30 @@ function onOriginChange() {
 }
 
 async function calculate() {
-    const dist = document.getElementById('distance').value || 18.5;
+    const distInput = document.getElementById('distance').value;
+    const dist = parseFloat(distInput);
     const veh = document.getElementById('vehicle_type').value;
 
-    const data = await KWDC_API.calculatePrice(dist, veh);
-    if (data) {
-        document.getElementById('res-base').innerText = 'Rs. ' + data.base_price.toFixed(2);
-        document.getElementById('res-margin').innerText = 'Rs. ' + data.admin_margin_amount.toFixed(2) + ' (' + data.admin_margin_percentage + '%)';
-        document.getElementById('res-subtotal').innerText = 'Rs. ' + data.subtotal.toFixed(2);
-        document.getElementById('res-vat').innerText = 'Rs. ' + data.vat_13_percent.toFixed(2);
-        document.getElementById('res-grand').innerText = 'Rs. ' + data.grand_total.toFixed(2);
+    if (!dist || isNaN(dist) || dist <= 0) {
+        document.getElementById('res-base').innerText = 'Rs. 0.00';
+        document.getElementById('res-margin').innerText = 'Rs. 0.00 (0%)';
+        document.getElementById('res-subtotal').innerText = 'Rs. 0.00';
+        document.getElementById('res-vat').innerText = 'Rs. 0.00';
+        document.getElementById('res-grand').innerText = 'Rs. 0.00';
+        return;
+    }
+
+    try {
+        const data = await KWDC_API.calculatePrice(dist, veh);
+        if (data) {
+            document.getElementById('res-base').innerText = 'Rs. ' + data.base_price.toFixed(2);
+            document.getElementById('res-margin').innerText = 'Rs. ' + data.admin_margin_amount.toFixed(2) + ' (' + data.admin_margin_percentage + '%)';
+            document.getElementById('res-subtotal').innerText = 'Rs. ' + data.subtotal.toFixed(2);
+            document.getElementById('res-vat').innerText = 'Rs. ' + data.vat_13_percent.toFixed(2);
+            document.getElementById('res-grand').innerText = 'Rs. ' + data.grand_total.toFixed(2);
+        }
+    } catch (e) {
+        console.warn('Tariff computation error:', e);
     }
 }
 

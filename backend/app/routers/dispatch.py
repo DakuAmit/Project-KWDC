@@ -169,29 +169,77 @@ def create_dispatch_json(payload: DispatchCreate, request: Request, db: Session 
         }
     }
 
+@api_router.get("/active-list")
+def get_active_dispatches(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_request(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    query = db.query(DispatchOrder)
+    if not (user.is_admin or user.role == "admin"):
+        if user.role == "driver":
+            query = query.filter(DispatchOrder.driver_id == user.id)
+        else:
+            query = query.filter(DispatchOrder.client_id == user.id)
+            
+    orders = query.order_by(DispatchOrder.id.desc()).limit(15).all()
+    return [
+        {
+            "id": o.id,
+            "tracking_id": o.tracking_id,
+            "pickup_address": o.pickup_address,
+            "total_distance": float(o.total_distance or 0),
+            "grand_total": float(o.grand_total or 0),
+            "status": o.status,
+            "created_at": o.created_at.strftime('%Y-%m-%d %H:%M') if o.created_at else None
+        } for o in orders
+    ]
+
 @api_router.get("/{dispatch_id}")
-def get_dispatch_json(dispatch_id: int, request: Request, db: Session = Depends(get_db)):
+def get_dispatch_json(dispatch_id: str, request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_request(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
 
-    order = db.query(DispatchOrder).filter(DispatchOrder.id == dispatch_id).first()
+    if dispatch_id.isdigit():
+        order = db.query(DispatchOrder).filter(
+            (DispatchOrder.id == int(dispatch_id)) | (DispatchOrder.tracking_id == dispatch_id)
+        ).first()
+    else:
+        order = db.query(DispatchOrder).filter(DispatchOrder.tracking_id == dispatch_id).first()
+
     if not order:
         raise HTTPException(status_code=404, detail="Dispatch order not found")
 
     stops = db.query(DeliveryStop).filter(DeliveryStop.dispatch_order_id == order.id).order_by(DeliveryStop.stop_number.asc()).all()
+    driver = db.query(User).filter(User.id == order.driver_id).first() if order.driver_id else None
+    vehicle = db.query(Vehicle).filter(Vehicle.driver_id == order.driver_id).first() if order.driver_id else None
+
+    dest_address = stops[0].address if stops else "Kathmandu Consignee"
+    dest_name = stops[0].recipient_name if stops else "Consignee"
+    dest_phone = stops[0].recipient_phone if stops else None
 
     return {
         "id": order.id,
         "tracking_id": order.tracking_id,
         "invoice_no": order.invoice_no,
         "pickup_address": order.pickup_address,
+        "pickup_contact_person": order.pickup_contact_person,
+        "pickup_contact_phone": order.pickup_contact_phone,
+        "delivery_address": dest_address,
+        "recipient_name": dest_name,
+        "recipient_phone": dest_phone,
         "warehouse_id": order.warehouse_id,
         "total_distance": float(order.total_distance or 0),
         "grand_total": float(order.grand_total or 0),
         "status": order.status,
         "current_latitude": float(order.current_latitude or 27.7172),
         "current_longitude": float(order.current_longitude or 85.3240),
+        "driver": {
+            "name": driver.name,
+            "phone": driver.phone,
+            "vehicle": f"{vehicle.vehicle_type} ({vehicle.vehicle_number})" if vehicle else "Commercial Freight Carrier"
+        } if driver else None,
         "stops": [
             {
                 "stop_number": s.stop_number,

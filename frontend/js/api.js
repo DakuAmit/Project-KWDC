@@ -184,6 +184,11 @@ const KWDC_API = {
         return (res && res.ok) ? await res.json() : null;
     },
 
+    async getActiveDispatches() {
+        const res = await this.request('/api/dispatch/active-list');
+        return (res && res.ok) ? await res.json() : [];
+    },
+
     async chatAI(message) {
         const res = await this.request('/api/ai/chat', {
             method: 'POST',
