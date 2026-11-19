@@ -12,7 +12,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
     SESSION_COOKIE_NAME: str = "kwdc_session"
 
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./kwdc.db")
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql://postgres.wnecdwukwnqyeiiseotp:%26%2AGUtc9nDMF87Db@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require"
+    )
     KWDC_DEMO_PASSWORD: str = os.getenv("KWDC_DEMO_PASSWORD", "KwdcNew2026!")
 
     # Superadmin Credentials (Configured in Vercel Environment Variables)

@@ -65,7 +65,13 @@ const KWDC_API = {
             this.setUser(data.user);
             return data;
         } else if (res) {
-            const data = await res.json().catch(() => ({}));
+            let data = {};
+            try {
+                data = await res.json();
+            } catch (_) {
+                const text = await res.text().catch(() => '');
+                data = { detail: text || `HTTP ${res.status}` };
+            }
             const err = new Error(data.detail || 'Invalid email address or password.');
             err.status = res.status;
             err.data = data;
@@ -80,7 +86,13 @@ const KWDC_API = {
             body: JSON.stringify(userData)
         });
         if (res) {
-            const data = await res.json();
+            let data = {};
+            try {
+                data = await res.json();
+            } catch (_) {
+                const text = await res.text().catch(() => '');
+                data = { detail: text || `HTTP ${res.status}` };
+            }
             return { ok: res.ok, status: res.status, data };
         }
         return { ok: false, data: null };
@@ -92,7 +104,13 @@ const KWDC_API = {
             body: JSON.stringify({ email, code })
         });
         if (res) {
-            const data = await res.json();
+            let data = {};
+            try {
+                data = await res.json();
+            } catch (_) {
+                const text = await res.text().catch(() => '');
+                data = { detail: text || `HTTP ${res.status}` };
+            }
             if (res.ok && data.access_token) {
                 this.setToken(data.access_token);
                 this.setUser(data.user);
@@ -108,7 +126,13 @@ const KWDC_API = {
             body: JSON.stringify({ email })
         });
         if (res) {
-            const data = await res.json();
+            let data = {};
+            try {
+                data = await res.json();
+            } catch (_) {
+                const text = await res.text().catch(() => '');
+                data = { detail: text || `HTTP ${res.status}` };
+            }
             return { ok: res.ok, status: res.status, data };
         }
         return { ok: false, data: null };

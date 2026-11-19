@@ -28,12 +28,18 @@ from app.routers import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure tables exist and seed superadmin on startup
+    # Fast, non-blocking startup for serverless
     try:
-        Base.metadata.create_all(bind=engine)
-        seed_database()
+        from seeders.seed_data import ensure_superadmin
+        from app.core.database import SessionLocal
+        if settings.ADMIN_EMAIL:
+            db = SessionLocal()
+            try:
+                ensure_superadmin(db)
+            finally:
+                db.close()
     except Exception as e:
-        print(f"Database initialization note: {e}")
+        print(f"Startup synchronization note: {e}")
     yield
 
 app = FastAPI(
@@ -78,6 +84,26 @@ app.include_router(invoice_router)
 app.include_router(payment_router)
 app.include_router(ai_router)
 app.include_router(websocket_router)
+
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from app.core.database import get_db
+
+@app.get("/api/health")
+def api_health(db: Session = Depends(get_db)):
+    try:
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "environment": settings.ENVIRONMENT
+        }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "database_error": str(e)
+        }
 
 from app.core.templates import templates
 

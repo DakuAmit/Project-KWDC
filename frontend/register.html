@@ -140,7 +140,14 @@ document.getElementById('reg-form').addEventListener('submit', async function(e)
                 password
             })
         });
-        const data = await res.json();
+        
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (_) {
+            const rawText = await res.text().catch(() => '');
+            data = { detail: rawText || `Server returned error (${res.status})` };
+        }
 
         if (res.ok) {
             // Forward user directly to 6-digit email verification screen
@@ -152,7 +159,7 @@ document.getElementById('reg-form').addEventListener('submit', async function(e)
             btn.innerHTML = '<i class="fa-solid fa-user-plus me-2"></i> Register & Send Verification';
         }
     } catch(err) {
-        errBox.innerText = 'Unable to connect to KTM-WDC server. Please try again.';
+        errBox.innerText = (err && err.message) ? err.message : 'Unable to connect to KTM-WDC server. Please try again.';
         errBox.classList.remove('d-none');
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-user-plus me-2"></i> Register & Send Verification';
