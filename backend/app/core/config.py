@@ -24,10 +24,15 @@ class Settings(BaseSettings):
     ADMIN_NAME: str = os.getenv("ADMIN_NAME", "System Superadmin")
     ADMIN_PHONE: str = os.getenv("ADMIN_PHONE", "9800000000")
 
-    # Email Service Configuration (Supports both Gmail/Custom SMTP and Resend)
-    MAIL_DRIVER: str = os.getenv("MAIL_DRIVER", "smtp")  # 'smtp' (Gmail/No domain) or 'resend'
+    # Email Service Configuration (Supports Brevo, Gmail/Custom SMTP, and Resend)
+    MAIL_DRIVER: str = os.getenv("MAIL_DRIVER", "brevo")  # 'brevo', 'smtp', or 'resend'
     
-    # SMTP / Gmail (No domain required - uses your personal or company Gmail)
+    # Brevo (formerly Sendinblue) REST API (300 free emails/day to ANY email, no custom domain required)
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
+    BREVO_SENDER_EMAIL: str = os.getenv("BREVO_SENDER_EMAIL", "")
+    BREVO_SENDER_NAME: str = os.getenv("BREVO_SENDER_NAME", "KTM-WDC Logistics")
+    
+    # SMTP / Gmail / Brevo SMTP (smtp-relay.brevo.com:587)
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USER: str = os.getenv("SMTP_USER", "")

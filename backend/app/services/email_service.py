@@ -59,6 +59,57 @@ class EmailService:
             logger.error(f"❌ [EmailService:SMTP] Failed to send email via SMTP: {str(e)}")
             return {"error": str(e), "driver": "smtp"}
 
+    BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+
+    @classmethod
+    def send_via_brevo(
+        cls,
+        recipients: List[str],
+        subject: str,
+        html_content: str,
+        text_content: Optional[str] = None
+    ) -> dict:
+        """
+        Sends transactional email via Brevo (formerly Sendinblue) REST API v3.
+        Supports sending to ANY recipient with 300 free emails per day without custom domain.
+        """
+        api_key = settings.BREVO_API_KEY.strip()
+        sender_email = (
+            settings.BREVO_SENDER_EMAIL.strip() or 
+            settings.SMTP_FROM_EMAIL.strip() or 
+            settings.SMTP_USER.strip() or 
+            "app.netpack@gmail.com"
+        )
+        sender_name = settings.BREVO_SENDER_NAME.strip() or "KTM-WDC Logistics"
+
+        headers = {
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json"
+        }
+        payload = {
+            "sender": {"name": sender_name, "email": sender_email},
+            "to": [{"email": email} for email in recipients],
+            "subject": subject,
+            "htmlContent": html_content
+        }
+        if text_content:
+            payload["textContent"] = text_content
+
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                res = client.post(cls.BREVO_API_URL, headers=headers, json=payload)
+                if res.status_code in [200, 201, 202]:
+                    data = res.json()
+                    logger.info(f"✅ [EmailService:Brevo] Email sent. Message ID: {data.get('messageId')}")
+                    return {"status": "sent", "driver": "brevo", "message_id": data.get("messageId"), "data": data}
+                else:
+                    logger.error(f"❌ [EmailService:Brevo] API Error ({res.status_code}): {res.text}")
+                    return {"error": res.text, "status_code": res.status_code, "driver": "brevo"}
+        except Exception as e:
+            logger.error(f"❌ [EmailService:Brevo] Exception: {str(e)}")
+            return {"error": str(e), "driver": "brevo"}
+
     @classmethod
     def send_via_resend(
         cls,
@@ -113,17 +164,21 @@ class EmailService:
         """
         recipients = [to] if isinstance(to, str) else to
 
-        # 1. Prefer SMTP if configured (no domain required)
+        # 1. Prefer Brevo REST API if configured (300 free emails/day to ANY address)
+        if settings.BREVO_API_KEY.strip():
+            return cls.send_via_brevo(recipients, subject, html_content, text_content)
+
+        # 2. Prefer SMTP if configured (e.g. Gmail or Brevo SMTP: smtp-relay.brevo.com:587)
         if settings.SMTP_USER and settings.SMTP_PASSWORD:
             return cls.send_via_smtp(recipients, subject, html_content, text_content)
 
-        # 2. Resend API
+        # 3. Resend API
         if settings.RESEND_API_KEY.strip():
             return cls.send_via_resend(recipients, subject, html_content, text_content)
 
-        # 3. Development simulation fallback
+        # 4. Development simulation fallback
         logger.warning(
-            f"⚠️ [EmailService:Simulated] Neither SMTP nor Resend is configured. "
+            f"⚠️ [EmailService:Simulated] No live email provider configured (BREVO_API_KEY, SMTP, or RESEND_API_KEY). "
             f"Simulating email dispatch to: {recipients} | Subject: '{subject}'"
         )
         return {
