@@ -256,3 +256,98 @@ def test_warehouse_and_invoice_api_production_flow():
     assert pdf_resp.status_code == 200
     assert pdf_resp.headers["content-type"] == "application/pdf"
     assert pdf_resp.content.startswith(b"%PDF")
+
+def test_admin_console_drawers_api():
+    # 1. Non-admin client token should get 403
+    client_login = client.post("/api/auth/login", json={
+        "email": "contact@himalayancargo.np",
+        "password": "BrandNewPassword2026!"
+    })
+    client_token = client_login.json()["access_token"]
+    forbidden_resp = client.get("/api/admin/overview", headers={"Authorization": f"Bearer {client_token}"})
+    assert forbidden_resp.status_code == 403
+
+    # 2. SuperAdmin login
+    admin_login = client.post("/api/auth/login", json={
+        "email": "app.netpack@gmail.com",
+        "password": "Admin@2026"
+    })
+    assert admin_login.status_code == 200
+    admin_token = admin_login.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # Drawer 1: Overview
+    ov_resp = client.get("/api/admin/overview", headers=admin_headers)
+    assert ov_resp.status_code == 200
+    ov_data = ov_resp.json()
+    assert ov_data["status"] == "healthy"
+    assert "counts" in ov_data
+    assert "financials" in ov_data
+
+    # Drawer 2: Users & KYC
+    users_resp = client.get("/api/admin/users", headers=admin_headers)
+    assert users_resp.status_code == 200
+    users_list = users_resp.json()
+    assert len(users_list) >= 2
+    target_user = users_list[0]
+    # Toggle status
+    status_resp = client.post(f"/api/admin/users/{target_user['id']}/status", json={"is_active": True}, headers=admin_headers)
+    assert status_resp.status_code == 200
+    # Toggle verification
+    verify_resp = client.post(f"/api/admin/users/{target_user['id']}/verify", json={"is_verified": True}, headers=admin_headers)
+    assert verify_resp.status_code == 200
+
+    # Drawer 3: Warehouses
+    wh_resp = client.get("/api/admin/warehouses", headers=admin_headers)
+    assert wh_resp.status_code == 200
+    wh_list = wh_resp.json()
+    assert len(wh_list) >= 1
+    wh_id = wh_list[0]["id"]
+    wh_status_resp = client.post(f"/api/admin/warehouses/{wh_id}/status", json={"status": "approved"}, headers=admin_headers)
+    assert wh_status_resp.status_code == 200
+
+    # Drawer 4: Dispatches
+    disp_resp = client.get("/api/admin/dispatches", headers=admin_headers)
+    assert disp_resp.status_code == 200
+
+    # Drawer 5: Telemetry
+    tele_resp = client.get("/api/admin/telemetry", headers=admin_headers)
+    assert tele_resp.status_code == 200
+
+    # Drawer 6: Inventory
+    inv_resp = client.get("/api/admin/inventory", headers=admin_headers)
+    assert inv_resp.status_code == 200
+
+    # Drawer 7: Equipment
+    eq_resp = client.get("/api/admin/equipment", headers=admin_headers)
+    assert eq_resp.status_code == 200
+
+    # Drawer 8: Security
+    sec_resp = client.get("/api/admin/security", headers=admin_headers)
+    assert sec_resp.status_code == 200
+
+    # Drawer 9: Invoices
+    inv_mgmt_resp = client.get("/api/admin/invoices", headers=admin_headers)
+    assert inv_mgmt_resp.status_code == 200
+    inv_mgmt_data = inv_mgmt_resp.json()
+    assert "summary" in inv_mgmt_data
+    assert "invoices" in inv_mgmt_data
+
+    # Drawer 10: Settings & Margins
+    settings_resp = client.get("/api/admin/settings", headers=admin_headers)
+    assert settings_resp.status_code == 200
+    # Create new margin tier
+    tier_add_resp = client.post("/api/admin/settings/margin-tiers", json={
+        "name": "Express Mountain Corridor",
+        "min_distance": 100.0,
+        "max_distance": 350.0,
+        "margin_value": 18.0,
+        "service_type": "dispatch",
+        "margin_type": "percentage",
+        "is_active": True
+    }, headers=admin_headers)
+    assert tier_add_resp.status_code == 200
+    tier_id = tier_add_resp.json()["tier_id"]
+    # Deactivate tier
+    tier_del_resp = client.delete(f"/api/admin/settings/margin-tiers/{tier_id}", headers=admin_headers)
+    assert tier_del_resp.status_code == 200

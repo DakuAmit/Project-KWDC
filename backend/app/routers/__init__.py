@@ -1,6 +1,6 @@
 from app.routers.auth import router as auth_router
 from app.routers.portal import router as portal_router
-from app.routers.admin import router as admin_router
+from app.routers.admin import router as admin_router, api_router as admin_api_router
 from app.routers.driver import router as driver_router
 from app.routers.property import router as property_router
 from app.routers.equipment import router as equipment_router
@@ -18,6 +18,7 @@ __all__ = [
     "auth_router",
     "portal_router",
     "admin_router",
+    "admin_api_router",
     "driver_router",
     "property_router",
     "equipment_router",

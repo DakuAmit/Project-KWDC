@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="/css/kwdc-ui.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
             --primary: #f97316;
@@ -134,6 +135,8 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/js/api.js"></script>
 <script>
 let currentUser = null;
@@ -229,14 +232,41 @@ function renderSidebarNav(role) {
 
     if (role === 'admin') {
         html = `
-            <div class="sidebar-section-label">Governance</div>
-            <a href="/dashboard.html?role=admin" class="sidebar-link active"><i class="fa-solid fa-gauge-high"></i> Admin Console</a>
-            <a href="/dashboard.html?role=admin&tab=users" class="sidebar-link"><i class="fa-solid fa-users"></i> Platform Users</a>
-            <a href="/warehouses.html" class="sidebar-link"><i class="fa-solid fa-warehouse"></i> Warehouse Audit</a>
-            <div class="sidebar-section-label">Operations</div>
-            <a href="/dispatch.html" class="sidebar-link"><i class="fa-solid fa-truck-fast"></i> Fleet Dispatches</a>
-            <a href="/tracking.html" class="sidebar-link"><i class="fa-solid fa-satellite-dish"></i> Live GPS Fleet Map</a>
-            <a href="/invoices.html" class="sidebar-link"><i class="fa-solid fa-file-invoice-dollar"></i> 13% IRD VAT Audits</a>
+            <div class="sidebar-section-label">Command & Strategy</div>
+            <a href="javascript:void(0)" class="sidebar-link active" id="admin-nav-overview" onclick="switchAdminDrawer('overview')">
+                <i class="fa-solid fa-gauge-high"></i> Overview & Health
+            </a>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-users" onclick="switchAdminDrawer('users')">
+                <i class="fa-solid fa-users-gear"></i> Users & KYC
+            </a>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-warehouses" onclick="switchAdminDrawer('warehouses')">
+                <i class="fa-solid fa-warehouse"></i> Warehousing Registry
+            </a>
+
+            <div class="sidebar-section-label">Logistics Fleet</div>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-dispatches" onclick="switchAdminDrawer('dispatches')">
+                <i class="fa-solid fa-truck-fast"></i> Freight Dispatches
+            </a>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-telemetry" onclick="switchAdminDrawer('telemetry')">
+                <i class="fa-solid fa-satellite-dish"></i> Live Telemetry Map
+            </a>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-inventory" onclick="switchAdminDrawer('inventory')">
+                <i class="fa-solid fa-boxes-stacked"></i> QR Inventory & Stock
+            </a>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-equipment" onclick="switchAdminDrawer('equipment')">
+                <i class="fa-solid fa-tractor"></i> Equipment & Machinery
+            </a>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-security" onclick="switchAdminDrawer('security')">
+                <i class="fa-solid fa-shield-halved"></i> Security & Incidents
+            </a>
+
+            <div class="sidebar-section-label">Finance & Governance</div>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-invoices" onclick="switchAdminDrawer('invoices')">
+                <i class="fa-solid fa-file-invoice-dollar"></i> 13% IRD VAT Invoices
+            </a>
+            <a href="javascript:void(0)" class="sidebar-link" id="admin-nav-settings" onclick="switchAdminDrawer('settings')">
+                <i class="fa-solid fa-sliders"></i> Platform Margins
+            </a>
         `;
     } else if (role === 'property_owner') {
         html = `
@@ -281,108 +311,848 @@ function renderSidebarNav(role) {
     container.innerHTML = html;
 }
 
-function renderRoleCockpit(role, apiData) {
-    const container = document.getElementById('role-cockpit-container');
-    const stats = (apiData && apiData.stats) ? apiData.stats : {};
+let activeAdminDrawer = 'overview';
 
-    if (role === 'admin') {
-        renderAdminCockpit(container, stats);
-    } else if (role === 'property_owner') {
-        renderPropertyCockpit(container, stats);
-    } else if (role === 'driver') {
-        renderDriverCockpit(container, stats);
-    } else if (role === 'equipment_owner') {
-        renderEquipmentCockpit(container, stats);
-    } else if (role === 'security_agency') {
-        renderSecurityCockpit(container, stats);
-    } else {
-        renderClientCockpit(container, stats);
-    }
+function showAdminAlert(msg, isSuccess = true) {
+    const el = document.getElementById('admin-alert-banner');
+    if (!el) return;
+    el.className = `alert ${isSuccess ? 'alert-success' : 'alert-danger'} alert-dismissible fade show`;
+    el.innerHTML = `${msg} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    el.classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 1. Platform Super Admin Cockpit
+// 1. Platform Super Admin Cockpit Controller
 function renderAdminCockpit(container, s) {
-    document.getElementById('cockpit-title').innerText = 'Platform Administration & Governance';
-    const totalUsers = s.total_users || 0;
-    const totalWh = s.total_warehouses || 0;
-    const totalDispatches = s.total_dispatches || 0;
-    const totalTax = s.total_tax || 0;
-    const marginTiers = s.margin_tiers || [];
-    const recentUsers = s.recent_users || [];
+    container.innerHTML = `
+        <div id="admin-alert-banner" class="alert d-none mb-3" role="alert"></div>
 
-    let usersRows = '';
-    if (recentUsers.length > 0) {
-        usersRows = recentUsers.map(u => `
-            <tr>
-                <td class="fw-bold"><code>${u.user_code || 'USR-00' + u.id}</code></td>
-                <td>${u.name}</td>
-                <td>${u.email}</td>
-                <td><span class="badge bg-secondary text-uppercase">${(u.role || 'client').replace('_', ' ')}</span></td>
-                <td><span class="badge bg-success-subtle text-success">Active</span></td>
-            </tr>
-        `).join('');
-    } else {
-        usersRows = `
-            <tr>
-                <td colspan="5" class="text-center py-4 text-muted">
-                    <i class="fa-solid fa-users fa-2x mb-2 d-block text-secondary opacity-50"></i>
-                    No users registered in database yet.
-                </td>
-            </tr>
-        `;
+        <!-- Drawer Header Banner -->
+        <div class="glass-card mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h3 class="fw-bold kwdc-serif mb-1" id="admin-drawer-heading">Platform Administration</h3>
+                    <p class="text-muted fs-7 mb-0" id="admin-drawer-subheading">KTM-WDC Logistics & Warehousing Governance System</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-dark btn-sm rounded-3" onclick="refreshCurrentAdminDrawer()">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh Data
+                    </button>
+                    <a href="/dispatch.html" class="btn btn-kwdc btn-sm rounded-3">
+                        <i class="fa-solid fa-plus me-1"></i> New Dispatch
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Drawer Content Container -->
+        <div id="admin-drawer-content">
+            <div class="text-center py-5 glass-card">
+                <div class="spinner-border text-warning" role="status"></div>
+                <p class="text-muted mt-2 fs-7">Loading management module...</p>
+            </div>
+        </div>
+
+        <!-- Dynamic Admin Modals Container -->
+        <div id="admin-modals-container"></div>
+    `;
+
+    // Check URL query or hash for active drawer
+    const urlParams = new URLSearchParams(window.location.search);
+    const drawerParam = urlParams.get('drawer') || window.location.hash.replace('#', '') || 'overview';
+    switchAdminDrawer(drawerParam);
+}
+
+function refreshCurrentAdminDrawer() {
+    switchAdminDrawer(activeAdminDrawer);
+}
+
+function switchAdminDrawer(drawerKey) {
+    activeAdminDrawer = drawerKey;
+
+    // Update Sidebar active link
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    const navLink = document.getElementById(`admin-nav-${drawerKey}`);
+    if (navLink) navLink.classList.add('active');
+
+    // Update URL hash
+    window.location.hash = drawerKey;
+
+    const content = document.getElementById('admin-drawer-content');
+    if (!content) return;
+
+    content.innerHTML = `
+        <div class="text-center py-5 glass-card">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p class="text-muted mt-2 fs-7">Loading live records from database...</p>
+        </div>
+    `;
+
+    const titles = {
+        'overview': { title: 'Executive Overview & System Health', sub: 'Real-time KPIs across all 7 provinces of Nepal' },
+        'users': { title: 'Ecosystem Entities & KYC Verification', sub: 'Manage user access, role permissions, and KYC verification' },
+        'warehouses': { title: 'Commercial Warehousing Registry', sub: 'Verify cold storage, ambient godowns, Kataho codes, and capacity' },
+        'dispatches': { title: 'Freight Logistics & Dispatches', sub: 'Multi-stop delivery orders, driver dispatching, and pricing audits' },
+        'telemetry': { title: 'Real-Time Fleet Telemetry & Map', sub: 'Live GPS locations of trucks and pickups on Nepal highway routes' },
+        'inventory': { title: 'QR Inventory & Batch Tracking', sub: 'Warehouse stocks, SKU batch numbers, and box distribution' },
+        'equipment': { title: 'Heavy Machinery & Equipment Fleet', sub: 'Forklifts, mobile cranes, and certified operator bookings' },
+        'security': { title: 'Licensed Security Agencies & Incident Post', sub: 'Guard deployments, emergency post dispatches, and police escalation' },
+        'invoices': { title: 'Inland Revenue Department (IRD) 13% VAT', sub: 'Nepal VAT Act 2052 compliant invoices, tax audits, and settlements' },
+        'settings': { title: 'Platform Commission Margins & Tariffs', sub: 'Distance-based platform margin tiers and per-km vehicle tariffs' }
+    };
+
+    if (titles[drawerKey]) {
+        document.getElementById('cockpit-title').innerText = titles[drawerKey].title;
+        document.getElementById('admin-drawer-heading').innerText = titles[drawerKey].title;
+        document.getElementById('admin-drawer-subheading').innerText = titles[drawerKey].sub;
     }
+
+    if (drawerKey === 'users') loadAdminDrawerUsers(content);
+    else if (drawerKey === 'warehouses') loadAdminDrawerWarehouses(content);
+    else if (drawerKey === 'dispatches') loadAdminDrawerDispatches(content);
+    else if (drawerKey === 'telemetry') loadAdminDrawerTelemetry(content);
+    else if (drawerKey === 'inventory') loadAdminDrawerInventory(content);
+    else if (drawerKey === 'equipment') loadAdminDrawerEquipment(content);
+    else if (drawerKey === 'security') loadAdminDrawerSecurity(content);
+    else if (drawerKey === 'invoices') loadAdminDrawerInvoices(content);
+    else if (drawerKey === 'settings') loadAdminDrawerSettings(content);
+    else loadAdminDrawerOverview(content);
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 1: OVERVIEW & HEALTH
+// -------------------------------------------------------------------------
+async function loadAdminDrawerOverview(container) {
+    const data = await KWDC_API.getAdminOverview();
+    if (!data) {
+        container.innerHTML = `<div class="alert alert-danger">Failed to fetch platform metrics from database.</div>`;
+        return;
+    }
+
+    const c = data.counts || {};
+    const f = data.financials || {};
+    const roles = data.roles || {};
 
     container.innerHTML = `
         <div class="row g-3 mb-4">
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
                     <span class="text-muted fs-8 text-uppercase fw-bold">Platform Entities</span>
-                    <div class="fs-2 fw-bold text-dark mt-1">${totalUsers} Users</div>
+                    <div class="fs-2 fw-bold text-dark mt-1">${c.users || 0} Users</div>
                     <div class="text-success fs-8 mt-1"><i class="fa-solid fa-users"></i> Live Database Users</div>
                 </div>
             </div>
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
                     <span class="text-muted fs-8 text-uppercase fw-bold">Commercial Warehouses</span>
-                    <div class="fs-2 fw-bold text-dark mt-1">${totalWh} Verified</div>
-                    <div class="text-info fs-8 mt-1"><i class="fa-solid fa-warehouse"></i> Storage facilities</div>
+                    <div class="fs-2 fw-bold text-dark mt-1">${c.warehouses || 0} Facilities</div>
+                    <div class="text-info fs-8 mt-1"><i class="fa-solid fa-warehouse"></i> Storage registry</div>
                 </div>
             </div>
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
                     <span class="text-muted fs-8 text-uppercase fw-bold">Freight Dispatches</span>
-                    <div class="fs-2 fw-bold text-dark mt-1">${totalDispatches} Scheduled</div>
-                    <div class="text-warning fs-8 mt-1"><i class="fa-solid fa-truck-fast"></i> Live Freight Orders</div>
+                    <div class="fs-2 fw-bold text-dark mt-1">${c.dispatches || 0} Orders</div>
+                    <div class="text-warning fs-8 mt-1"><i class="fa-solid fa-truck-fast"></i> Multi-stop shipments</div>
                 </div>
             </div>
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
                     <span class="text-muted fs-8 text-uppercase fw-bold">13% IRD VAT Audited</span>
-                    <div class="fs-2 fw-bold text-danger mt-1">Rs. ${parseFloat(totalTax).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
-                    <div class="text-muted fs-8 mt-1">Inland Revenue Compliant</div>
+                    <div class="fs-2 fw-bold text-danger mt-1">Rs. ${(f.total_tax_collected || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                    <div class="text-muted fs-8 mt-1">Nepal Inland Revenue</div>
                 </div>
             </div>
         </div>
 
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="glass-card h-100">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie text-primary me-2"></i> User Ecosystem Breakdown</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light fs-8 text-uppercase">
+                                <tr><th>Ecosystem Role</th><th>Registered Accounts</th><th>Action</th></tr>
+                            </thead>
+                            <tbody class="fs-7">
+                                <tr><td><i class="fa-solid fa-user-shield text-danger me-2"></i> Platform Administrators</td><td class="fw-bold">${roles.admin || 0}</td><td><button class="btn btn-outline-dark btn-sm py-0" onclick="loadAdminDrawerUsers(document.getElementById('admin-drawer-content'), 'admin')">View</button></td></tr>
+                                <tr><td><i class="fa-solid fa-building text-primary me-2"></i> Enterprise Shippers (Clients)</td><td class="fw-bold">${roles.client || 0}</td><td><button class="btn btn-outline-dark btn-sm py-0" onclick="loadAdminDrawerUsers(document.getElementById('admin-drawer-content'), 'client')">View</button></td></tr>
+                                <tr><td><i class="fa-solid fa-warehouse text-success me-2"></i> Warehouse Property Owners</td><td class="fw-bold">${roles.property_owner || 0}</td><td><button class="btn btn-outline-dark btn-sm py-0" onclick="loadAdminDrawerUsers(document.getElementById('admin-drawer-content'), 'property_owner')">View</button></td></tr>
+                                <tr><td><i class="fa-solid fa-truck text-warning me-2"></i> Commercial Drivers</td><td class="fw-bold">${roles.driver || 0}</td><td><button class="btn btn-outline-dark btn-sm py-0" onclick="loadAdminDrawerUsers(document.getElementById('admin-drawer-content'), 'driver')">View</button></td></tr>
+                                <tr><td><i class="fa-solid fa-tractor text-info me-2"></i> Heavy Equipment Owners</td><td class="fw-bold">${roles.equipment_owner || 0}</td><td><button class="btn btn-outline-dark btn-sm py-0" onclick="loadAdminDrawerUsers(document.getElementById('admin-drawer-content'), 'equipment_owner')">View</button></td></tr>
+                                <tr><td><i class="fa-solid fa-shield-halved text-secondary me-2"></i> Licensed Security Agencies</td><td class="fw-bold">${roles.security_agency || 0}</td><td><button class="btn btn-outline-dark btn-sm py-0" onclick="loadAdminDrawerUsers(document.getElementById('admin-drawer-content'), 'security_agency')">View</button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="glass-card h-100">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-server text-success me-2"></i> System Health & Infrastructure</h5>
+                    <ul class="list-group list-group-flush fs-7">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span><i class="fa-solid fa-database text-success me-2"></i> Supabase PostgreSQL DB</span>
+                            <span class="badge bg-success-subtle text-success">Connected (NullPool Serverless)</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span><i class="fa-solid fa-envelope text-primary me-2"></i> Email OTP Gateway (Brevo REST)</span>
+                            <span class="badge bg-primary-subtle text-primary">Active (300/day Free Tier)</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span><i class="fa-solid fa-file-invoice text-danger me-2"></i> 13% IRD Tax PDF Generator</span>
+                            <span class="badge bg-danger-subtle text-danger">ReportLab Ready</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span><i class="fa-solid fa-clock text-secondary me-2"></i> Server Local Timestamp</span>
+                            <code>${new Date().toLocaleString()}</code>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 2: USERS & KYC VERIFICATION
+// -------------------------------------------------------------------------
+async function loadAdminDrawerUsers(container, roleFilter = 'all') {
+    const users = await KWDC_API.getAdminUsers(roleFilter);
+
+    container.innerHTML = `
+        <div class="glass-card">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold fs-7">Filter Role:</span>
+                    <select class="form-select form-select-sm w-auto" id="filter-user-role" onchange="loadAdminDrawerUsers(document.getElementById('admin-drawer-content'), this.value)">
+                        <option value="all" ${roleFilter === 'all' ? 'selected' : ''}>All Entities</option>
+                        <option value="admin" ${roleFilter === 'admin' ? 'selected' : ''}>Super Admins</option>
+                        <option value="client" ${roleFilter === 'client' ? 'selected' : ''}>Clients (Shippers)</option>
+                        <option value="driver" ${roleFilter === 'driver' ? 'selected' : ''}>Drivers</option>
+                        <option value="property_owner" ${roleFilter === 'property_owner' ? 'selected' : ''}>Property Owners</option>
+                        <option value="equipment_owner" ${roleFilter === 'equipment_owner' ? 'selected' : ''}>Equipment Owners</option>
+                        <option value="security_agency" ${roleFilter === 'security_agency' ? 'selected' : ''}>Security Agencies</option>
+                    </select>
+                </div>
+                <div class="text-muted fs-8">Total: <strong>${users.length}</strong> accounts</div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr>
+                            <th>User Code</th>
+                            <th>Name / Company</th>
+                            <th>Email & Phone</th>
+                            <th>Role</th>
+                            <th>KYC Verification</th>
+                            <th>Account Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${users.length > 0 ? users.map(u => `
+                            <tr>
+                                <td class="fw-bold"><code>${u.user_code}</code></td>
+                                <td class="fw-semibold">${escapeHtml(u.name)}</td>
+                                <td>
+                                    <div>${escapeHtml(u.email)}</div>
+                                    <div class="text-muted fs-8">${escapeHtml(u.phone)}</div>
+                                </td>
+                                <td><span class="badge bg-secondary text-uppercase">${(u.role || 'client').replace('_', ' ')}</span></td>
+                                <td>
+                                    ${u.is_verified 
+                                        ? `<span class="badge bg-success-subtle text-success"><i class="fa-solid fa-circle-check me-1"></i> Verified</span>`
+                                        : `<span class="badge bg-warning-subtle text-warning"><i class="fa-solid fa-clock me-1"></i> Pending KYC</span>`
+                                    }
+                                </td>
+                                <td>
+                                    ${u.is_active 
+                                        ? `<span class="badge bg-success-subtle text-success">Active</span>`
+                                        : `<span class="badge bg-danger-subtle text-danger">Suspended</span>`
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-sm ${u.is_active ? 'btn-outline-danger' : 'btn-outline-success'} py-0 px-2" onclick="adminToggleUserStatus(${u.id}, ${u.is_active})">
+                                            ${u.is_active ? '<i class="fa-solid fa-ban"></i> Suspend' : '<i class="fa-solid fa-check"></i> Activate'}
+                                        </button>
+                                        <button class="btn btn-sm ${u.is_verified ? 'btn-outline-secondary' : 'btn-outline-primary'} py-0 px-2" onclick="adminToggleUserVerify(${u.id}, ${u.is_verified})">
+                                            ${u.is_verified ? 'Revoke KYC' : 'Verify KYC'}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('') : `
+                            <tr><td colspan="7" class="text-center py-4 text-muted">No accounts found for selected filter.</td></tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function adminToggleUserStatus(userId, currentActive) {
+    if (!confirm(`Are you sure you want to ${currentActive ? 'suspend' : 'activate'} this account?`)) return;
+    const ok = await KWDC_API.updateAdminUserStatus(userId, !currentActive);
+    if (ok) {
+        showAdminAlert(`Account status updated successfully.`);
+        loadAdminDrawerUsers(document.getElementById('admin-drawer-content'));
+    } else {
+        showAdminAlert(`Failed to update account status.`, false);
+    }
+}
+
+async function adminToggleUserVerify(userId, currentVerified) {
+    const ok = await KWDC_API.verifyAdminUser(userId, !currentVerified);
+    if (ok) {
+        showAdminAlert(`KYC verification status updated.`);
+        loadAdminDrawerUsers(document.getElementById('admin-drawer-content'));
+    } else {
+        showAdminAlert(`Failed to update verification status.`, false);
+    }
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 3: COMMERCIAL WAREHOUSES
+// -------------------------------------------------------------------------
+async function loadAdminDrawerWarehouses(container) {
+    const warehouses = await KWDC_API.getAdminWarehouses();
+
+    container.innerHTML = `
+        <div class="glass-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-warehouse text-warning me-2"></i> Verified Warehousing Facilities</h5>
+                <a href="/warehouses.html" class="btn btn-kwdc btn-sm rounded-3"><i class="fa-solid fa-plus me-1"></i> List New Facility</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr>
+                            <th>Facility Name</th>
+                            <th>City & Kataho</th>
+                            <th>Area & Rate</th>
+                            <th>Storage Type</th>
+                            <th>Property Owner</th>
+                            <th>Approval Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${warehouses.length > 0 ? warehouses.map(w => `
+                            <tr>
+                                <td class="fw-bold">${escapeHtml(w.name)}</td>
+                                <td>
+                                    <div>${escapeHtml(w.location)}</div>
+                                    <code class="fs-8">${escapeHtml(w.kataho_code || '—')}</code>
+                                </td>
+                                <td>
+                                    <div><strong>${(w.area_sqft || 0).toLocaleString()}</strong> sqft</div>
+                                    <div class="text-success fs-8 fw-semibold">Rs. ${w.price_per_sqft} / sqft</div>
+                                </td>
+                                <td>
+                                    ${w.cold_storage 
+                                        ? `<span class="badge bg-info-subtle text-info"><i class="fa-solid fa-snowflake me-1"></i> Cold (${w.temperature_min}°C to ${w.temperature_max}°C)</span>`
+                                        : `<span class="badge bg-secondary-subtle text-secondary">Dry Goods</span>`
+                                    }
+                                </td>
+                                <td>
+                                    <div>${escapeHtml(w.owner_name)}</div>
+                                    <div class="text-muted fs-8">${escapeHtml(w.owner_email)}</div>
+                                </td>
+                                <td>
+                                    ${w.status === 'approved' 
+                                        ? `<span class="badge bg-success-subtle text-success">Approved</span>`
+                                        : (w.status === 'suspended' 
+                                            ? `<span class="badge bg-danger-subtle text-danger">Suspended</span>`
+                                            : `<span class="badge bg-warning-subtle text-warning">Pending Review</span>`
+                                        )
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        ${w.status !== 'approved' ? `
+                                            <button class="btn btn-sm btn-success py-0 px-2" onclick="adminSetWarehouseStatus(${w.id}, 'approved')">Approve</button>
+                                        ` : ''}
+                                        ${w.status !== 'suspended' ? `
+                                            <button class="btn btn-sm btn-danger py-0 px-2" onclick="adminSetWarehouseStatus(${w.id}, 'suspended')">Suspend</button>
+                                        ` : ''}
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('') : `
+                            <tr><td colspan="7" class="text-center py-4 text-muted">No warehouses in database.</td></tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function adminSetWarehouseStatus(whId, newStatus) {
+    const ok = await KWDC_API.updateAdminWarehouseStatus(whId, newStatus);
+    if (ok) {
+        showAdminAlert(`Warehouse status updated to <strong>${newStatus.toUpperCase()}</strong>.`);
+        loadAdminDrawerWarehouses(document.getElementById('admin-drawer-content'));
+    } else {
+        showAdminAlert(`Failed to update warehouse status.`, false);
+    }
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 4: FREIGHT LOGISTICS & DISPATCHES
+// -------------------------------------------------------------------------
+async function loadAdminDrawerDispatches(container) {
+    const dispatches = await KWDC_API.getAdminDispatches();
+
+    container.innerHTML = `
+        <div class="glass-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-truck-fast text-primary me-2"></i> All Scheduled Freight Dispatches</h5>
+                <a href="/dispatch.html" class="btn btn-kwdc btn-sm rounded-3"><i class="fa-solid fa-plus me-1"></i> Book Dispatch</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr>
+                            <th>Tracking ID</th>
+                            <th>Pickup Address</th>
+                            <th>Distance</th>
+                            <th>Pricing (13% VAT)</th>
+                            <th>Shipper & Driver</th>
+                            <th>Dispatch Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${dispatches.length > 0 ? dispatches.map(d => `
+                            <tr>
+                                <td class="fw-bold"><code>${d.tracking_id}</code></td>
+                                <td>${escapeHtml(d.pickup_address)}</td>
+                                <td><strong>${d.total_distance} km</strong></td>
+                                <td>
+                                    <div class="fw-bold text-success">Rs. ${parseFloat(d.grand_total || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                                    <div class="fs-8 text-muted">Base: Rs. ${d.base_price} &bull; Margin: Rs. ${d.admin_margin}</div>
+                                </td>
+                                <td>
+                                    <div>Shipper: <strong>${escapeHtml(d.client_name)}</strong></div>
+                                    <div class="text-muted fs-8">Driver: ${escapeHtml(d.driver_name)}</div>
+                                </td>
+                                <td>
+                                    <span class="badge ${d.status === 'delivered' ? 'bg-success' : (d.status === 'cancelled' ? 'bg-danger' : 'bg-primary-subtle text-primary')} text-uppercase">
+                                        ${d.status}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-dark dropdown-toggle py-0 px-2" type="button" data-bs-toggle="dropdown">
+                                            Manage
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end fs-8">
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="adminOpenAssignModal(${d.id})"><i class="fa-solid fa-user-plus me-1"></i> Assign Driver</a></li>
+                                            <li><a class="dropdown-item text-success" href="javascript:void(0)" onclick="adminSetDispatchStatus(${d.id}, 'delivered')"><i class="fa-solid fa-check me-1"></i> Mark Delivered</a></li>
+                                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="adminSetDispatchStatus(${d.id}, 'cancelled')"><i class="fa-solid fa-xmark me-1"></i> Cancel Dispatch</a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('') : `
+                            <tr><td colspan="7" class="text-center py-4 text-muted">No dispatches found in database.</td></tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function adminSetDispatchStatus(dispId, newStatus) {
+    const ok = await KWDC_API.updateAdminDispatchStatus(dispId, newStatus);
+    if (ok) {
+        showAdminAlert(`Dispatch status set to <strong>${newStatus.toUpperCase()}</strong>.`);
+        loadAdminDrawerDispatches(document.getElementById('admin-drawer-content'));
+    }
+}
+
+async function adminOpenAssignModal(dispId) {
+    const drivers = await KWDC_API.getAdminUsers('driver');
+    const modalContainer = document.getElementById('admin-modals-container');
+    modalContainer.innerHTML = `
+        <div class="modal fade" id="assignDriverModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-bottom">
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus text-primary me-2"></i> Assign Driver to Dispatch #${dispId}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Select Verified Driver</label>
+                        <select class="form-select rounded-3" id="modal-driver-select">
+                            ${drivers.map(dr => `<option value="${dr.id}">${dr.name} (${dr.phone}) &bull; ${dr.user_code}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-kwdc btn-sm" onclick="adminAssignDriverSubmit(${dispId})">Assign Driver</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    const m = new bootstrap.Modal(document.getElementById('assignDriverModal'));
+    m.show();
+}
+
+async function adminAssignDriverSubmit(dispId) {
+    const drId = document.getElementById('modal-driver-select').value;
+    const ok = await KWDC_API.assignAdminDispatch(dispId, drId);
+    bootstrap.Modal.getInstance(document.getElementById('assignDriverModal')).hide();
+    if (ok) {
+        showAdminAlert(`Driver assigned to dispatch #${dispId}.`);
+        loadAdminDrawerDispatches(document.getElementById('admin-drawer-content'));
+    } else {
+        showAdminAlert(`Failed to assign driver.`, false);
+    }
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 5: REAL-TIME TELEMETRY & FLEET MAP
+// -------------------------------------------------------------------------
+async function loadAdminDrawerTelemetry(container) {
+    const telemetry = await KWDC_API.getAdminTelemetry();
+
+    container.innerHTML = `
+        <div class="glass-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-satellite-dish text-danger me-2"></i> Live Fleet GPS Map (Kathmandu Valley & Corridors)</h5>
+                <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-signal me-1"></i> Live Stream</span>
+            </div>
+            <div id="admin-fleet-map" style="height: 380px; width: 100%; border-radius: 12px;"></div>
+        </div>
+
+        <div class="glass-card">
+            <h6 class="fw-bold mb-3">Active En-Route Dispatches (${telemetry.length})</h6>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr><th>Tracking ID</th><th>Assigned Driver</th><th>Current GPS Coordinates</th><th>Route / Corridor</th><th>Status</th></tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${telemetry.length > 0 ? telemetry.map(t => `
+                            <tr>
+                                <td class="fw-bold"><code>${t.tracking_id}</code></td>
+                                <td>${escapeHtml(t.driver_name)} (${t.driver_phone})</td>
+                                <td><code>${t.current_latitude.toFixed(4)}, ${t.current_longitude.toFixed(4)}</code></td>
+                                <td>${escapeHtml(t.pickup_address)}</td>
+                                <td><span class="badge bg-primary-subtle text-primary">${t.status}</span></td>
+                            </tr>
+                        `).join('') : `
+                            <tr><td colspan="5" class="text-center py-4 text-muted">No active drivers transmitting telemetry at this moment.</td></tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    setTimeout(() => {
+        try {
+            const map = L.map('admin-fleet-map').setView([27.7172, 85.3240], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            telemetry.forEach(t => {
+                L.marker([t.current_latitude, t.current_longitude])
+                    .addTo(map)
+                    .bindPopup(`<strong>${escapeHtml(t.tracking_id)}</strong><br>Driver: ${escapeHtml(t.driver_name)}<br>Status: ${t.status}`);
+            });
+        } catch(e) {
+            console.warn("Leaflet map initialization notice:", e);
+        }
+    }, 150);
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 6: QR INVENTORY & STOCK
+// -------------------------------------------------------------------------
+async function loadAdminDrawerInventory(container) {
+    const data = await KWDC_API.getAdminInventory();
+    const stocks = data.stocks || [];
+
+    container.innerHTML = `
+        <div class="glass-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-0"><i class="fa-solid fa-boxes-stacked text-warning me-2"></i> Commercial QR Inventory & Batches</h5>
+                    <div class="text-muted fs-8">Total Tracked Pallet Boxes: <strong>${data.total_boxes || 0}</strong></div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr><th>Product Name</th><th>SKU & Batch</th><th>Warehouse Depot</th><th>Shipper</th><th>Remaining / Total</th><th>Status</th></tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${stocks.length > 0 ? stocks.map(s => `
+                            <tr>
+                                <td class="fw-bold">${escapeHtml(s.product_name)}</td>
+                                <td>
+                                    <div>SKU: <code>${escapeHtml(s.sku)}</code></div>
+                                    <div class="text-muted fs-8">Batch: ${escapeHtml(s.batch_id)}</div>
+                                </td>
+                                <td>${escapeHtml(s.warehouse_name)}</td>
+                                <td>${escapeHtml(s.client_name)}</td>
+                                <td><strong>${s.remaining_quantity}</strong> / ${s.total_quantity} units</td>
+                                <td><span class="badge bg-success-subtle text-success">${s.status}</span></td>
+                            </tr>
+                        `).join('') : `
+                            <tr><td colspan="6" class="text-center py-4 text-muted">No stock batches in database.</td></tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 7: EQUIPMENT & MACHINERY
+// -------------------------------------------------------------------------
+async function loadAdminDrawerEquipment(container) {
+    const data = await KWDC_API.getAdminEquipment();
+    const equipment = data.equipment || [];
+    const jobs = data.jobs || [];
+
+    container.innerHTML = `
+        <div class="glass-card mb-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-tractor text-info me-2"></i> Heavy Machinery Fleet</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr><th>Equipment</th><th>Type & Model</th><th>Daily Rate</th><th>Security Deposit</th><th>Operating Fleet</th><th>Status</th></tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${equipment.length > 0 ? equipment.map(e => `
+                            <tr>
+                                <td class="fw-bold">${escapeHtml(e.name)}</td>
+                                <td><span class="badge bg-secondary text-uppercase">${e.type}</span> &bull; ${escapeHtml(e.model)}</td>
+                                <td class="text-success fw-bold">Rs. ${parseFloat(e.daily_rate).toLocaleString()} / day</td>
+                                <td>Rs. ${parseFloat(e.security_deposit).toLocaleString()}</td>
+                                <td>${escapeHtml(e.owner_name)}</td>
+                                <td><span class="badge bg-success-subtle text-success">${e.status}</span></td>
+                            </tr>
+                        `).join('') : `
+                            <tr><td colspan="6" class="text-center py-4 text-muted">No heavy machinery registered in database yet.</td></tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 8: SECURITY AGENCIES & INCIDENTS
+// -------------------------------------------------------------------------
+async function loadAdminDrawerSecurity(container) {
+    const data = await KWDC_API.getAdminSecurity();
+    const agencies = data.agencies || [];
+    const incidents = data.incidents || [];
+
+    container.innerHTML = `
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="glass-card h-100">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-building-shield text-primary me-2"></i> Licensed Security Agencies (${agencies.length})</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light fs-8 text-uppercase">
+                                <tr><th>Agency Name</th><th>License & PAN</th><th>Phone</th><th>Status</th></tr>
+                            </thead>
+                            <tbody class="fs-7">
+                                ${agencies.length > 0 ? agencies.map(a => `
+                                    <tr>
+                                        <td class="fw-bold">${escapeHtml(a.agency_name)}</td>
+                                        <td>
+                                            <div>Lic: ${escapeHtml(a.license_number)}</div>
+                                            <div class="text-muted fs-8">PAN: ${escapeHtml(a.pan_vat_number)}</div>
+                                        </td>
+                                        <td>${escapeHtml(a.phone)}</td>
+                                        <td><span class="badge bg-success-subtle text-success">${a.status}</span></td>
+                                    </tr>
+                                `).join('') : `
+                                    <tr><td colspan="4" class="text-center py-4 text-muted">No agencies registered.</td></tr>
+                                `}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="glass-card h-100">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i> Security Incident Escalation Log</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light fs-8 text-uppercase">
+                                <tr><th>Type</th><th>Severity</th><th>Description</th><th>Status</th><th>Action</th></tr>
+                            </thead>
+                            <tbody class="fs-7">
+                                ${incidents.length > 0 ? incidents.map(inc => `
+                                    <tr>
+                                        <td class="fw-bold">${escapeHtml(inc.incident_type)}</td>
+                                        <td><span class="badge bg-danger-subtle text-danger">${inc.severity}</span></td>
+                                        <td>${escapeHtml(inc.description)}</td>
+                                        <td><span class="badge bg-warning-subtle text-warning">${inc.status}</span></td>
+                                        <td>
+                                            ${inc.status !== 'resolved' ? `
+                                                <button class="btn btn-sm btn-outline-success py-0 px-2" onclick="adminResolveIncident(${inc.id})">Resolve</button>
+                                            ` : '—'}
+                                        </td>
+                                    </tr>
+                                `).join('') : `
+                                    <tr><td colspan="5" class="text-center py-4 text-muted">No security incidents logged. Perimeter is secure.</td></tr>
+                                `}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function adminResolveIncident(incId) {
+    const ok = await KWDC_API.updateAdminIncidentStatus(incId, 'resolved');
+    if (ok) {
+        showAdminAlert(`Incident #${incId} marked as resolved.`);
+        loadAdminDrawerSecurity(document.getElementById('admin-drawer-content'));
+    }
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 9: 13% IRD VAT INVOICES
+// -------------------------------------------------------------------------
+async function loadAdminDrawerInvoices(container) {
+    const data = await KWDC_API.getAdminInvoices();
+    const invoices = data.invoices || [];
+    const sum = data.summary || {};
+
+    container.innerHTML = `
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-xl-3">
+                <div class="glass-card mb-0">
+                    <span class="text-muted fs-8 text-uppercase fw-bold">Total Invoiced</span>
+                    <div class="fs-3 fw-bold text-dark mt-1">Rs. ${(sum.total_billed || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <div class="glass-card mb-0">
+                    <span class="text-muted fs-8 text-uppercase fw-bold">13% Nepal VAT Audited</span>
+                    <div class="fs-3 fw-bold text-danger mt-1">Rs. ${(sum.total_tax_13_vat || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <div class="glass-card mb-0">
+                    <span class="text-muted fs-8 text-uppercase fw-bold">Settled Payments</span>
+                    <div class="fs-3 fw-bold text-success mt-1">Rs. ${(sum.total_settled || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <div class="glass-card mb-0">
+                    <span class="text-muted fs-8 text-uppercase fw-bold">Pending Receivables</span>
+                    <div class="fs-3 fw-bold text-warning mt-1">Rs. ${(sum.total_unpaid || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-file-invoice-dollar text-danger me-2"></i> Statutory Tax Invoices (Nepal VAT Act 2052)</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Service Type</th>
+                            <th>Shipper / Account</th>
+                            <th>Subtotal</th>
+                            <th>13% VAT</th>
+                            <th>Grand Total</th>
+                            <th>Payment Status</th>
+                            <th>Receipt</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${invoices.length > 0 ? invoices.map(inv => `
+                            <tr>
+                                <td class="fw-bold"><code>${inv.invoice_number}</code></td>
+                                <td><span class="badge bg-light text-dark border">${escapeHtml(inv.order_type)}</span></td>
+                                <td>${escapeHtml(inv.client_name)}</td>
+                                <td>Rs. ${parseFloat(inv.subtotal).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                <td class="text-danger fw-bold">Rs. ${parseFloat(inv.tax_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                <td class="text-success fw-bold">Rs. ${parseFloat(inv.grand_total).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                <td>
+                                    ${inv.payment_status === 'paid' 
+                                        ? `<span class="badge bg-success-subtle text-success"><i class="fa-solid fa-check me-1"></i> Paid (${inv.payment_method})</span>`
+                                        : `<span class="badge bg-danger-subtle text-danger">Unpaid</span>`
+                                    }
+                                </td>
+                                <td>
+                                    <a href="/api/invoices/${inv.id}/download" target="_blank" class="btn btn-sm btn-outline-danger py-0 px-2">
+                                        <i class="fa-solid fa-file-pdf me-1"></i> Tax PDF
+                                    </a>
+                                </td>
+                            </tr>
+                        `).join('') : `
+                            <tr><td colspan="8" class="text-center py-4 text-muted">No tax invoices in database.</td></tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// -------------------------------------------------------------------------
+// DRAWER 10: PLATFORM MARGINS & SETTINGS
+// -------------------------------------------------------------------------
+async function loadAdminDrawerSettings(container) {
+    const data = await KWDC_API.getAdminSettings();
+    const tiers = data.margin_tiers || [];
+    const tariffs = data.vehicle_tariffs || [];
+
+    container.innerHTML = `
         <div class="row g-4">
             <div class="col-lg-6">
                 <div class="glass-card h-100">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-sliders text-warning me-2"></i> Platform Margin Tiers</h5>
-                        <span class="badge bg-dark rounded-pill">Active Rules</span>
+                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-sliders text-warning me-2"></i> Distance Commission Tiers</h5>
+                        <button class="btn btn-kwdc btn-sm py-1 px-3" data-bs-toggle="modal" data-bs-target="#newTierModal">
+                            <i class="fa-solid fa-plus me-1"></i> Add Tier
+                        </button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light fs-8 text-uppercase">
-                                <tr><th>Tier</th><th>Distance</th><th>Margin %</th><th>Status</th></tr>
+                                <tr><th>Tier Name</th><th>Distance Range</th><th>Margin %</th><th>Action</th></tr>
                             </thead>
                             <tbody class="fs-7">
-                                ${marginTiers.length > 0 ? marginTiers.map(t => `
+                                ${tiers.length > 0 ? tiers.map(t => `
                                     <tr>
-                                        <td class="fw-bold">${t.tier_name}</td>
-                                        <td>${t.min_distance_km} - ${t.max_distance_km} km</td>
-                                        <td class="text-warning fw-bold">${t.margin_percent}%</td>
-                                        <td><span class="badge bg-success-subtle text-success">Enforced</span></td>
+                                        <td class="fw-bold">${escapeHtml(t.name)}</td>
+                                        <td>${t.min_distance} - ${t.max_distance ? t.max_distance + ' km' : '∞ km'}</td>
+                                        <td class="fw-bold text-warning">${t.margin_value}%</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="adminDeleteMarginTier(${t.id})">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 `).join('') : `
                                     <tr><td colspan="4" class="text-center py-3 text-muted">No margin tiers defined.</td></tr>
@@ -392,26 +1162,99 @@ function renderAdminCockpit(container, s) {
                     </div>
                 </div>
             </div>
+
             <div class="col-lg-6">
                 <div class="glass-card h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-user-shield text-primary me-2"></i> Registered Ecosystem Users</h5>
-                        <a href="/register.html" class="btn btn-outline-dark btn-sm rounded-3"><i class="fa-solid fa-plus me-1"></i> Add Entity</a>
-                    </div>
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-truck text-primary me-2"></i> Nepal Highway Vehicle Base Tariffs</h5>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light fs-8 text-uppercase">
-                                <tr><th>Code</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr>
+                                <tr><th>Vehicle Category</th><th>Per-KM Tariff</th><th>Minimum Base Fare</th></tr>
                             </thead>
                             <tbody class="fs-7">
-                                ${usersRows}
+                                ${tariffs.map(tf => `
+                                    <tr>
+                                        <td class="fw-bold">${tf.vehicle}</td>
+                                        <td class="text-success fw-bold">Rs. ${tf.base_price_per_km} / km</td>
+                                        <td>Rs. ${tf.minimum_base_fare}</td>
+                                    </tr>
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Add Tier Modal -->
+        <div class="modal fade" id="newTierModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-bottom">
+                        <h5 class="modal-title fw-bold">Add Platform Distance Tier</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form onsubmit="adminAddMarginTier(event)">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold fs-8 text-uppercase">Tier Name</label>
+                                <input type="text" class="form-control" id="tier-name" placeholder="e.g. Mountain Extreme Haul" required>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold fs-8 text-uppercase">Min Distance (km)</label>
+                                    <input type="number" step="0.1" class="form-control" id="tier-min" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold fs-8 text-uppercase">Max Distance (km)</label>
+                                    <input type="number" step="0.1" class="form-control" id="tier-max" placeholder="Leave empty for unlimited">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold fs-8 text-uppercase">Admin Commission Margin (%)</label>
+                                <input type="number" step="0.1" class="form-control" id="tier-percent" placeholder="e.g. 15.0" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-kwdc btn-sm">Save Commission Tier</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     `;
+}
+
+async function adminAddMarginTier(e) {
+    e.preventDefault();
+    const payload = {
+        name: document.getElementById('tier-name').value.trim(),
+        min_distance: parseFloat(document.getElementById('tier-min').value),
+        max_distance: document.getElementById('tier-max').value ? parseFloat(document.getElementById('tier-max').value) : null,
+        margin_value: parseFloat(document.getElementById('tier-percent').value),
+        service_type: 'dispatch',
+        margin_type: 'percentage',
+        is_active: true
+    };
+
+    const ok = await KWDC_API.createAdminMarginTier(payload);
+    bootstrap.Modal.getInstance(document.getElementById('newTierModal')).hide();
+    if (ok) {
+        showAdminAlert(`Commission tier <strong>${escapeHtml(payload.name)}</strong> saved.`);
+        loadAdminDrawerSettings(document.getElementById('admin-drawer-content'));
+    } else {
+        showAdminAlert(`Failed to save commission tier.`, false);
+    }
+}
+
+async function adminDeleteMarginTier(tierId) {
+    if (!confirm(`Are you sure you want to deactivate this commission tier?`)) return;
+    const ok = await KWDC_API.deleteAdminMarginTier(tierId);
+    if (ok) {
+        showAdminAlert(`Commission tier #${tierId} deactivated.`);
+        loadAdminDrawerSettings(document.getElementById('admin-drawer-content'));
+    }
 }
 
 // 2. Warehouse Property Owner Cockpit

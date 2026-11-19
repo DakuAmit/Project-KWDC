@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     KWDC_DEMO_PASSWORD: str = os.getenv("KWDC_DEMO_PASSWORD", "KwdcNew2026!")
 
     # Superadmin Credentials (Configured in Vercel Environment Variables)
-    ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
-    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")
+    ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "app.netpack@gmail.com")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "Admin@2026")
     ADMIN_NAME: str = os.getenv("ADMIN_NAME", "System Superadmin")
     ADMIN_PHONE: str = os.getenv("ADMIN_PHONE", "9800000000")
 

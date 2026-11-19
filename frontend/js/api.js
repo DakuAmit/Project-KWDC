@@ -232,6 +232,123 @@ const KWDC_API = {
             return { ok: res.ok, status: res.status, data };
         }
         return { ok: false, data: null };
+    },
+
+    // ==========================================
+    // SuperAdmin Console & Drawer API Services
+    // ==========================================
+    async getAdminOverview() {
+        const res = await this.request('/api/admin/overview');
+        return (res && res.ok) ? await res.json() : null;
+    },
+
+    async getAdminUsers(role = '') {
+        const url = role && role !== 'all' ? `/api/admin/users?role=${encodeURIComponent(role)}` : '/api/admin/users';
+        const res = await this.request(url);
+        return (res && res.ok) ? await res.json() : [];
+    },
+
+    async updateAdminUserStatus(userId, isActive) {
+        const res = await this.request(`/api/admin/users/${userId}/status`, {
+            method: 'POST',
+            body: JSON.stringify({ is_active: isActive })
+        });
+        return (res && res.ok);
+    },
+
+    async verifyAdminUser(userId, isVerified) {
+        const res = await this.request(`/api/admin/users/${userId}/verify`, {
+            method: 'POST',
+            body: JSON.stringify({ is_verified: isVerified })
+        });
+        return (res && res.ok);
+    },
+
+    async getAdminWarehouses() {
+        const res = await this.request('/api/admin/warehouses');
+        return (res && res.ok) ? await res.json() : [];
+    },
+
+    async updateAdminWarehouseStatus(warehouseId, status) {
+        const res = await this.request(`/api/admin/warehouses/${warehouseId}/status`, {
+            method: 'POST',
+            body: JSON.stringify({ status })
+        });
+        return (res && res.ok);
+    },
+
+    async getAdminDispatches() {
+        const res = await this.request('/api/admin/dispatches');
+        return (res && res.ok) ? await res.json() : [];
+    },
+
+    async updateAdminDispatchStatus(dispatchId, status) {
+        const res = await this.request(`/api/admin/dispatches/${dispatchId}/status`, {
+            method: 'POST',
+            body: JSON.stringify({ status })
+        });
+        return (res && res.ok);
+    },
+
+    async assignAdminDispatch(dispatchId, driverId) {
+        const res = await this.request(`/api/admin/dispatches/${dispatchId}/assign`, {
+            method: 'POST',
+            body: JSON.stringify({ driver_id: parseInt(driverId) })
+        });
+        return (res && res.ok);
+    },
+
+    async getAdminTelemetry() {
+        const res = await this.request('/api/admin/telemetry');
+        return (res && res.ok) ? await res.json() : [];
+    },
+
+    async getAdminInventory() {
+        const res = await this.request('/api/admin/inventory');
+        return (res && res.ok) ? await res.json() : { total_boxes: 0, stocks: [] };
+    },
+
+    async getAdminEquipment() {
+        const res = await this.request('/api/admin/equipment');
+        return (res && res.ok) ? await res.json() : { equipment: [], jobs: [] };
+    },
+
+    async getAdminSecurity() {
+        const res = await this.request('/api/admin/security');
+        return (res && res.ok) ? await res.json() : { total_guards: 0, agencies: [], incidents: [] };
+    },
+
+    async updateAdminIncidentStatus(incidentId, status) {
+        const res = await this.request(`/api/admin/security/incidents/${incidentId}/status`, {
+            method: 'POST',
+            body: JSON.stringify({ status })
+        });
+        return (res && res.ok);
+    },
+
+    async getAdminInvoices() {
+        const res = await this.request('/api/admin/invoices');
+        return (res && res.ok) ? await res.json() : { summary: {}, invoices: [] };
+    },
+
+    async getAdminSettings() {
+        const res = await this.request('/api/admin/settings');
+        return (res && res.ok) ? await res.json() : { margin_tiers: [], vehicle_tariffs: [] };
+    },
+
+    async createAdminMarginTier(tierData) {
+        const res = await this.request('/api/admin/settings/margin-tiers', {
+            method: 'POST',
+            body: JSON.stringify(tierData)
+        });
+        return (res && res.ok);
+    },
+
+    async deleteAdminMarginTier(tierId) {
+        const res = await this.request(`/api/admin/settings/margin-tiers/${tierId}`, {
+            method: 'DELETE'
+        });
+        return (res && res.ok);
     }
 };
 

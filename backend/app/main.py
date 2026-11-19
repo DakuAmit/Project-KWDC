@@ -12,6 +12,7 @@ from app.routers import (
     auth_router,
     portal_router,
     admin_router,
+    admin_api_router,
     driver_router,
     property_router,
     equipment_router,
@@ -76,6 +77,7 @@ if os.path.exists(static_dir):
 app.include_router(auth_router)
 app.include_router(portal_router)
 app.include_router(admin_router)
+app.include_router(admin_api_router)
 app.include_router(driver_router)
 app.include_router(property_router)
 app.include_router(equipment_router)
