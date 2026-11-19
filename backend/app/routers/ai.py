@@ -4,12 +4,15 @@ from app.services.ai_service import AIService
 from app.schemas.ai import AIChatRequest, AIDispatchAdvisorRequest, VoiceCommandRequest
 
 router = APIRouter(prefix="/ai", tags=["AI Copilot & Logistics Assistant"])
+api_router = APIRouter(prefix="/api/ai", tags=["AI Copilot API"])
 
+@api_router.post("/chat")
 @router.post("/chat")
 async def chat_support(payload: AIChatRequest) -> Dict[str, Any]:
     response = await AIService.generate_response(payload.message)
     return {"status": "success", "reply": response}
 
+@api_router.post("/dispatch-advisor")
 @router.post("/dispatch-advisor")
 async def dispatch_advisor(payload: AIDispatchAdvisorRequest) -> Dict[str, Any]:
     advice = await AIService.dispatch_advisor(
@@ -19,6 +22,7 @@ async def dispatch_advisor(payload: AIDispatchAdvisorRequest) -> Dict[str, Any]:
     )
     return advice
 
+@api_router.post("/voice-command")
 @router.post("/voice-command")
 async def handle_voice(payload: VoiceCommandRequest) -> Dict[str, Any]:
     advice = await AIService.dispatch_advisor(

@@ -177,3 +177,82 @@ def test_ai_dispatch_advisor():
     data = response.json()
     assert "estimated_km" in data
     assert "recommended_vehicle" in data
+
+def test_warehouse_and_invoice_api_production_flow():
+    # 1. Login as user to get auth token
+    login_resp = client.post("/api/auth/login", json={
+        "email": "contact@himalayancargo.np",
+        "password": "BrandNewPassword2026!"
+    })
+    assert login_resp.status_code == 200
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 2. List a new real commercial warehouse
+    wh_resp = client.post("/api/warehouses", json={
+        "name": "Bhairahawa Special Economic Zone Cold Hub",
+        "location": "Bhairahawa, Rupandehi",
+        "address": "SEZ Industrial Area, Plot 4",
+        "kataho_code": "BHA-SEZ-04",
+        "area_sqft": 15000.0,
+        "price_per_sqft": 40.0,
+        "cold_storage": True,
+        "temperature_min": -2.0,
+        "temperature_max": 6.0,
+        "description": "Multi-chamber cold facility for pharmaceuticals and perishable agriculture."
+    }, headers=headers)
+    assert wh_resp.status_code == 200
+    wh_data = wh_resp.json()
+    assert wh_data["status"] == "success"
+    wh_id = wh_data["warehouse"]["id"]
+
+    # 3. Fetch warehouses list via GET /api/warehouses
+    list_resp = client.get("/api/warehouses")
+    assert list_resp.status_code == 200
+    warehouses = list_resp.json()
+    assert any(w["id"] == wh_id for w in warehouses)
+
+    # 4. Reserve storage space (500 sqft)
+    res_resp = client.post(f"/api/warehouses/{wh_id}/reserve", json={
+        "space_required": 500.0,
+        "purpose": "Cold fruit transit storage"
+    }, headers=headers)
+    assert res_resp.status_code == 200
+    res_data = res_resp.json()
+    assert res_data["status"] == "success"
+    inv = res_data["invoice"]
+    assert inv["subtotal"] == 20000.0  # 500 sqft * 40 Rs/sqft
+    assert inv["vat_amount"] == 2600.0  # 13% VAT
+    assert inv["grand_total"] == 22600.0
+    inv_id = inv["id"]
+
+    # 5. Fetch real invoices via GET /api/invoices
+    inv_list_resp = client.get("/api/invoices", headers=headers)
+    assert inv_list_resp.status_code == 200
+    invoices = inv_list_resp.json()
+    assert any(i["id"] == inv_id for i in invoices)
+
+    # 6. Settle invoice via POST /api/invoices/{id}/pay (eSewa)
+    pay_resp = client.post(f"/api/invoices/{inv_id}/pay", json={
+        "payment_method": "esewa",
+        "reference_id": "ESEWA-TEST-998877"
+    }, headers=headers)
+    assert pay_resp.status_code == 200
+    pay_data = pay_resp.json()
+    assert pay_data["status"] == "success"
+    assert pay_data["invoice"]["payment_status"] == "paid"
+
+    # 7. Check Dashboard Stats reflects real live figures
+    stats_resp = client.get("/api/dashboard/stats", headers=headers)
+    assert stats_resp.status_code == 200
+    stats = stats_resp.json()
+    assert "stats" in stats
+    assert stats["stats"]["storage_sqft"] == 500.0
+    assert stats["stats"]["unpaid_invoices_amount"] == 0.0
+    assert len(stats["stats"]["invoices"]) >= 1
+
+    # 8. Check PDF Tax Invoice download via GET /api/invoices/{inv_id}/download
+    pdf_resp = client.get(f"/api/invoices/{inv_id}/download")
+    assert pdf_resp.status_code == 200
+    assert pdf_resp.headers["content-type"] == "application/pdf"
+    assert pdf_resp.content.startswith(b"%PDF")

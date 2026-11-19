@@ -24,7 +24,7 @@
             background: linear-gradient(135deg, #f97316, #ea580c); color: white;
             font-weight: 600; border-radius: 10px; padding: 8px 18px; border: none;
         }
-        .btn-kwdc:hover { color: white; }
+        .btn-kwdc:hover { color: white; opacity: 0.95; }
     </style>
 </head>
 <body>
@@ -39,85 +39,157 @@
         </a>
         <div class="ms-auto d-flex gap-2">
             <a href="/dashboard.html" class="btn btn-outline-dark btn-sm rounded-3">Dashboard</a>
+            <a href="/warehouses.html" class="btn btn-outline-secondary btn-sm rounded-3">Warehouses</a>
             <a href="/dispatch.html" class="btn btn-outline-warning btn-sm rounded-3">New Dispatch</a>
         </div>
     </div>
 </nav>
 
 <div class="container py-4">
+    <!-- Header banner -->
     <div class="glass-card mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <h3 class="fw-bold kwdc-serif mb-1">Inland Revenue Department (IRD) Tax Invoices</h3>
                 <p class="text-muted fs-7 mb-0">13% Value Added Tax compliance under Nepal VAT Act 2052 with cryptographic QR validation</p>
             </div>
+            <div class="d-flex gap-2">
+                <a href="/dispatch.html" class="btn btn-kwdc btn-sm"><i class="fa-solid fa-plus me-1"></i> New Order</a>
+            </div>
         </div>
     </div>
 
-    <!-- Active Invoices Table -->
-    <div class="glass-card">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light fs-8 text-uppercase">
-                    <tr>
-                        <th>Invoice Number</th>
-                        <th>Order Type</th>
-                        <th>Taxable Subtotal</th>
-                        <th>13% VAT</th>
-                        <th>Grand Total</th>
-                        <th>Payment Status</th>
-                        <th>Settlement Gateways</th>
-                    </tr>
-                </thead>
-                <tbody class="fs-7">
-                    <tr>
-                        <td class="fw-bold"><code>INV-2026-0012</code></td>
-                        <td><span class="badge bg-light text-dark border">Freight Dispatch</span></td>
-                        <td>Rs. 2,282.00</td>
-                        <td class="text-danger fw-bold">Rs. 296.66</td>
-                        <td class="text-success fw-bold fs-6">Rs. 2,578.66</td>
-                        <td><span class="badge bg-danger-subtle text-danger" id="status-badge">Unpaid</span></td>
-                        <td>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-success fw-bold px-2 py-1" onclick="payEsewa('INV-2026-0012', 2578.66)">
-                                    <i class="fa-solid fa-wallet me-1"></i> eSewa
-                                </button>
-                                <button class="btn btn-sm text-white fw-bold px-2 py-1" style="background:#5c2d91;" onclick="payKhalti('INV-2026-0012', 2578.66)">
-                                    <i class="fa-solid fa-mobile-screen me-1"></i> Khalti
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger px-2 py-1" onclick="downloadPdf()">
-                                    <i class="fa-solid fa-file-pdf me-1"></i> Tax PDF
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- Alert Box -->
+    <div id="alert-box" class="alert d-none mb-4" role="alert"></div>
+
+    <!-- Active Invoices Table / Empty Container -->
+    <div id="invoices-container">
+        <div class="text-center py-5 glass-card">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p class="text-muted mt-2 fs-7">Loading invoices from database...</p>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/js/api.js"></script>
 <script>
-function payEsewa(inv, amt) {
-    if (confirm(`Confirm eSewa EPWI checkout for Rs. ${amt} on Invoice ${inv}?`)) {
-        document.getElementById('status-badge').className = 'badge bg-success-subtle text-success';
-        document.getElementById('status-badge').innerText = 'Paid via eSewa';
-        alert('Payment verified! Status updated to PAID.');
+function showAlert(msg, isSuccess = true) {
+    const b = document.getElementById('alert-box');
+    b.className = `alert ${isSuccess ? 'alert-success' : 'alert-danger'}`;
+    b.innerHTML = msg;
+    b.classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function loadInvoices() {
+    const container = document.getElementById('invoices-container');
+    try {
+        const invoices = await KWDC_API.getInvoices();
+        if (!invoices || invoices.length === 0) {
+            container.innerHTML = `
+                <div class="glass-card text-center py-5">
+                    <div style="width:64px;height:64px;background:#fff7ed;color:#ea580c;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                    <h4 class="fw-bold mb-2">No Invoices Issued Yet</h4>
+                    <p class="text-muted fs-7 max-w-md mx-auto mb-4">
+                        Under Nepal VAT Act 2052, official tax invoices are automatically created and audited when you book freight dispatches or storage warehouse leases.
+                    </p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="/dispatch.html" class="btn btn-kwdc"><i class="fa-solid fa-truck-fast me-1"></i> Book Freight Dispatch</a>
+                        <a href="/warehouses.html" class="btn btn-outline-dark"><i class="fa-solid fa-warehouse me-1"></i> Browse Storage Space</a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="glass-card">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light fs-8 text-uppercase">
+                            <tr>
+                                <th>Invoice Number</th>
+                                <th>Order Type</th>
+                                <th>Taxable Subtotal</th>
+                                <th>13% VAT</th>
+                                <th>Grand Total</th>
+                                <th>Payment Status</th>
+                                <th>Actions & Settlement</th>
+                            </tr>
+                        </thead>
+                        <tbody class="fs-7">
+                            ${invoices.map(inv => {
+                                const isPaid = (inv.payment_status || '').toLowerCase() === 'paid';
+                                return `
+                                    <tr>
+                                        <td class="fw-bold"><code>${escapeHtml(inv.invoice_number)}</code></td>
+                                        <td><span class="badge bg-light text-dark border">${escapeHtml(inv.order_type)}</span></td>
+                                        <td>Rs. ${parseFloat(inv.subtotal || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                        <td class="text-danger fw-bold">Rs. ${parseFloat(inv.tax_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                        <td class="text-success fw-bold fs-6">Rs. ${parseFloat(inv.grand_total || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                        <td>
+                                            ${isPaid 
+                                                ? `<span class="badge bg-success-subtle text-success"><i class="fa-solid fa-check me-1"></i> Paid (${escapeHtml(inv.payment_method || 'Online')})</span>`
+                                                : `<span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-clock me-1"></i> Unpaid</span>`
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                ${!isPaid ? `
+                                                    <button class="btn btn-sm btn-success fw-bold px-2 py-1" onclick="settlePayment(${inv.id}, '${escapeJs(inv.invoice_number)}', 'esewa', ${inv.grand_total})">
+                                                        <i class="fa-solid fa-wallet me-1"></i> eSewa
+                                                    </button>
+                                                    <button class="btn btn-sm text-white fw-bold px-2 py-1" style="background:#5c2d91;" onclick="settlePayment(${inv.id}, '${escapeJs(inv.invoice_number)}', 'khalti', ${inv.grand_total})">
+                                                        <i class="fa-solid fa-mobile-screen me-1"></i> Khalti
+                                                    </button>
+                                                ` : ''}
+                                                <a href="/api/invoices/${inv.id}/download" target="_blank" class="btn btn-sm btn-outline-danger px-2 py-1">
+                                                    <i class="fa-solid fa-file-pdf me-1"></i> Tax PDF
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } catch(err) {
+        container.innerHTML = `<div class="alert alert-danger">Error fetching invoices: ${err.message}</div>`;
     }
 }
 
-function payKhalti(inv, amt) {
-    if (confirm(`Confirm Khalti ePayment checkout for Rs. ${amt} on Invoice ${inv}?`)) {
-        document.getElementById('status-badge').className = 'badge bg-success-subtle text-success';
-        document.getElementById('status-badge').innerText = 'Paid via Khalti';
-        alert('Payment verified! Status updated to PAID.');
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+}
+
+function escapeJs(str) {
+    if (!str) return '';
+    return String(str).replace(/'/g, "\\'");
+}
+
+async function settlePayment(id, invNum, gateway, amount) {
+    const formatted = parseFloat(amount).toLocaleString('en-US', {minimumFractionDigits: 2});
+    if (!confirm(`Confirm ${gateway.toUpperCase()} payment of Rs. ${formatted} for invoice ${invNum}?`)) {
+        return;
+    }
+
+    const res = await KWDC_API.payInvoice(id, gateway);
+    if (res.ok) {
+        showAlert(`Payment verified! Invoice <strong>${escapeHtml(invNum)}</strong> settled via ${gateway.toUpperCase()}.`);
+        loadInvoices();
+    } else {
+        showAlert(res.data?.detail || 'Payment failed. Please try again.', false);
     }
 }
 
-function downloadPdf() {
-    window.open('/invoices/1/download', '_blank');
-}
+loadInvoices();
 </script>
 </body>
 </html>

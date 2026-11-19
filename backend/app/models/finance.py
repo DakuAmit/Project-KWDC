@@ -43,6 +43,14 @@ class Invoice(Base):
     warehouse_request = relationship("WarehouseRequest", back_populates="invoices")
     transactions = relationship("Transaction", back_populates="invoice", cascade="all, delete-orphan")
 
+    @property
+    def total_amount(self):
+        return float(self.grand_total or self.amount or 0.0)
+
+    @property
+    def vat_amount(self):
+        return float(self.tax_amount or 0.0)
+
 class Transaction(Base):
     __tablename__ = "transactions"
 

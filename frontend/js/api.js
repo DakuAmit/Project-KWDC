@@ -152,7 +152,7 @@ const KWDC_API = {
     },
 
     async calculatePrice(distance, vehicleType = 'truck', stopsCount = 1) {
-        const res = await this.request('/dispatch/calculate-price', {
+        const res = await this.request('/api/dispatch/calculate-price', {
             method: 'POST',
             body: JSON.stringify({
                 distance: parseFloat(distance),
@@ -167,7 +167,7 @@ const KWDC_API = {
     },
 
     async chatAI(message) {
-        const res = await this.request('/ai/chat', {
+        const res = await this.request('/api/ai/chat', {
             method: 'POST',
             body: JSON.stringify({ message })
         });
@@ -175,6 +175,63 @@ const KWDC_API = {
             return await res.json();
         }
         return { reply: 'AI service temporarily in fallback mode.' };
+    },
+
+    // Real Warehousing API
+    async getWarehouses() {
+        const res = await this.request('/api/warehouses');
+        if (res && res.ok) {
+            return await res.json();
+        }
+        return [];
+    },
+
+    async createWarehouse(whData) {
+        const res = await this.request('/api/warehouses', {
+            method: 'POST',
+            body: JSON.stringify(whData)
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async reserveWarehouse(warehouseId, payload) {
+        const res = await this.request(`/api/warehouses/${warehouseId}/reserve`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    // Real Invoices & IRD Tax Settlements
+    async getInvoices() {
+        const res = await this.request('/api/invoices');
+        if (res && res.ok) {
+            return await res.json();
+        }
+        return [];
+    },
+
+    async payInvoice(invoiceId, paymentMethod = 'esewa') {
+        const res = await this.request(`/api/invoices/${invoiceId}/pay`, {
+            method: 'POST',
+            body: JSON.stringify({ payment_method: paymentMethod })
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
     }
 };
 

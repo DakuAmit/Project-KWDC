@@ -41,6 +41,9 @@ def create_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login")
     return templates.TemplateResponse(request=request, name="dispatch/create.html", context={"user": user})
 
+api_router = APIRouter(prefix="/api/dispatch", tags=["Dispatch API"])
+
+@api_router.post("/calculate-price", response_model=PriceCalculateResponse)
 @router.post("/calculate-price", response_model=PriceCalculateResponse)
 def calculate_price_ajax(payload: PriceCalculateRequest, db: Session = Depends(get_db)):
     calc = PricingService.calculate_dispatch_price(

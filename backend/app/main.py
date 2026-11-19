@@ -17,12 +17,16 @@ from app.routers import (
     equipment_router,
     security_router,
     warehouse_router,
+    warehouse_api_router,
     dispatch_router,
+    dispatch_api_router,
     pickup_router,
     inventory_router,
     invoice_router,
+    invoice_api_router,
     payment_router,
     ai_router,
+    ai_api_router,
     websocket_router
 )
 
@@ -77,12 +81,16 @@ app.include_router(property_router)
 app.include_router(equipment_router)
 app.include_router(security_router)
 app.include_router(warehouse_router)
+app.include_router(warehouse_api_router)
 app.include_router(dispatch_router)
+app.include_router(dispatch_api_router)
 app.include_router(pickup_router)
 app.include_router(inventory_router)
 app.include_router(invoice_router)
+app.include_router(invoice_api_router)
 app.include_router(payment_router)
 app.include_router(ai_router)
+app.include_router(ai_api_router)
 app.include_router(websocket_router)
 
 from sqlalchemy.orm import Session

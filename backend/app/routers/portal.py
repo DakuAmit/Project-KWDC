@@ -6,7 +6,7 @@ from sqlalchemy import func
 from app.core.database import get_db
 from app.core.security import get_current_user_from_request
 from app.models.user import User
-from app.models.warehouse import Warehouse
+from app.models.warehouse import Warehouse, WarehouseRequest
 from app.models.logistics import DispatchOrder, DriverRate
 from app.models.finance import Invoice, MarginTier
 from app.models.equipment import Equipment, EquipmentJob
@@ -93,14 +93,24 @@ def api_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         warehouses = db.query(Warehouse).filter(Warehouse.user_id == user.id).all()
         if not warehouses and user.is_admin:
             warehouses = db.query(Warehouse).all()
+            
         total_capacity = sum(float(w.area_sqft or 0) for w in warehouses)
-        monthly_cashflow = sum(float(w.area_sqft or 0) * float(w.price_per_sqft or 25) for w in warehouses)
+        monthly_cashflow = sum(float(w.area_sqft or 0) * float(w.price_per_sqft or 0) for w in warehouses)
+        
+        # Real pending space inquiries for properties owned by this user
+        wh_ids = [w.id for w in warehouses]
+        pending_reqs = 0
+        if wh_ids:
+            pending_reqs = db.query(WarehouseRequest).filter(
+                WarehouseRequest.warehouse_id.in_(wh_ids),
+                WarehouseRequest.status == "pending"
+            ).count()
         
         response_data["stats"] = {
             "total_properties": len(warehouses),
             "total_capacity_sqft": total_capacity,
-            "monthly_cashflow": monthly_cashflow if monthly_cashflow > 0 else 320000.0,
-            "pending_requests": 2,
+            "monthly_cashflow": monthly_cashflow,
+            "pending_requests": pending_reqs,
             "warehouses": [
                 {
                     "id": w.id,
@@ -108,8 +118,8 @@ def api_dashboard_stats(request: Request, db: Session = Depends(get_db)):
                     "location": w.location,
                     "area_sqft": float(w.area_sqft or 0),
                     "price_per_sqft": float(w.price_per_sqft or 0),
-                    "cold_storage": w.cold_storage,
-                    "temperature_min": float(w.temperature_min or 0) if w.temperature_min else None,
+                    "cold_storage": bool(w.cold_storage),
+                    "temperature_min": float(w.temperature_min or 0) if w.temperature_min is not None else None,
                     "status": w.status
                 } for w in warehouses
             ]
@@ -117,15 +127,17 @@ def api_dashboard_stats(request: Request, db: Session = Depends(get_db)):
 
     elif role == "driver":
         jobs = db.query(DispatchOrder).filter(
-            (DispatchOrder.driver_id == user.id) | (DispatchOrder.status == "pending")
-        ).order_by(DispatchOrder.id.desc()).limit(10).all()
+            (DispatchOrder.driver_id == user.id)
+        ).order_by(DispatchOrder.id.desc()).limit(15).all()
+        
         rates = db.query(DriverRate).filter(DriverRate.user_id == user.id).all()
-        pending_fares = sum(float(j.base_price or 0) for j in jobs if j.status == "assigned")
+        settled_payouts = sum(float(j.base_price or 0) for j in jobs if j.status == "completed")
+        pending_fares = sum(float(j.base_price or 0) for j in jobs if j.status in ("assigned", "in_transit"))
 
         response_data["stats"] = {
-            "settled_payouts": 42500.0,
-            "pending_fares": pending_fares if pending_fares > 0 else 6800.0,
-            "total_trips": len(jobs),
+            "settled_payouts": settled_payouts,
+            "pending_fares": pending_fares,
+            "total_trips": len([j for j in jobs if j.status == "completed"]),
             "jobs": [
                 {
                     "id": j.id,
@@ -148,15 +160,23 @@ def api_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         }
 
     elif role == "equipment_owner":
-        equipment = db.query(Equipment).filter((Equipment.user_id == user.id) | (Equipment.owner_id == user.id)).all()
-        if not equipment:
-            equipment = db.query(Equipment).limit(8).all()
-        jobs = db.query(EquipmentJob).limit(5).all()
+        equipment = db.query(Equipment).filter(
+            (Equipment.user_id == user.id) | (Equipment.owner_id == user.id)
+        ).all()
+        if not equipment and user.is_admin:
+            equipment = db.query(Equipment).all()
+            
+        eq_ids = [eq.id for eq in equipment]
+        jobs = []
+        if eq_ids:
+            jobs = db.query(EquipmentJob).filter(EquipmentJob.equipment_id.in_(eq_ids)).all()
+
+        monthly_revenue = sum(float(job.agreed_rate or 0) for job in jobs if job.status == "completed")
 
         response_data["stats"] = {
             "total_machinery": len(equipment),
-            "active_leases": len(jobs),
-            "monthly_revenue": 185000.0,
+            "active_leases": len([j for j in jobs if j.status == "active"]),
+            "monthly_revenue": monthly_revenue,
             "equipment": [
                 {
                     "id": eq.id,
@@ -171,27 +191,41 @@ def api_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         }
 
     elif role == "security_agency":
-        assignments = db.query(SecurityAssignment).limit(10).all()
-        incidents = db.query(SecurityIncident).order_by(SecurityIncident.id.desc()).limit(5).all()
+        agency = db.query(SecurityAgency).filter(SecurityAgency.user_id == user.id).first()
+        assignments = []
+        incidents = []
+        guards_count = 0
+        resolved_count = 0
+        
+        if agency:
+            assignments = db.query(SecurityAssignment).filter(SecurityAssignment.agency_id == agency.id).all()
+            incidents = db.query(SecurityIncident).filter(SecurityIncident.agency_id == agency.id).order_by(SecurityIncident.id.desc()).limit(5).all()
+            guards_count = db.query(SecurityPersonnel).filter(SecurityPersonnel.agency_id == agency.id, SecurityPersonnel.status == "on_duty").count()
+            resolved_count = db.query(SecurityIncident).filter(SecurityIncident.agency_id == agency.id, SecurityIncident.status == "resolved").count()
+        elif user.is_admin:
+            assignments = db.query(SecurityAssignment).limit(10).all()
+            incidents = db.query(SecurityIncident).order_by(SecurityIncident.id.desc()).limit(5).all()
+            guards_count = db.query(SecurityPersonnel).filter(SecurityPersonnel.status == "on_duty").count()
+            resolved_count = db.query(SecurityIncident).filter(SecurityIncident.status == "resolved").count()
 
         response_data["stats"] = {
-            "active_posts": len(assignments) if assignments else 4,
-            "guards_on_duty": 12,
-            "incidents_resolved": 8,
+            "active_posts": len(assignments),
+            "guards_on_duty": guards_count,
+            "incidents_resolved": resolved_count,
             "assignments": [
                 {
                     "id": asgn.id,
-                    "warehouse_name": asgn.warehouse.name if asgn.warehouse else "Kalimati Cold Store Hub",
-                    "shift_type": getattr(asgn, "shift_type", "Day Shift (12h)"),
-                    "status": "On Duty"
+                    "warehouse_name": asgn.warehouse.name if asgn.warehouse else "Commercial Post",
+                    "shift_type": getattr(asgn, "shift_type", "Standard Shift"),
+                    "status": getattr(asgn, "status", "Assigned")
                 } for asgn in assignments
             ],
             "incidents": [
                 {
                     "id": inc.id,
-                    "title": getattr(inc, "title", "Perimeter Check"),
-                    "severity": getattr(inc, "severity", "Low"),
-                    "status": getattr(inc, "status", "Investigating")
+                    "title": getattr(inc, "title", "Incident Report"),
+                    "severity": getattr(inc, "severity", "Routine"),
+                    "status": getattr(inc, "status", "Logged")
                 } for inc in incidents
             ]
         }
@@ -200,11 +234,15 @@ def api_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         dispatches = db.query(DispatchOrder).filter(DispatchOrder.client_id == user.id).order_by(DispatchOrder.id.desc()).limit(10).all()
         invoices = db.query(Invoice).filter(Invoice.client_id == user.id).order_by(Invoice.id.desc()).limit(10).all()
         unpaid_invoices = sum(float(inv.total_amount or 0) for inv in invoices if inv.status != "paid")
+        
+        # Real approved storage space for this client
+        storage_reqs = db.query(WarehouseRequest).filter(WarehouseRequest.client_id == user.id, WarehouseRequest.status == "approved").all()
+        storage_sqft = sum(float(r.space_required or 0) for r in storage_reqs)
 
         response_data["stats"] = {
-            "active_dispatches": len(dispatches),
-            "storage_sqft": 6200.0,
-            "unpaid_invoices_amount": unpaid_invoices if unpaid_invoices > 0 else 2578.66,
+            "active_dispatches": len([d for d in dispatches if d.status in ("pending", "assigned", "in_transit")]),
+            "storage_sqft": storage_sqft,
+            "unpaid_invoices_amount": unpaid_invoices,
             "dispatches": [
                 {
                     "id": d.id,
