@@ -187,6 +187,8 @@ def get_admin_warehouses(current_user: User = Depends(require_admin_user), db: S
             "address": w.address or w.location,
             "area_sqft": float(w.area_sqft or 0),
             "price_per_sqft": float(w.price_per_sqft or 0),
+            "latitude": float(w.latitude) if w.latitude is not None else 27.6982,
+            "longitude": float(w.longitude) if w.longitude is not None else 85.3015,
             "cold_storage": bool(w.cold_storage),
             "temperature_min": float(w.temperature_min) if w.temperature_min is not None else None,
             "temperature_max": float(w.temperature_max) if w.temperature_max is not None else None,

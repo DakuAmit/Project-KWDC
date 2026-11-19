@@ -31,6 +31,9 @@
         .btn-kwdc:hover { color: white; filter: brightness(1.05); }
         .fs-7 { font-size: 0.875rem; }
         .fs-8 { font-size: 0.75rem; }
+        @media (max-width: 768px) {
+            #map { height: 350px !important; }
+        }
     </style>
 </head>
 <body>
@@ -145,6 +148,9 @@
                         </div>
                     </div>
 
+                    <a id="btn-google-maps" href="#" target="_blank" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fa-solid fa-map-location-dot me-1"></i> Open Route in Google Maps
+                    </a>
                     <a href="/invoices.html" class="btn btn-kwdc w-100">
                         <i class="fa-solid fa-file-invoice me-1"></i> View Tax Invoice
                     </a>
@@ -276,8 +282,15 @@ function renderOrderDetails(order) {
 
     document.getElementById('detail-distance').innerText = `${order.total_distance || 0} km`;
     document.getElementById('detail-total').innerText = `Rs. ${parseFloat(order.grand_total || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-    document.getElementById('detail-pickup').innerText = order.pickup_address || 'Kathmandu Hub';
-    document.getElementById('detail-delivery').innerText = order.delivery_address || (order.stops && order.stops[0] ? order.stops[0].address : 'Consignee Address');
+    const pAddr = order.pickup_address || 'Kathmandu Hub';
+    const dAddr = order.delivery_address || (order.stops && order.stops[0] ? order.stops[0].address : 'Consignee Address');
+    document.getElementById('detail-pickup').innerText = pAddr;
+    document.getElementById('detail-delivery').innerText = dAddr;
+
+    const gmapsBtn = document.getElementById('btn-google-maps');
+    if (gmapsBtn) {
+        gmapsBtn.href = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(pAddr + ', Nepal')}&destination=${encodeURIComponent(dAddr + ', Nepal')}`;
+    }
 }
 
 function renderOrderMap(order) {

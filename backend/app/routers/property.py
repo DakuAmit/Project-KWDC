@@ -118,6 +118,8 @@ def get_property_overview(request: Request, db: Session = Depends(get_db)):
             "nearby_hospital": w.nearby_hospital,
             "nearby_bank": w.nearby_bank,
             "nearby_fuel": w.nearby_fuel,
+            "latitude": float(w.latitude) if w.latitude is not None else 27.6982,
+            "longitude": float(w.longitude) if w.longitude is not None else 85.3015,
             "status": w.status
         })
 

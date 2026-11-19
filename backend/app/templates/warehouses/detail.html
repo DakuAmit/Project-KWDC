@@ -57,8 +57,12 @@
                 </div>
                 <div class="col-sm-6 col-md-4">
                     <div class="p-3 rounded-3 bg-light">
-                        <div class="text-muted fs-8">Kataho Grid Code</div>
-                        <div class="fw-bold fs-6"><code>{{ warehouse.kataho_code or 'KTM-KLM-01' }}</code></div>
+                        <div class="text-muted fs-8">Location & Google Maps</div>
+                        <div class="fw-bold fs-6">
+                            <a href="https://www.google.com/maps?q={{ warehouse.latitude or 27.6982 }},{{ warehouse.longitude or 85.3015 }}" target="_blank" class="text-primary text-decoration-none">
+                                <i class="fa-solid fa-map-location-dot me-1"></i> Open in Maps
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

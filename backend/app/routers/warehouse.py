@@ -96,6 +96,8 @@ class WarehouseCreatePayload(BaseModel):
     address: Optional[str] = None
     area_sqft: float
     price_per_sqft: float
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     description: Optional[str] = None
     kataho_code: Optional[str] = None
     facilities: Optional[str] = None  # Storage classification: Closed Godown, Open Yard Free Space, etc.
@@ -166,6 +168,8 @@ def get_api_warehouses(db: Session = Depends(get_db)):
             "nearby_bank": w.nearby_bank,
             "nearby_fuel": w.nearby_fuel,
             "nearby_market": w.nearby_market,
+            "latitude": float(w.latitude) if w.latitude is not None else 27.6982,
+            "longitude": float(w.longitude) if w.longitude is not None else 85.3015,
             "kataho_code": w.kataho_code,
             "description": w.description,
             "status": w.status,
@@ -187,6 +191,8 @@ def create_api_warehouse(payload: WarehouseCreatePayload, request: Request, db: 
         name=payload.name.strip(),
         location=payload.location.strip(),
         address=payload.address.strip() if payload.address else payload.location.strip(),
+        latitude=payload.latitude or 27.6982,
+        longitude=payload.longitude or 85.3015,
         area_sqft=payload.area_sqft,
         price_per_sqft=payload.price_per_sqft,
         cold_storage=payload.cold_storage,

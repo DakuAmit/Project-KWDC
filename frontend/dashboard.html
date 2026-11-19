@@ -25,11 +25,12 @@
         
         .sidebar {
             width: 260px; background: var(--sidebar-bg); color: #cbd5e1;
-            position: fixed; top: 0; bottom: 0; left: 0; z-index: 100;
+            position: fixed; top: 0; bottom: 0; left: 0; z-index: 1050;
             overflow-y: auto; border-right: 1px solid #1e293b;
+            transition: transform 0.25s ease-in-out;
         }
         .sidebar-brand {
-            padding: 20px; display: flex; align-items: center; gap: 10px;
+            padding: 20px; display: flex; align-items: center; justify-content: space-between;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
         .sidebar-section-label {
@@ -44,11 +45,43 @@
         .sidebar-link:hover, .sidebar-link.active {
             color: white; background: rgba(249, 115, 22, 0.18);
         }
-        .main-wrapper { margin-left: 260px; padding: 24px 32px; }
+        .main-wrapper {
+            margin-left: 260px; padding: 24px 32px;
+            transition: margin-left 0.25s ease-in-out;
+        }
         .topbar {
             background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(20px);
             border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 14px;
             padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1040;
+        }
+        @media (max-width: 991.98px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+                box-shadow: 0 0 35px rgba(0, 0, 0, 0.5);
+            }
+            .main-wrapper {
+                margin-left: 0 !important;
+                padding: 16px 12px !important;
+            }
+            .sidebar-backdrop.show {
+                display: block;
+            }
+            .topbar {
+                padding: 12px 16px !important;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
         }
         .glass-card {
             background: var(--card-glass); backdrop-filter: blur(16px);
@@ -73,13 +106,18 @@
 <!-- Dynamic Sidebar Navigation -->
 <aside class="sidebar">
     <div class="sidebar-brand">
-        <div style="width:34px; height:34px; background:#f97316; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white;">
-            <i class="fa-solid fa-cube"></i>
+        <div class="d-flex align-items-center gap-2">
+            <div style="width:34px; height:34px; background:#f97316; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white;">
+                <i class="fa-solid fa-cube"></i>
+            </div>
+            <div>
+                <div class="fw-bold text-white fs-6">KTM-WDC</div>
+                <div class="text-muted" style="font-size:11px;" id="sidebar-role-subtitle">Commercial Portal</div>
+            </div>
         </div>
-        <div>
-            <div class="fw-bold text-white fs-6">KTM-WDC</div>
-            <div class="text-muted" style="font-size:11px;" id="sidebar-role-subtitle">Commercial Portal</div>
-        </div>
+        <button class="btn btn-sm btn-link text-white-50 d-lg-none p-0 text-decoration-none" onclick="toggleMobileSidebar()" aria-label="Close sidebar">
+            <i class="fa-solid fa-xmark fs-5"></i>
+        </button>
     </div>
 
     <!-- Admin Entity Preview Selector (Visible only to Admin) -->
@@ -106,11 +144,17 @@
     </div>
 </aside>
 
+<!-- Sidebar Overlay Backdrop for Mobile -->
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
+
 <!-- Main Operations Cockpit -->
 <div class="main-wrapper">
     <!-- Topbar Header -->
     <header class="topbar">
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm d-lg-none rounded-3 px-2.5 py-1.5" onclick="toggleMobileSidebar()" aria-label="Toggle navigation">
+                <i class="fa-solid fa-bars fs-6"></i>
+            </button>
             <h4 class="mb-0 fw-bold" id="cockpit-title">Operations Cockpit</h4>
             <span class="badge px-3 py-1.5 rounded-pill fs-8 fw-bold text-uppercase" id="user-role-badge">Client</span>
             <span class="badge bg-light text-secondary border px-2.5 py-1 rounded-pill fs-8 d-none d-md-inline" id="user-code-badge">ID: ---</span>
@@ -134,6 +178,284 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Driver Digital POD -->
+<div class="modal fade" id="modal-driver-pod" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-signature text-success me-2"></i> Submit Proof of Delivery (POD)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="pod-order-id">
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Recipient Name / Receiver</label>
+                    <input type="text" class="form-control rounded-3" id="pod-recipient-name" value="Consignee Manager" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Inspection & Verification Notes</label>
+                    <textarea class="form-control rounded-3" id="pod-delivery-notes" rows="3">Cargo inspected and received in sound condition.</textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success btn-sm rounded-3 fw-bold" id="btn-submit-pod" onclick="submitDriverPODForm()">
+                    <i class="fa-solid fa-check me-1"></i> Verify & Complete Delivery
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Heavy Equipment -->
+<div class="modal fade" id="modal-add-equipment" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-tractor text-warning me-2"></i> Register Heavy Machinery</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Machinery / Model Name</label>
+                    <input type="text" class="form-control rounded-3" id="eq-name" value="Toyota 3-Ton Electric Forklift" required>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Equipment Classification</label>
+                        <select class="form-select rounded-3" id="eq-type">
+                            <option value="forklift">Forklift (Electric/Diesel)</option>
+                            <option value="crane">Mobile Hydraulic Crane</option>
+                            <option value="reach_stacker">Container Reach Stacker</option>
+                            <option value="telehandler">Telescopic Handler</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Daily Tariff (NPR)</label>
+                        <input type="number" class="form-control rounded-3" id="eq-rate" value="7500" oninput="updateEqDeposit(this.value)" required>
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Security Deposit (NPR)</label>
+                        <input type="number" class="form-control rounded-3" id="eq-deposit" value="15000">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Depot / Base Hub</label>
+                        <input type="text" class="form-control rounded-3" id="eq-location" value="Kalimati Hub, Kathmandu" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Specifications & Details</label>
+                    <textarea class="form-control rounded-3" id="eq-desc" rows="2">Heavy machinery with certified operator.</textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-kwdc btn-sm rounded-3 fw-bold" id="btn-submit-eq" onclick="submitAddEquipmentForm()">
+                    <i class="fa-solid fa-plus me-1"></i> Register Machine
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Security Guard Officer -->
+<div class="modal fade" id="modal-add-guard" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-shield text-primary me-2"></i> Register Security Personnel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Full Legal Name</label>
+                    <input type="text" class="form-control rounded-3" id="guard-name" value="Ram Bahadur Gurung" required>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Badge / Service Number</label>
+                        <input type="text" class="form-control rounded-3" id="guard-badge" value="SEC-4819" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Mobile Contact Phone</label>
+                        <input type="tel" class="form-control rounded-3" id="guard-phone" value="9811223344" required>
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Rank / Designation</label>
+                        <select class="form-select rounded-3" id="guard-rank">
+                            <option value="Senior Guard" selected>Senior Guard</option>
+                            <option value="Patrol Officer">Patrol Officer</option>
+                            <option value="Security Supervisor">Security Supervisor</option>
+                            <option value="Armed Guard">Armed Guard</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Citizenship / National ID</label>
+                        <input type="text" class="form-control rounded-3" id="guard-citizenship" value="27-01-72-01928">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-kwdc btn-sm rounded-3 fw-bold" id="btn-submit-guard" onclick="submitAddGuardForm()">
+                    <i class="fa-solid fa-user-plus me-1"></i> Enroll Officer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Deploy Guard Post -->
+<div class="modal fade" id="modal-deploy-guard" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-person-military-pointing text-success me-2"></i> Deploy Guard to Warehouse Post</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Warehouse Facility</label>
+                    <select class="form-select rounded-3" id="deploy-wh-select" required></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Security Personnel Officer</label>
+                    <select class="form-select rounded-3" id="deploy-guard-select" required></select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Shift Schedule</label>
+                        <select class="form-select rounded-3" id="deploy-shift-type">
+                            <option value="day">Day Shift (06:00 - 18:00)</option>
+                            <option value="night">Night Shift (18:00 - 06:00)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Effective Start Date</label>
+                        <input type="date" class="form-control rounded-3" id="deploy-start-date" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success btn-sm rounded-3 fw-bold" id="btn-submit-deploy" onclick="submitDeployGuardForm()">
+                    <i class="fa-solid fa-shield-halved me-1"></i> Deploy Post
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Log Security Incident -->
+<div class="modal fade" id="modal-log-incident" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i> Log Security Incident & Alert</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Target Warehouse Facility</label>
+                    <select class="form-select rounded-3" id="incident-wh-select" required></select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Incident Classification</label>
+                        <select class="form-select rounded-3" id="incident-type-select">
+                            <option value="Perimeter Breach">Perimeter Breach</option>
+                            <option value="Theft Attempt">Theft Attempt</option>
+                            <option value="Fire Alarm">Fire Alarm / Smoke</option>
+                            <option value="Unauthorized Entry">Unauthorized Entry</option>
+                            <option value="Cargo Tampering">Cargo Tampering</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Severity Level</label>
+                        <select class="form-select rounded-3" id="incident-severity-select">
+                            <option value="low">Low (Advisory)</option>
+                            <option value="medium" selected>Medium (Watch Notice)</option>
+                            <option value="high">High (Active Threat)</option>
+                            <option value="critical">Critical (Emergency)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Incident Description & Immediate Response</label>
+                    <textarea class="form-control rounded-3" id="incident-desc-input" rows="3" placeholder="Detail observed activity, involved checkpoints, guard response actions...">Motion sensor triggered along southern perimeter fence.</textarea>
+                </div>
+                <div class="form-check form-switch p-3 rounded-3 bg-danger-subtle border border-danger-subtle">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" id="incident-police-check" checked>
+                    <label class="form-check-label fw-bold text-danger fs-8" for="incident-police-check">
+                        <i class="fa-solid fa-building-shield me-1"></i> Auto-notify & escalate to nearest Nepal Police Post
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger btn-sm rounded-3 fw-bold" id="btn-submit-incident" onclick="submitLogIncidentForm()">
+                    <i class="fa-solid fa-bullhorn me-1"></i> Broadcast Incident Alert
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Generate Security Guarding Invoice -->
+<div class="modal fade" id="modal-security-invoice" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-invoice-dollar text-primary me-2"></i> Issue Monthly Guarding Tax Invoice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold fs-8 text-uppercase">Billed Facility / Warehouse</label>
+                    <select class="form-select rounded-3" id="invoice-wh-select" required></select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Stationed Guards</label>
+                        <input type="number" min="1" class="form-control rounded-3" id="invoice-guards-count" value="4" oninput="recalcSecurityInvoice()" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Monthly Tariff / Guard</label>
+                        <input type="number" class="form-control rounded-3" id="invoice-guard-rate" value="24000" oninput="recalcSecurityInvoice()" required>
+                    </div>
+                </div>
+                
+                <!-- Live 13% IRD VAT Breakdown -->
+                <div class="p-3 rounded-3 bg-light border fs-7">
+                    <div class="d-flex justify-content-between text-muted mb-1">
+                        <span>Taxable Guarding Subtotal:</span>
+                        <strong class="text-dark" id="invoice-disp-subtotal">Rs. 96,000.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between text-danger mb-2">
+                        <span>13% IRD VAT (Nepal VAT Act 2052):</span>
+                        <strong id="invoice-disp-vat">Rs. 12,480.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top fs-6 fw-bold text-success">
+                        <span>Total Payable Settlement:</span>
+                        <span id="invoice-disp-total">Rs. 108,480.00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-kwdc btn-sm rounded-3 fw-bold" id="btn-submit-sec-invoice" onclick="submitSecurityInvoiceForm()">
+                    <i class="fa-solid fa-file-invoice me-1"></i> Issue IRD Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -198,7 +520,24 @@ async function initDashboard() {
 
 document.addEventListener("DOMContentLoaded", initDashboard);
 
+function toggleMobileSidebar() {
+    const sb = document.querySelector('.sidebar');
+    const bd = document.getElementById('sidebar-backdrop');
+    if (sb) sb.classList.toggle('show');
+    if (bd) bd.classList.toggle('show');
+}
+
+function closeMobileSidebar() {
+    if (window.innerWidth < 992) {
+        const sb = document.querySelector('.sidebar');
+        const bd = document.getElementById('sidebar-backdrop');
+        if (sb) sb.classList.remove('show');
+        if (bd) bd.classList.remove('show');
+    }
+}
+
 async function switchEntityView(role) {
+    closeMobileSidebar();
     activeRole = role;
     updateRoleBadge(role);
     renderSidebarNav(role);
@@ -398,6 +737,7 @@ function refreshCurrentAdminDrawer() {
 }
 
 function switchAdminDrawer(drawerKey) {
+    closeMobileSidebar();
     activeAdminDrawer = drawerKey;
 
     // Update Sidebar active link
@@ -421,7 +761,7 @@ function switchAdminDrawer(drawerKey) {
     const titles = {
         'overview': { title: 'Executive Overview & System Health', sub: 'Real-time KPIs across all 7 provinces of Nepal' },
         'users': { title: 'Ecosystem Entities & KYC Verification', sub: 'Manage user access, role permissions, and KYC verification' },
-        'warehouses': { title: 'Commercial Warehousing Registry', sub: 'Verify cold storage, ambient godowns, Kataho codes, and capacity' },
+        'warehouses': { title: 'Commercial Warehousing Registry', sub: 'Verify cold storage, ambient godowns, GPS coordinates, and capacity' },
         'dispatches': { title: 'Freight Logistics & Dispatches', sub: 'Multi-stop delivery orders, driver dispatching, and pricing audits' },
         'telemetry': { title: 'Real-Time Fleet Telemetry & Map', sub: 'Live GPS locations of trucks and pickups on Nepal highway routes' },
         'inventory': { title: 'QR Inventory & Batch Tracking', sub: 'Warehouse stocks, SKU batch numbers, and box distribution' },
@@ -662,7 +1002,7 @@ async function loadAdminDrawerWarehouses(container) {
                     <thead class="table-light fs-8 text-uppercase">
                         <tr>
                             <th>Facility Name</th>
-                            <th>City & Kataho</th>
+                            <th>Location & GPS</th>
                             <th>Area & Rate</th>
                             <th>Storage Type</th>
                             <th>Property Owner</th>
@@ -675,8 +1015,11 @@ async function loadAdminDrawerWarehouses(container) {
                             <tr>
                                 <td class="fw-bold">${escapeHtml(w.name)}</td>
                                 <td>
-                                    <div>${escapeHtml(w.location)}</div>
-                                    <code class="fs-8">${escapeHtml(w.kataho_code || '—')}</code>
+                                    <div class="fw-semibold">${escapeHtml(w.location)}</div>
+                                    ${w.address ? `<div class="text-muted fs-8">${escapeHtml(w.address)}</div>` : ''}
+                                    ${(w.latitude && w.longitude)
+                                        ? `<a href="https://www.google.com/maps?q=${w.latitude},${w.longitude}" target="_blank" class="badge bg-primary-subtle text-primary text-decoration-none mt-1" title="Open in Google Maps"><i class="fa-solid fa-map-location-dot me-1"></i> Google Maps</a>`
+                                        : `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((w.name || '') + ' ' + (w.location || '') + ' Nepal')}" target="_blank" class="badge bg-light text-secondary border text-decoration-none mt-1" title="Search Google Maps"><i class="fa-solid fa-map-pin me-1"></i> Google Maps</a>`}
                                 </td>
                                 <td>
                                     <div><strong>${(w.area_sqft || 0).toLocaleString()}</strong> sqft</div>
@@ -1781,20 +2124,38 @@ async function driverUpdateStatus(orderId, status) {
     }
 }
 
-async function driverPromptPOD(orderId) {
-    const recipient = prompt("Enter recipient name for digital Proof of Delivery (POD):", "Consignee Manager");
-    if (!recipient) return;
-    const notes = prompt("Enter delivery verification notes:", "Cargo inspected and received in sound condition.");
+function driverPromptPOD(orderId) {
+    document.getElementById('pod-order-id').value = orderId;
+    const modalEl = document.getElementById('modal-driver-pod');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
+
+async function submitDriverPODForm() {
+    const orderId = document.getElementById('pod-order-id').value;
+    const recipient = document.getElementById('pod-recipient-name').value.trim();
+    const notes = document.getElementById('pod-delivery-notes').value.trim();
+    if (!recipient) {
+        alert('Please enter recipient name.');
+        return;
+    }
+    const btn = document.getElementById('btn-submit-pod');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Submitting...';
     try {
         const res = await KWDC_API.submitDriverPOD(orderId, recipient, notes);
+        bootstrap.Modal.getInstance(document.getElementById('modal-driver-pod'))?.hide();
         if (res && res.ok) {
             alert('Digital Proof of Delivery verified! Payout recorded and order completed.');
             await initDashboard();
         } else {
-            alert('Failed to submit POD.');
+            alert('Failed to submit POD: ' + (res?.data?.detail || 'Unknown error'));
         }
     } catch(err) {
         alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Verify & Complete Delivery';
     }
 }
 
@@ -1890,33 +2251,57 @@ async function renderEquipmentCockpit(container, s) {
     `;
 }
 
-async function equipmentPromptAdd() {
-    const name = prompt("Enter Machine Name (e.g. Toyota 5-Ton Diesel Forklift):", "Toyota 3-Ton Electric Forklift");
-    if (!name) return;
-    const type = prompt("Enter Equipment Type (forklift / crane / reach_stacker / telehandler):", "forklift");
-    if (!type) return;
-    const rate = prompt("Enter Daily Rental Tariff in Rs:", "7500");
-    if (!rate) return;
-    const loc = prompt("Enter Staging Location / Warehouse Depot:", "Kalimati Warehouse Hub, Kathmandu");
-    if (!loc) return;
+function equipmentPromptAdd() {
+    const modalEl = document.getElementById('modal-add-equipment');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
 
+function updateEqDeposit(val) {
+    const num = parseFloat(val);
+    const depEl = document.getElementById('eq-deposit');
+    if (depEl && !isNaN(num) && num > 0) {
+        depEl.value = Math.round(num * 2);
+    }
+}
+
+async function submitAddEquipmentForm() {
+    const name = document.getElementById('eq-name').value.trim();
+    const type = document.getElementById('eq-type').value;
+    const rate = parseFloat(document.getElementById('eq-rate').value);
+    const deposit = parseFloat(document.getElementById('eq-deposit').value) || (rate * 2);
+    const loc = document.getElementById('eq-location').value.trim();
+    const desc = document.getElementById('eq-desc').value.trim();
+
+    if (!name || isNaN(rate) || !loc) {
+        alert('Please complete all required fields.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-submit-eq');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Saving...';
     try {
         const res = await KWDC_API.createEquipment({
             name,
             type,
-            daily_rate: parseFloat(rate),
-            security_deposit: parseFloat(rate) * 2,
+            daily_rate: rate,
+            security_deposit: deposit,
             location: loc,
-            description: "Heavy machinery with certified operator."
+            description: desc || "Heavy machinery with certified operator."
         });
+        bootstrap.Modal.getInstance(document.getElementById('modal-add-equipment'))?.hide();
         if (res && res.ok) {
             alert(`Machinery '${name}' listed successfully!`);
             await initDashboard();
         } else {
-            alert('Failed to list machinery.');
+            alert('Failed to list machinery: ' + (res?.data?.detail || 'Unknown error'));
         }
     } catch(err) {
         alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-plus me-1"></i> Register Machine';
     }
 }
 
@@ -2079,24 +2464,69 @@ async function renderSecurityCockpit(container, s) {
     `;
 }
 
-async function securityPromptAddGuard() {
-    const name = prompt("Enter Security Guard Full Name:", "Ram Bahadur Gurung");
-    if (!name) return;
-    const badge = prompt("Enter Badge / ID Number:", "SEC-" + Math.floor(1000 + Math.random() * 9000));
-    if (!badge) return;
-    const phone = prompt("Enter Contact Phone:", "9811223344");
-    if (!phone) return;
-    const rank = prompt("Enter Rank (Senior Guard / Patrol Officer / Security Supervisor):", "Senior Guard");
-    if (!rank) return;
+async function populateWarehouseSelect(selectId, defaultId = null) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Loading warehouses...</option>';
+    try {
+        const whs = await KWDC_API.getWarehouses();
+        if (whs && whs.length > 0) {
+            sel.innerHTML = whs.map(w => `<option value="${w.id}" ${defaultId == w.id ? 'selected' : ''}>${escapeHtml(w.name)} (${escapeHtml(w.location)})</option>`).join('');
+        } else {
+            sel.innerHTML = '<option value="1">Kalimati Agro-Center (Kathmandu)</option><option value="2">Birgunj Dry Port Godown (Birgunj)</option>';
+        }
+    } catch(e) {
+        sel.innerHTML = '<option value="1">Kalimati Agro-Center (Kathmandu)</option><option value="2">Birgunj Dry Port Godown (Birgunj)</option>';
+    }
+}
 
+async function populateGuardSelect(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Loading roster...</option>';
+    try {
+        const sec = await KWDC_API.getSecurityOverview();
+        const roster = (sec && sec.roster) ? sec.roster : [];
+        if (roster.length > 0) {
+            sel.innerHTML = roster.map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${escapeHtml(g.badge_id || 'ID')} - ${escapeHtml(g.rank || 'Officer')})</option>`).join('');
+        } else {
+            sel.innerHTML = '<option value="1">Ram Bahadur Gurung (SEC-1001 - Senior Guard)</option>';
+        }
+    } catch(e) {
+        sel.innerHTML = '<option value="1">Ram Bahadur Gurung (SEC-1001 - Senior Guard)</option>';
+    }
+}
+
+function securityPromptAddGuard() {
+    document.getElementById('guard-badge').value = 'SEC-' + Math.floor(1000 + Math.random() * 9000);
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-guard'));
+    modal.show();
+}
+
+async function submitAddGuardForm() {
+    const name = document.getElementById('guard-name').value.trim();
+    const badge = document.getElementById('guard-badge').value.trim();
+    const phone = document.getElementById('guard-phone').value.trim();
+    const rank = document.getElementById('guard-rank').value;
+    const citizenship = document.getElementById('guard-citizenship').value.trim();
+
+    if (!name || !badge || !phone) {
+        alert('Please fill out all required guard details.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-submit-guard');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Enrolling...';
     try {
         const res = await KWDC_API.addSecurityGuard({
             name,
             badge_id: badge,
             phone,
-            citizenship_no: "27-01-72-01928",
+            citizenship_no: citizenship || "27-01-72-01928",
             rank
         });
+        bootstrap.Modal.getInstance(document.getElementById('modal-add-guard'))?.hide();
         if (res && res.ok) {
             alert(`Officer '${name}' added to security roster!`);
             await initDashboard();
@@ -2105,82 +2535,154 @@ async function securityPromptAddGuard() {
         }
     } catch(err) {
         alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-user-plus me-1"></i> Enroll Officer';
     }
 }
 
 async function securityPromptDeployPost() {
-    const whId = prompt("Enter Warehouse ID to Deploy Guard Post:", "1");
-    if (!whId) return;
-    const shift = prompt("Enter Shift Type ('day' for Day Shift: 06:00-18:00, or 'night' for Night Shift: 18:00-06:00):", "day");
-    if (!shift) return;
+    await populateWarehouseSelect('deploy-wh-select');
+    await populateGuardSelect('deploy-guard-select');
+    document.getElementById('deploy-start-date').value = new Date().toISOString().split('T')[0];
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-deploy-guard'));
+    modal.show();
+}
 
+async function submitDeployGuardForm() {
+    const whId = document.getElementById('deploy-wh-select').value;
+    const guardId = document.getElementById('deploy-guard-select').value;
+    const shift = document.getElementById('deploy-shift-type').value;
+    const startDate = document.getElementById('deploy-start-date').value;
+
+    if (!whId) {
+        alert('Please select a target warehouse.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-submit-deploy');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Deploying...';
     try {
         const res = await KWDC_API.deploySecurityGuard({
             warehouse_id: parseInt(whId),
-            personnel_id: 1,
+            personnel_id: guardId ? parseInt(guardId) : 1,
             shift_type: shift.toLowerCase(),
-            start_date: new Date().toISOString().split('T')[0]
+            start_date: startDate || new Date().toISOString().split('T')[0]
         });
+        bootstrap.Modal.getInstance(document.getElementById('modal-deploy-guard'))?.hide();
         if (res && res.ok) {
             alert(`Guard successfully deployed under ${shift.toUpperCase()} shift!`);
             await initDashboard();
         } else {
-            alert('Failed to deploy guard.');
+            alert('Failed to deploy guard: ' + (res?.data?.detail || 'Unknown error'));
         }
     } catch(err) {
         alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-shield-halved me-1"></i> Deploy Post';
     }
 }
 
 async function securityPromptLogIncident() {
-    const whId = prompt("Enter Warehouse ID where incident occurred:", "1");
-    if (!whId) return;
-    const type = prompt("Enter Incident Type (Theft / Fire / Unauthorized Entry / Perimeter Breach):", "Perimeter Breach");
-    if (!type) return;
-    const desc = prompt("Enter Incident Description:", "Motion sensor triggered along southern perimeter fence.");
-    if (!desc) return;
-    const esc = confirm("Escalate and automatically notify the local Nepal Police Post?");
+    await populateWarehouseSelect('incident-wh-select');
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-log-incident'));
+    modal.show();
+}
 
+async function submitLogIncidentForm() {
+    const whId = document.getElementById('incident-wh-select').value;
+    const type = document.getElementById('incident-type-select').value;
+    const severity = document.getElementById('incident-severity-select').value;
+    const desc = document.getElementById('incident-desc-input').value.trim();
+    const esc = document.getElementById('incident-police-check').checked;
+
+    if (!whId || !desc) {
+        alert('Please select facility and enter incident description.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-submit-incident');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Logging Alert...';
     try {
         const res = await KWDC_API.logSecurityIncident({
             warehouse_id: parseInt(whId),
             incident_type: type.toLowerCase(),
-            severity: esc ? "high" : "medium",
+            severity: severity,
             description: desc,
             escalate_to_police: esc
         });
+        bootstrap.Modal.getInstance(document.getElementById('modal-log-incident'))?.hide();
         if (res && res.ok) {
-            alert(res.data.message || 'Security incident logged successfully!');
+            alert(res.data?.message || 'Security incident logged successfully!');
             await initDashboard();
         } else {
             alert('Failed to log incident.');
         }
     } catch(err) {
         alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-bullhorn me-1"></i> Broadcast Incident Alert';
     }
 }
 
 async function securityPromptGenerateInvoice() {
-    const whId = prompt("Enter Warehouse ID to Bill for Monthly Security Guarding:", "1");
-    if (!whId) return;
-    const guards = prompt("Enter number of stationed guards:", "4");
-    if (!guards) return;
+    await populateWarehouseSelect('invoice-wh-select');
+    recalcSecurityInvoice();
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-security-invoice'));
+    modal.show();
+}
 
+function recalcSecurityInvoice() {
+    const guards = parseInt(document.getElementById('invoice-guards-count')?.value) || 0;
+    const rate = parseFloat(document.getElementById('invoice-guard-rate')?.value) || 0;
+    const subtotal = guards * rate;
+    const vat = subtotal * 0.13;
+    const total = subtotal + vat;
+
+    const subEl = document.getElementById('invoice-disp-subtotal');
+    if (subEl) subEl.innerText = `Rs. ${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+    const vatEl = document.getElementById('invoice-disp-vat');
+    if (vatEl) vatEl.innerText = `Rs. ${vat.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+    const totEl = document.getElementById('invoice-disp-total');
+    if (totEl) totEl.innerText = `Rs. ${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+}
+
+async function submitSecurityInvoiceForm() {
+    const whId = document.getElementById('invoice-wh-select').value;
+    const guards = parseInt(document.getElementById('invoice-guards-count').value);
+    const rate = parseFloat(document.getElementById('invoice-guard-rate').value);
+
+    if (!whId || isNaN(guards) || guards <= 0) {
+        alert('Please select warehouse facility and enter valid number of guards.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-submit-sec-invoice');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Generating IRD Invoice...';
     try {
         const res = await KWDC_API.generateSecurityInvoice({
             warehouse_id: parseInt(whId),
-            guards_count: parseInt(guards),
-            monthly_rate_per_guard: 24000.0
+            guards_count: guards,
+            monthly_rate_per_guard: rate || 24000.0
         });
+        bootstrap.Modal.getInstance(document.getElementById('modal-security-invoice'))?.hide();
         if (res && res.ok) {
-            const inv = res.data.invoice || {};
-            alert(`Monthly guarding invoice #${inv.invoice_number} generated!\nSubtotal: Rs. ${inv.subtotal}\n13% IRD VAT: Rs. ${inv.vat_13_percent}\nGrand Total: Rs. ${inv.grand_total}`);
+            const inv = res.data?.invoice || {};
+            alert(`Monthly guarding invoice #${inv.invoice_number || 'INV'} generated successfully!\nSubtotal: Rs. ${inv.subtotal}\n13% IRD VAT: Rs. ${inv.vat_13_percent}\nGrand Total: Rs. ${inv.grand_total}`);
             await initDashboard();
         } else {
             alert('Failed to generate security invoice.');
         }
     } catch(err) {
         alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-file-invoice me-1"></i> Issue IRD Invoice';
     }
 }
 
