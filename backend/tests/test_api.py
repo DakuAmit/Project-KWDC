@@ -459,3 +459,304 @@ def test_property_owner_multi_tenant_and_facility_governance():
     }, headers=po_headers)
     assert patch_resp.status_code == 200
     assert patch_resp.json()["request"]["status"] == "approved"
+
+def test_client_adaptive_dispatch_and_vat_settlement():
+    # 1. Login as Client 1 (who has an approved warehouse lease from previous test)
+    cl_login = client.post("/api/auth/login", json={"email": "contact@himalayancargo.np", "password": "BrandNewPassword2026!"})
+    cl_token = cl_login.json()["access_token"]
+    cl_headers = {"Authorization": f"Bearer {cl_token}"}
+
+    # Verify cockpit stats reflects assigned warehouse
+    portal_resp = client.post("/api/portal/cockpit-stats", headers=cl_headers)
+    assert portal_resp.status_code == 200
+    stats = portal_resp.json()["stats"]
+    assert stats["has_assigned_warehouse"] is True
+    assert len(stats["assigned_warehouses"]) >= 1
+    wh = next(w for w in stats["assigned_warehouses"] if w["cold_storage"])
+    assert wh["cold_storage"] is True
+    assert any(("-25" in w["temperature_range"] or "-2" in w["temperature_range"]) for w in stats["assigned_warehouses"] if w.get("temperature_range"))
+
+    # 2. Book Dispatch from Leased Warehouse Dock
+    disp_dock_resp = client.post("/api/dispatch/orders", json={
+        "pickup_address": f"{wh['name']}, Loading Bay 3, Birgunj",
+        "warehouse_id": wh["warehouse_id"],
+        "vehicle_type": "truck",
+        "total_distance": 22.0,
+        "delivery_address": "Kalimati Fruit Market Depot, Kathmandu",
+        "recipient_name": "Kathmandu Wholesale Dist.",
+        "recipient_phone": "9801998877",
+        "bill_type": "regular",
+        "pan_number": "601234567"
+    }, headers=cl_headers)
+    assert disp_dock_resp.status_code == 200
+    dock_data = disp_dock_resp.json()
+    assert dock_data["status"] == "success"
+    assert dock_data["dispatch"]["warehouse_id"] == wh["warehouse_id"]
+    dock_inv = dock_data["invoice"]
+    assert dock_inv["subtotal"] > 0
+    assert dock_inv["tax_amount"] == round(dock_inv["subtotal"] * 0.13, 2)
+    assert dock_inv["payment_status"] == "unpaid"
+
+    # 3. Register Ad-Hoc Client (No Leased Warehouse)
+    adhoc_email = "direct.shipper@nepaltrade.np"
+    client.post("/api/auth/register", json={
+        "name": "Direct Point-to-Point Shipper",
+        "email": adhoc_email,
+        "password": "SecurePassword2026!",
+        "phone": "9809988112",
+        "role": "client",
+        "address": "Tripureswor, Kathmandu"
+    })
+
+    db = SessionLocal()
+    adhoc_u = db.query(User).filter(User.email == adhoc_email).first()
+    adhoc_code = adhoc_u.email_verification_token
+    db.close()
+
+    v_adhoc = client.post("/api/auth/verify-code", json={"email": adhoc_email, "code": adhoc_code})
+    assert v_adhoc.status_code == 200
+    adhoc_token = v_adhoc.json()["access_token"]
+    adhoc_headers = {"Authorization": f"Bearer {adhoc_token}"}
+
+    # Verify ad-hoc client has NO assigned warehouse
+    adhoc_portal = client.post("/api/portal/cockpit-stats", headers=adhoc_headers)
+    assert adhoc_portal.status_code == 200
+    adhoc_stats = adhoc_portal.json()["stats"]
+    assert adhoc_stats["has_assigned_warehouse"] is False
+    assert len(adhoc_stats["assigned_warehouses"]) == 0
+
+    # 4. Ad-Hoc Client directly books Point-to-Point Freight Transit (No Warehouse Required)
+    disp_p2p_resp = client.post("/api/dispatch/orders", json={
+        "pickup_address": "Balaju Industrial Estate Gate 2, Kathmandu",
+        "warehouse_id": None,
+        "vehicle_type": "pickup",
+        "total_distance": 18.5,
+        "delivery_address": "Dhulikhel Hospital Medical Store, Kavre",
+        "recipient_name": "Store In-charge",
+        "recipient_phone": "9841122334",
+        "bill_type": "regular",
+        "pan_number": "601234567"
+    }, headers=adhoc_headers)
+    assert disp_p2p_resp.status_code == 200
+    p2p_data = disp_p2p_resp.json()
+    assert p2p_data["status"] == "success"
+    assert p2p_data["dispatch"]["warehouse_id"] is None
+    p2p_inv = p2p_data["invoice"]
+
+    # 5. Settle 13% IRD VAT Tax Invoice via eSewa
+    pay_resp = client.post(f"/api/invoices/{p2p_inv['id']}/pay", json={
+        "payment_method": "esewa",
+        "reference_id": "ESEWA-TXN-2026-99"
+    }, headers=adhoc_headers)
+    assert pay_resp.status_code == 200
+    assert pay_resp.json()["status"] == "success"
+    assert pay_resp.json()["invoice"]["payment_status"] == "paid"
+
+def test_commercial_driver_workflow():
+    # 1. Register and verify Commercial Driver
+    driver_email = "driver.pokhara@nepalroad.np"
+    reg = client.post("/api/auth/register", json={
+        "name": "Hari Sharma",
+        "email": driver_email,
+        "password": "SecurePassword2026!",
+        "phone": "9812334455",
+        "role": "driver",
+        "address": "Prithvi Chowk, Pokhara"
+    })
+    assert reg.status_code == 200
+
+    db = SessionLocal()
+    driver_u = db.query(User).filter(User.email == driver_email).first()
+    code = driver_u.email_verification_token
+    db.close()
+
+    v_resp = client.post("/api/auth/verify-code", json={"email": driver_email, "code": code})
+    assert v_resp.status_code == 200
+    driver_token = v_resp.json()["access_token"]
+    driver_headers = {"Authorization": f"Bearer {driver_token}"}
+
+    # 2. Driver overview
+    ov_resp = client.get("/api/driver/overview", headers=driver_headers)
+    assert ov_resp.status_code == 200
+    ov_data = ov_resp.json()
+    assert ov_data["status"] == "success"
+    assert ov_data["driver"]["name"] == "Hari Sharma"
+
+    # Driver accepts an available dispatch job or claim one
+    db = SessionLocal()
+    from app.models.logistics import DispatchOrder
+    order = db.query(DispatchOrder).first()
+    if order:
+        order.driver_id = driver_u.id
+        order.status = "assigned"
+        db.commit()
+        job_id = order.id
+    db.close()
+
+    # 3. Transmit GPS Telemetry Ping
+    tel_resp = client.post("/api/driver/telemetry", json={
+        "order_id": job_id if order else None,
+        "latitude": 27.7012,
+        "longitude": 85.3120,
+        "accuracy": 5.0,
+        "speed": 35.0
+    }, headers=driver_headers)
+    assert tel_resp.status_code == 200
+    assert tel_resp.json()["status"] == "success"
+
+    if order:
+        # 4. Trip Status Transition: picked_up -> on_the_way
+        patch1 = client.patch(f"/api/driver/orders/{job_id}/status", json={"status": "picked_up"}, headers=driver_headers)
+        assert patch1.status_code == 200
+        assert patch1.json()["order"]["status"] == "picked_up"
+
+        patch2 = client.patch(f"/api/driver/orders/{job_id}/status", json={"status": "on_the_way"}, headers=driver_headers)
+        assert patch2.status_code == 200
+        assert patch2.json()["order"]["status"] == "on_the_way"
+
+        # 5. Digital Proof of Delivery (POD)
+        pod_resp = client.post(f"/api/driver/orders/{job_id}/pod", json={
+            "recipient_name": "Sita Thapa",
+            "delivery_notes": "All pallets received intact with seal intact."
+        }, headers=driver_headers)
+        assert pod_resp.status_code == 200
+        assert pod_resp.json()["status"] == "success"
+
+def test_heavy_equipment_owner_workflow():
+    # 1. Register and verify Heavy Equipment Owner
+    eq_email = "machinery.crane@himalayanequip.np"
+    reg = client.post("/api/auth/register", json={
+        "name": "Himalayan Heavy Cranes & Forklifts",
+        "email": eq_email,
+        "password": "SecurePassword2026!",
+        "phone": "9805566778",
+        "role": "equipment_owner",
+        "address": "Birgunj Inland Port Road"
+    })
+    assert reg.status_code == 200
+
+    db = SessionLocal()
+    eq_u = db.query(User).filter(User.email == eq_email).first()
+    code = eq_u.email_verification_token
+    db.close()
+
+    v_resp = client.post("/api/auth/verify-code", json={"email": eq_email, "code": code})
+    assert v_resp.status_code == 200
+    eq_token = v_resp.json()["access_token"]
+    eq_headers = {"Authorization": f"Bearer {eq_token}"}
+
+    # 2. Equipment Overview
+    ov_resp = client.get("/api/equipment/overview", headers=eq_headers)
+    assert ov_resp.status_code == 200
+    assert ov_resp.json()["status"] == "success"
+
+    # 3. Register New Machinery
+    create_eq = client.post("/api/equipment", json={
+        "name": "Komatsu 7-Ton Heavy Duty Forklift",
+        "type": "forklift",
+        "model": "FD70-10",
+        "daily_rate": 9500.0,
+        "security_deposit": 20000.0,
+        "location": "Birgunj Dry Port Logistics Hub",
+        "description": "Heavy container handling forklift with certified operator.",
+        "weight": 7000.0
+    }, headers=eq_headers)
+    assert create_eq.status_code == 200
+    new_eq_id = create_eq.json()["equipment"]["id"]
+
+    # 4. Book Equipment
+    start = date.today() + timedelta(days=1)
+    end = date.today() + timedelta(days=4)
+    book_resp = client.post(f"/api/equipment/{new_eq_id}/book", json={
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "location": "Kalimati Cold Store Loading Dock",
+        "job_type": "Cold Chain Pallet Unloading"
+    }, headers=eq_headers)
+    assert book_resp.status_code == 200
+    job_id = book_resp.json()["job"]["id"]
+    assert book_resp.json()["job"]["days"] == 3
+    assert book_resp.json()["job"]["total_amount"] == 28500.0  # 9500 * 3
+
+    # 5. Complete Job
+    stat_resp = client.patch(f"/api/equipment/jobs/{job_id}/status", json={"status": "completed"}, headers=eq_headers)
+    assert stat_resp.status_code == 200
+    assert stat_resp.json()["status"] == "success"
+
+def test_licensed_security_agency_5_use_cases():
+    # 1. Register and verify Licensed Security Agency
+    sec_email = "suraksha.agency@securitycommand.np"
+    reg = client.post("/api/auth/register", json={
+        "name": "Nepal Suraksha Agency Pvt Ltd",
+        "email": sec_email,
+        "password": "SecurePassword2026!",
+        "phone": "9809988776",
+        "role": "security_agency",
+        "address": "Ring Road Security Division, Kathmandu"
+    })
+    assert reg.status_code == 200
+
+    db = SessionLocal()
+    sec_u = db.query(User).filter(User.email == sec_email).first()
+    code = sec_u.email_verification_token
+    db.close()
+
+    v_resp = client.post("/api/auth/verify-code", json={"email": sec_email, "code": code})
+    assert v_resp.status_code == 200
+    sec_token = v_resp.json()["access_token"]
+    sec_headers = {"Authorization": f"Bearer {sec_token}"}
+
+    # USE CASE 1: Register Agency & Government License Overview
+    ov_resp = client.get("/api/security/overview", headers=sec_headers)
+    assert ov_resp.status_code == 200
+    ov_data = ov_resp.json()
+    assert ov_data["status"] == "success"
+    assert "agency" in ov_data
+    assert ov_data["agency"]["license_number"] is not None
+
+    # USE CASE 2: Manage Guard Personnel Roster (Badge/Rank)
+    guard_resp = client.post("/api/security/guards", json={
+        "name": "Bhim Bahadur Thapa",
+        "phone": "9812998877",
+        "citizenship_no": "27-01-70-04918",
+        "badge_id": "SEC-G-8821",
+        "rank": "Patrol Officer"
+    }, headers=sec_headers)
+    assert guard_resp.status_code == 200
+    guard_id = guard_resp.json()["guard"]["id"]
+
+    # USE CASE 3: Deploy Guards to Warehouse Posts <<include>> Configure Day/Night Shift Schedules
+    asgn_resp = client.post("/api/security/assignments", json={
+        "warehouse_id": 1,
+        "personnel_id": guard_id,
+        "shift_type": "night",
+        "start_date": date.today().isoformat()
+    }, headers=sec_headers)
+    assert asgn_resp.status_code == 200
+    assert asgn_resp.json()["assignment"]["shift"] == "night"
+
+    # USE CASE 4: Log Security Incidents (Theft/Fire/Intrusion) <<extend>> Escalate & Notify Local Nepal Police Post
+    inc_resp = client.post("/api/security/incidents", json={
+        "warehouse_id": 1,
+        "incident_type": "perimeter_breach",
+        "severity": "critical",
+        "description": "Unauthorized vehicle detected inspecting rear godown fence at 02:30 AM.",
+        "escalate_to_police": True
+    }, headers=sec_headers)
+    assert inc_resp.status_code == 200
+    inc_data = inc_resp.json()
+    assert inc_data["incident"]["police_station_notified"] is not None
+    assert "Escalated & dispatched alert" in inc_data["message"]
+
+    # USE CASE 5: Generate Monthly Station Guarding Invoices (13% IRD VAT Compliant)
+    inv_resp = client.post("/api/security/invoices/generate", json={
+        "warehouse_id": 1,
+        "guards_count": 4,
+        "monthly_rate_per_guard": 25000.0
+    }, headers=sec_headers)
+    assert inv_resp.status_code == 200
+    inv_data = inv_resp.json()["invoice"]
+    assert inv_data["subtotal"] == 100000.0  # 4 * 25000
+    assert inv_data["vat_13_percent"] == 13000.0  # 13% VAT
+    assert inv_data["grand_total"] == 113000.0
+    assert inv_data["payment_status"] == "unpaid"

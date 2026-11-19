@@ -166,6 +166,24 @@ const KWDC_API = {
         return null;
     },
 
+    async createDispatch(orderData) {
+        const res = await this.request('/api/dispatch/orders', {
+            method: 'POST',
+            body: JSON.stringify(orderData)
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async getDispatch(dispatchId) {
+        const res = await this.request(`/api/dispatch/${dispatchId}`);
+        return (res && res.ok) ? await res.json() : null;
+    },
+
     async chatAI(message) {
         const res = await this.request('/api/ai/chat', {
             method: 'POST',
@@ -363,6 +381,160 @@ const KWDC_API = {
         const res = await this.request(`/api/property-owner/requests/${requestId}`, {
             method: 'PATCH',
             body: JSON.stringify({ status, admin_notes: adminNotes })
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    // ==========================================
+    // Commercial Driver API Services
+    // ==========================================
+    async getDriverOverview() {
+        const res = await this.request('/api/driver/overview');
+        return (res && res.ok) ? await res.json() : null;
+    },
+
+    async updateDriverTelemetry(lat, lng, orderId = null, accuracy = 10.0) {
+        const res = await this.request('/api/driver/telemetry', {
+            method: 'POST',
+            body: JSON.stringify({ latitude: lat, longitude: lng, order_id: orderId, accuracy })
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async updateDriverOrderStatus(orderId, status, notes = '') {
+        const res = await this.request(`/api/driver/orders/${orderId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, admin_notes: notes })
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async submitDriverPOD(orderId, recipientName, notes = '') {
+        const res = await this.request(`/api/driver/orders/${orderId}/pod`, {
+            method: 'POST',
+            body: JSON.stringify({ recipient_name: recipientName, delivery_notes: notes })
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    // ==========================================
+    // Heavy Equipment Owner API Services
+    // ==========================================
+    async getEquipmentOverview() {
+        const res = await this.request('/api/equipment/overview');
+        return (res && res.ok) ? await res.json() : null;
+    },
+
+    async createEquipment(eqData) {
+        const res = await this.request('/api/equipment', {
+            method: 'POST',
+            body: JSON.stringify(eqData)
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async bookEquipment(equipmentId, bookingData) {
+        const res = await this.request(`/api/equipment/${equipmentId}/book`, {
+            method: 'POST',
+            body: JSON.stringify(bookingData)
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async updateEquipmentJobStatus(jobId, status) {
+        const res = await this.request(`/api/equipment/jobs/${jobId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status })
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    // ==========================================
+    // Licensed Security Agency API Services (5 Use Cases)
+    // ==========================================
+    async getSecurityOverview() {
+        const res = await this.request('/api/security/overview');
+        return (res && res.ok) ? await res.json() : null;
+    },
+
+    async addSecurityGuard(guardData) {
+        const res = await this.request('/api/security/guards', {
+            method: 'POST',
+            body: JSON.stringify(guardData)
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async deploySecurityGuard(assignmentData) {
+        const res = await this.request('/api/security/assignments', {
+            method: 'POST',
+            body: JSON.stringify(assignmentData)
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async logSecurityIncident(incidentData) {
+        const res = await this.request('/api/security/incidents', {
+            method: 'POST',
+            body: JSON.stringify(incidentData)
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
+    },
+
+    async generateSecurityInvoice(invoiceData) {
+        const res = await this.request('/api/security/invoices/generate', {
+            method: 'POST',
+            body: JSON.stringify(invoiceData)
         });
         if (res) {
             let data = {};

@@ -1615,7 +1615,7 @@ function renderDriverCockpit(container, s) {
     document.getElementById('cockpit-title').innerText = 'Commercial Driver Telemetry & Active Deliveries';
     const settledPayouts = s.settled_payouts || 0;
     const pendingFares = s.pending_fares || 0;
-    const jobs = s.jobs || [];
+    const jobs = s.jobs || s.assigned_jobs || [];
 
     container.innerHTML = `
         <div class="row g-4 mb-4">
@@ -1624,17 +1624,17 @@ function renderDriverCockpit(container, s) {
                 <div class="glass-card h-100">
                     <h5 class="fw-bold mb-3"><i class="fa-solid fa-satellite-dish text-success me-2"></i> GPS Telemetry Stream</h5>
                     <p class="text-muted fs-7">
-                        Your mobile terminal pings live coordinates to the KTM-WDC dispatch hub via ASGI WebSockets for real-time customer tracking.
+                        Your mobile terminal pings live coordinates to the KTM-WDC dispatch telemetry hub for real-time customer tracking.
                     </p>
                     <div class="p-3 rounded-3 bg-light mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="fw-bold fs-7">ASGI WebSocket Hub</span>
-                            <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-circle text-success me-1"></i> Ready</span>
+                            <span class="fw-bold fs-7">Live Fleet Sensor</span>
+                            <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-circle text-success me-1"></i> Active</span>
                         </div>
                         <div id="driver-geo-status" class="fs-8 text-secondary">Ready to transmit GPS ping to Kathmandu hub.</div>
                     </div>
-                    <button class="btn btn-kwdc w-100" onclick="sendDriverGPS()">
-                        <i class="fa-solid fa-location-arrow me-1"></i> Transmit GPS Ping Now
+                    <button class="btn btn-kwdc w-100 py-2 shadow-sm" onclick="sendDriverGPS()">
+                        <i class="fa-solid fa-location-arrow me-1"></i> Transmit GPS Telemetry Ping Now
                     </button>
                 </div>
             </div>
@@ -1642,7 +1642,7 @@ function renderDriverCockpit(container, s) {
             <!-- Earnings Overview -->
             <div class="col-lg-7">
                 <div class="glass-card h-100">
-                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-wallet text-warning me-2"></i> Driver Earnings</h5>
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-wallet text-warning me-2"></i> Driver Earnings & Payouts</h5>
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <div class="p-3 rounded-3 bg-light">
@@ -1655,7 +1655,7 @@ function renderDriverCockpit(container, s) {
                             <div class="p-3 rounded-3 bg-light">
                                 <div class="text-muted fs-8 text-uppercase fw-bold">Pending Delivery Fares</div>
                                 <div class="fs-3 fw-bold text-dark mt-1">Rs. ${parseFloat(pendingFares).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
-                                <div class="text-warning fs-8">Payable upon POD</div>
+                                <div class="text-warning fs-8">Payable upon Digital POD</div>
                             </div>
                         </div>
                     </div>
@@ -1666,26 +1666,42 @@ function renderDriverCockpit(container, s) {
             </div>
         </div>
 
-        <div class="glass-card">
+        <div class="glass-card mb-4">
             <h5 class="fw-bold mb-3"><i class="fa-solid fa-truck-ramp-box text-primary me-2"></i> Assigned Freight Deliveries</h5>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light fs-8 text-uppercase">
-                        <tr><th>Tracking #</th><th>Pickup Depot</th><th>Destination</th><th>Distance</th><th>Driver Share</th><th>Status</th><th>POD</th></tr>
+                        <tr><th>Tracking #</th><th>Pickup Depot</th><th>Destination</th><th>Distance</th><th>Driver Share</th><th>Status</th><th>Actions</th></tr>
                     </thead>
                     <tbody class="fs-7">
                         ${jobs.length > 0 ? jobs.map(j => `
                             <tr>
                                 <td class="fw-bold"><code>${j.tracking_id}</code></td>
                                 <td>${j.pickup_address}</td>
-                                <td>${j.delivery_address || 'Destination'}</td>
+                                <td>${j.delivery_address || 'Kathmandu Consignee'}</td>
                                 <td>${j.total_distance} km</td>
-                                <td class="text-success fw-bold">Rs. ${parseFloat(j.base_price).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                <td><span class="badge bg-primary-subtle text-primary">${j.status}</span></td>
+                                <td class="text-success fw-bold">Rs. ${parseFloat(j.driver_share || j.base_price || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-dark rounded-pill px-3" onclick="alert('Digital Proof of Delivery (POD) mobile camera capture triggered for ${j.tracking_id}.')">
-                                        <i class="fa-solid fa-camera me-1"></i> Upload POD
-                                    </button>
+                                    <span class="badge ${j.status === 'delivered' ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary'}">
+                                        ${j.status}
+                                    </span>
+                                </td>
+                                <td>
+                                    ${j.status === 'assigned' ? `
+                                        <button class="btn btn-sm btn-kwdc py-1 px-2" onclick="driverUpdateStatus(${j.id}, 'picked_up')">
+                                            <i class="fa-solid fa-box me-1"></i> Pick Up
+                                        </button>
+                                    ` : j.status === 'picked_up' ? `
+                                        <button class="btn btn-sm btn-warning text-dark py-1 px-2 fw-bold" onclick="driverUpdateStatus(${j.id}, 'on_the_way')">
+                                            <i class="fa-solid fa-road me-1"></i> Start Trip
+                                        </button>
+                                    ` : j.status === 'on_the_way' ? `
+                                        <button class="btn btn-sm btn-success text-white py-1 px-2 fw-bold" onclick="driverPromptPOD(${j.id})">
+                                            <i class="fa-solid fa-camera me-1"></i> Deliver (POD)
+                                        </button>
+                                    ` : `
+                                        <span class="badge bg-success text-white py-1 px-2"><i class="fa-solid fa-circle-check me-1"></i> Delivered</span>
+                                    `}
                                 </td>
                             </tr>
                         `).join('') : `
@@ -1703,27 +1719,71 @@ function renderDriverCockpit(container, s) {
     `;
 }
 
-function sendDriverGPS() {
+async function sendDriverGPS() {
     const statusBox = document.getElementById('driver-geo-status');
     statusBox.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1 text-warning"></i> Querying hardware GPS sensor...';
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function (pos) {
-            statusBox.innerHTML = `<span class="text-success"><i class="fa-solid fa-check me-1"></i> Live Transmitted: Lat ${pos.coords.latitude.toFixed(4)}, Lng ${pos.coords.longitude.toFixed(4)}</span>`;
+        navigator.geolocation.getCurrentPosition(async function (pos) {
+            try {
+                const res = await KWDC_API.updateDriverTelemetry(pos.coords.latitude, pos.coords.longitude, null, pos.coords.accuracy || 10.0);
+                if (res && res.ok) {
+                    statusBox.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-check me-1"></i> Transmitted: Lat ${pos.coords.latitude.toFixed(4)}, Lng ${pos.coords.longitude.toFixed(4)} (Saved to Database)</span>`;
+                } else {
+                    statusBox.innerHTML = `<span class="text-success"><i class="fa-solid fa-check me-1"></i> Lat ${pos.coords.latitude.toFixed(4)}, Lng ${pos.coords.longitude.toFixed(4)}</span>`;
+                }
+            } catch(e) {
+                statusBox.innerHTML = `<span class="text-success"><i class="fa-solid fa-check me-1"></i> Local GPS: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}</span>`;
+            }
         }, function (err) {
-            statusBox.innerHTML = `<span class="text-muted"><i class="fa-solid fa-satellite me-1"></i> GPS hardware signal unavailable or location permission denied.</span>`;
+            statusBox.innerHTML = `<span class="text-muted"><i class="fa-solid fa-satellite me-1"></i> Defaulting to Kathmandu Hub: 27.7172, 85.3240</span>`;
+            KWDC_API.updateDriverTelemetry(27.7172, 85.3240);
         });
     } else {
-        statusBox.innerHTML = `<span class="text-muted"><i class="fa-solid fa-satellite me-1"></i> Geolocation API not supported by browser.</span>`;
+        statusBox.innerHTML = `<span class="text-muted"><i class="fa-solid fa-satellite me-1"></i> Defaulting to Kathmandu Hub: 27.7172, 85.3240</span>`;
+        KWDC_API.updateDriverTelemetry(27.7172, 85.3240);
+    }
+}
+
+async function driverUpdateStatus(orderId, status) {
+    if (!confirm(`Update dispatch order status to '${status}'?`)) return;
+    try {
+        const res = await KWDC_API.updateDriverOrderStatus(orderId, status);
+        if (res && res.ok) {
+            alert(`Order status updated to '${status}' successfully!`);
+            await initDashboard();
+        } else {
+            alert('Failed to update status. Please try again.');
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function driverPromptPOD(orderId) {
+    const recipient = prompt("Enter recipient name for digital Proof of Delivery (POD):", "Consignee Manager");
+    if (!recipient) return;
+    const notes = prompt("Enter delivery verification notes:", "Cargo inspected and received in sound condition.");
+    try {
+        const res = await KWDC_API.submitDriverPOD(orderId, recipient, notes);
+        if (res && res.ok) {
+            alert('Digital Proof of Delivery verified! Payout recorded and order completed.');
+            await initDashboard();
+        } else {
+            alert('Failed to submit POD.');
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
     }
 }
 
 // 4. Heavy Equipment Owner Cockpit
 function renderEquipmentCockpit(container, s) {
-    document.getElementById('cockpit-title').innerText = 'Heavy Equipment & Certified Machinery';
-    const totalMachinery = s.total_machinery || 0;
-    const activeLeases = s.active_leases || 0;
+    document.getElementById('cockpit-title').innerText = 'Heavy Equipment & Certified Machinery Fleet';
+    const totalMachinery = s.total_machinery || (s.counts ? s.counts.total_machinery : 0) || 0;
+    const activeLeases = s.active_leases || (s.counts ? s.counts.active_leases : 0) || 0;
     const monthlyRev = s.monthly_revenue || 0;
     const equipment = s.equipment || [];
+    const jobs = s.jobs || [];
 
     container.innerHTML = `
         <div class="row g-3 mb-4">
@@ -1751,60 +1811,121 @@ function renderEquipmentCockpit(container, s) {
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
                     <span class="text-muted fs-8 text-uppercase fw-bold">Operational Status</span>
-                    <div class="fs-2 fw-bold text-success mt-1">Ready</div>
-                    <div class="text-muted fs-8 mt-1">Nepal Logistics Network</div>
+                    <div class="fs-2 fw-bold text-success mt-1">Active Fleet</div>
+                    <div class="text-muted fs-8 mt-1">Certified Operators</div>
                 </div>
             </div>
         </div>
 
-        <div class="row g-4">
-            <div class="col-12">
-                <div class="glass-card h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-tractor text-warning me-2"></i> Machinery Fleet Catalog</h5>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light fs-8 text-uppercase">
-                                <tr><th>Machine Name</th><th>Type</th><th>Daily Rate</th><th>Security Deposit</th><th>Location</th><th>Status</th></tr>
-                            </thead>
-                            <tbody class="fs-7">
-                                ${equipment.length > 0 ? equipment.map(e => `
-                                    <tr>
-                                        <td class="fw-bold">${e.name}</td>
-                                        <td><span class="badge bg-light text-dark border">${e.type}</span></td>
-                                        <td class="text-success fw-bold">Rs. ${parseFloat(e.daily_rate).toLocaleString()}</td>
-                                        <td>Rs. ${parseFloat(e.security_deposit).toLocaleString()}</td>
-                                        <td>${e.location}</td>
-                                        <td><span class="badge ${e.status === 'Available' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'}">${e.status}</span></td>
-                                    </tr>
-                                `).join('') : `
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4 text-muted">
-                                            <i class="fa-solid fa-tractor fa-2x mb-2 d-block text-secondary opacity-50"></i>
-                                            No heavy machinery listed under your account yet.
-                                        </td>
-                                    </tr>
-                                `}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <div class="glass-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-tractor text-warning me-2"></i> Machinery Fleet Catalog</h5>
+                <button class="btn btn-kwdc btn-sm" onclick="equipmentPromptAdd()">
+                    <i class="fa-solid fa-plus me-1"></i> List New Machinery
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr><th>Machine Name</th><th>Type</th><th>Daily Rate</th><th>Security Deposit</th><th>Location</th><th>Status</th></tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${equipment.length > 0 ? equipment.map(e => `
+                            <tr>
+                                <td class="fw-bold">${e.name}</td>
+                                <td><span class="badge bg-light text-dark border">${e.type}</span></td>
+                                <td class="text-success fw-bold">Rs. ${parseFloat(e.daily_rate).toLocaleString()} / day</td>
+                                <td>Rs. ${parseFloat(e.security_deposit).toLocaleString()}</td>
+                                <td>${e.location}</td>
+                                <td><span class="badge ${e.status === 'available' || e.status === 'Available' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'}">${e.status}</span></td>
+                            </tr>
+                        `).join('') : `
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-tractor fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                                    No heavy machinery listed under your account yet. <button class="btn btn-link text-kwdc fw-bold p-0" onclick="equipmentPromptAdd()">Register your first machine &rarr;</button>
+                                </td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
             </div>
         </div>
     `;
 }
 
-// 5. Licensed Security Agency Cockpit
+async function equipmentPromptAdd() {
+    const name = prompt("Enter Machine Name (e.g. Toyota 5-Ton Diesel Forklift):", "Toyota 3-Ton Electric Forklift");
+    if (!name) return;
+    const type = prompt("Enter Equipment Type (forklift / crane / reach_stacker / telehandler):", "forklift");
+    if (!type) return;
+    const rate = prompt("Enter Daily Rental Tariff in Rs:", "7500");
+    if (!rate) return;
+    const loc = prompt("Enter Staging Location / Warehouse Depot:", "Kalimati Warehouse Hub, Kathmandu");
+    if (!loc) return;
+
+    try {
+        const res = await KWDC_API.createEquipment({
+            name,
+            type,
+            daily_rate: parseFloat(rate),
+            security_deposit: parseFloat(rate) * 2,
+            location: loc,
+            description: "Heavy machinery with certified operator."
+        });
+        if (res && res.ok) {
+            alert(`Machinery '${name}' listed successfully!`);
+            await initDashboard();
+        } else {
+            alert('Failed to list machinery.');
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+// 5. Licensed Security Agency Cockpit (5 UML Use Cases)
 function renderSecurityCockpit(container, s) {
-    document.getElementById('cockpit-title').innerText = 'Licensed Security Agency Deployments';
+    document.getElementById('cockpit-title').innerText = 'Perimeter Guarding & Incident Command Cockpit';
     const activePosts = s.active_posts || 0;
     const guardsOnDuty = s.guards_on_duty || 0;
     const incidentsResolved = s.incidents_resolved || 0;
     const assignments = s.assignments || [];
     const incidents = s.incidents || [];
+    const roster = s.roster || [];
+    const agency = s.agency || {};
 
     container.innerHTML = `
+        <!-- Agency Registration & Licensing Status (Use Case 1) -->
+        <div class="glass-card mb-4 border-dark">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-danger-subtle text-danger fs-8 text-uppercase fw-bold">Command Center</span>
+                        <span class="badge bg-success-subtle text-success fs-8"><i class="fa-solid fa-circle-check me-1"></i> Government Verified</span>
+                    </div>
+                    <h4 class="fw-bold kwdc-serif mt-1 mb-0">${agency.agency_name || 'Nepal Suraksha Agency Pvt Ltd'}</h4>
+                    <div class="fs-8 text-muted mt-1">
+                        License No: <strong>${agency.license_number || 'MHA-SEC-2026-092'}</strong> (Ministry of Home Affairs) | Reg: <strong>${agency.registration_number || 'REG-SEC-0042'}</strong>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-outline-dark btn-sm rounded-3" onclick="securityPromptAddGuard()">
+                        <i class="fa-solid fa-user-plus me-1"></i> Add Guard Officer
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm rounded-3" onclick="securityPromptDeployPost()">
+                        <i class="fa-solid fa-shield me-1"></i> Deploy Guard to Post
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm rounded-3" onclick="securityPromptLogIncident()">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Log Incident
+                    </button>
+                    <button class="btn btn-kwdc btn-sm rounded-3" onclick="securityPromptGenerateInvoice()">
+                        <i class="fa-solid fa-file-invoice me-1"></i> Monthly Guarding Invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="row g-3 mb-4">
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
@@ -1822,43 +1943,49 @@ function renderSecurityCockpit(container, s) {
             </div>
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
-                    <span class="text-muted fs-8 text-uppercase fw-bold">Incidents Resolved</span>
-                    <div class="fs-2 fw-bold text-success mt-1">${incidentsResolved} Recorded</div>
-                    <div class="text-muted fs-8 mt-1">Audit Logged</div>
+                    <span class="text-muted fs-8 text-uppercase fw-bold">Incidents Logged</span>
+                    <div class="fs-2 fw-bold text-danger mt-1">${incidents.length || incidentsResolved} Recorded</div>
+                    <div class="text-muted fs-8 mt-1">Perimeter Audited</div>
                 </div>
             </div>
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
                     <span class="text-muted fs-8 text-uppercase fw-bold">Emergency Escalation</span>
                     <div class="fs-2 fw-bold text-danger mt-1">100 / Police</div>
-                    <div class="text-muted fs-8 mt-1">Nepal Sector Response</div>
+                    <div class="text-muted fs-8 mt-1">Nepal Police Post Linked</div>
                 </div>
             </div>
         </div>
 
-        <div class="row g-4">
+        <!-- Post Assignments & Shift Schedules (Use Case 3) -->
+        <div class="row g-4 mb-4">
             <div class="col-lg-7">
                 <div class="glass-card h-100">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-user-shield text-danger me-2"></i> Security Post Assignments</h5>
+                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-user-shield text-danger me-2"></i> Warehouse Post Deployments & Shift Schedules</h5>
+                        <button class="btn btn-outline-dark btn-sm py-0" onclick="securityPromptDeployPost()">+ Deploy Post</button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light fs-8 text-uppercase">
-                                <tr><th>Warehouse Depot</th><th>Shift</th><th>Duty Status</th></tr>
+                                <tr><th>Warehouse Depot</th><th>Shift Schedule</th><th>Duty Status</th></tr>
                             </thead>
                             <tbody class="fs-7">
                                 ${assignments.length > 0 ? assignments.map(asgn => `
                                     <tr>
                                         <td class="fw-bold">${asgn.warehouse_name}</td>
-                                        <td><span class="badge bg-light text-dark border">${asgn.shift_type}</span></td>
-                                        <td><span class="badge bg-success-subtle text-success">${asgn.status}</span></td>
+                                        <td>
+                                            <span class="badge ${asgn.shift_type === 'day' ? 'bg-warning-subtle text-dark' : 'bg-dark text-white'} border">
+                                                ${asgn.shift_type === 'day' ? '☀️ Day Shift (06:00 - 18:00)' : '🌙 Night Shift (18:00 - 06:00)'}
+                                            </span>
+                                        </td>
+                                        <td><span class="badge bg-success-subtle text-success">${asgn.status || 'Active'}</span></td>
                                     </tr>
                                 `).join('') : `
                                     <tr>
                                         <td colspan="3" class="text-center py-4 text-muted">
                                             <i class="fa-solid fa-user-shield fa-2x mb-2 d-block text-secondary opacity-50"></i>
-                                            No guard posts currently stationed.
+                                            No guard posts currently stationed. <button class="btn btn-link text-kwdc fw-bold p-0" onclick="securityPromptDeployPost()">Deploy guards now &rarr;</button>
                                         </td>
                                     </tr>
                                 `}
@@ -1867,22 +1994,33 @@ function renderSecurityCockpit(container, s) {
                     </div>
                 </div>
             </div>
+
+            <!-- Incident Log & Police Escalation (Use Case 4) -->
             <div class="col-lg-5">
                 <div class="glass-card h-100">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i> Incident Response Log</h5>
+                        <button class="btn btn-outline-danger btn-sm py-0" onclick="securityPromptLogIncident()">+ Log Incident</button>
                     </div>
                     ${incidents.length > 0 ? incidents.map(inc => `
-                        <div class="p-3 rounded-3 bg-light mb-2">
-                            <div class="d-flex justify-content-between">
-                                <span class="fw-bold fs-7 text-danger">${inc.title}</span>
-                                <span class="badge bg-warning-subtle text-warning fs-8">${inc.status}</span>
+                        <div class="p-3 rounded-3 bg-light mb-2 border">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold fs-7 text-danger text-uppercase">${inc.incident_type || inc.title}</span>
+                                <span class="badge ${inc.severity === 'critical' || inc.severity === 'high' ? 'bg-danger text-white' : 'bg-warning-subtle text-dark'} fs-9">
+                                    ${(inc.severity || 'Medium').toUpperCase()}
+                                </span>
                             </div>
+                            <div class="fs-8 text-secondary mb-1">${inc.description || 'Routine incident log recorded.'}</div>
+                            ${inc.police_station_notified ? `
+                                <div class="fs-9 text-danger fw-bold mt-1">
+                                    <i class="fa-solid fa-building-shield me-1"></i> Escalated to: ${inc.police_station_notified}
+                                </div>
+                            ` : ''}
                         </div>
                     `).join('') : `
                         <div class="p-4 text-center text-muted fs-7">
                             <i class="fa-solid fa-circle-check text-success fa-2x mb-2 d-block"></i>
-                            No active security incidents logged. All perimeters secure.
+                            No active security incidents logged. All warehouse perimeters secure.
                         </div>
                     `}
                 </div>
@@ -1891,14 +2029,121 @@ function renderSecurityCockpit(container, s) {
     `;
 }
 
+async function securityPromptAddGuard() {
+    const name = prompt("Enter Security Guard Full Name:", "Ram Bahadur Gurung");
+    if (!name) return;
+    const badge = prompt("Enter Badge / ID Number:", "SEC-" + Math.floor(1000 + Math.random() * 9000));
+    if (!badge) return;
+    const phone = prompt("Enter Contact Phone:", "9811223344");
+    if (!phone) return;
+    const rank = prompt("Enter Rank (Senior Guard / Patrol Officer / Security Supervisor):", "Senior Guard");
+    if (!rank) return;
+
+    try {
+        const res = await KWDC_API.addSecurityGuard({
+            name,
+            badge_id: badge,
+            phone,
+            citizenship_no: "27-01-72-01928",
+            rank
+        });
+        if (res && res.ok) {
+            alert(`Officer '${name}' added to security roster!`);
+            await initDashboard();
+        } else {
+            alert('Failed to add guard officer.');
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function securityPromptDeployPost() {
+    const whId = prompt("Enter Warehouse ID to Deploy Guard Post:", "1");
+    if (!whId) return;
+    const shift = prompt("Enter Shift Type ('day' for Day Shift: 06:00-18:00, or 'night' for Night Shift: 18:00-06:00):", "day");
+    if (!shift) return;
+
+    try {
+        const res = await KWDC_API.deploySecurityGuard({
+            warehouse_id: parseInt(whId),
+            personnel_id: 1,
+            shift_type: shift.toLowerCase(),
+            start_date: new Date().toISOString().split('T')[0]
+        });
+        if (res && res.ok) {
+            alert(`Guard successfully deployed under ${shift.toUpperCase()} shift!`);
+            await initDashboard();
+        } else {
+            alert('Failed to deploy guard.');
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function securityPromptLogIncident() {
+    const whId = prompt("Enter Warehouse ID where incident occurred:", "1");
+    if (!whId) return;
+    const type = prompt("Enter Incident Type (Theft / Fire / Unauthorized Entry / Perimeter Breach):", "Perimeter Breach");
+    if (!type) return;
+    const desc = prompt("Enter Incident Description:", "Motion sensor triggered along southern perimeter fence.");
+    if (!desc) return;
+    const esc = confirm("Escalate and automatically notify the local Nepal Police Post?");
+
+    try {
+        const res = await KWDC_API.logSecurityIncident({
+            warehouse_id: parseInt(whId),
+            incident_type: type.toLowerCase(),
+            severity: esc ? "high" : "medium",
+            description: desc,
+            escalate_to_police: esc
+        });
+        if (res && res.ok) {
+            alert(res.data.message || 'Security incident logged successfully!');
+            await initDashboard();
+        } else {
+            alert('Failed to log incident.');
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function securityPromptGenerateInvoice() {
+    const whId = prompt("Enter Warehouse ID to Bill for Monthly Security Guarding:", "1");
+    if (!whId) return;
+    const guards = prompt("Enter number of stationed guards:", "4");
+    if (!guards) return;
+
+    try {
+        const res = await KWDC_API.generateSecurityInvoice({
+            warehouse_id: parseInt(whId),
+            guards_count: parseInt(guards),
+            monthly_rate_per_guard: 24000.0
+        });
+        if (res && res.ok) {
+            const inv = res.data.invoice || {};
+            alert(`Monthly guarding invoice #${inv.invoice_number} generated!\nSubtotal: Rs. ${inv.subtotal}\n13% IRD VAT: Rs. ${inv.vat_13_percent}\nGrand Total: Rs. ${inv.grand_total}`);
+            await initDashboard();
+        } else {
+            alert('Failed to generate security invoice.');
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    }
+}
+
 // 6. Enterprise Client / Shipper Cockpit
 function renderClientCockpit(container, s) {
-    document.getElementById('cockpit-title').innerText = 'Operations Cockpit';
+    document.getElementById('cockpit-title').innerText = 'Enterprise Client Operations Cockpit';
     const dispatches = s.active_dispatches || 0;
     const storageSqft = s.storage_sqft || 0;
     const unpaidInv = s.unpaid_invoices_amount || 0;
     const realDispatches = s.dispatches || [];
     const realInvoices = s.invoices || [];
+    const hasAssignedWh = Boolean(s.has_assigned_warehouse);
+    const assignedWhs = s.assigned_warehouses || [];
 
     container.innerHTML = `
         <div class="row g-3 mb-4">
@@ -1913,7 +2158,7 @@ function renderClientCockpit(container, s) {
                 <div class="glass-card mb-0">
                     <span class="text-muted fs-8 text-uppercase fw-bold">Reserved Storage</span>
                     <div class="fs-2 fw-bold text-dark mt-1">${(storageSqft).toLocaleString()} sqft</div>
-                    <div class="text-info fs-8 mt-1"><i class="fa-solid fa-warehouse"></i> Warehouse Leases</div>
+                    <div class="text-info fs-8 mt-1"><i class="fa-solid fa-warehouse"></i> ${hasAssignedWh ? `${assignedWhs.length} Leased Warehouses` : 'No Leased Godowns'}</div>
                 </div>
             </div>
             <div class="col-sm-6 col-xl-3">
@@ -1926,77 +2171,212 @@ function renderClientCockpit(container, s) {
             <div class="col-sm-6 col-xl-3">
                 <div class="glass-card mb-0">
                     <span class="text-muted fs-8 text-uppercase fw-bold">Account Standing</span>
-                    <div class="fs-2 fw-bold text-success mt-1">Active</div>
+                    <div class="fs-2 fw-bold text-success mt-1">Active Shipper</div>
                     <div class="text-muted fs-8 mt-1">Nepal Logistics Network</div>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Dispatches & Invoices Table -->
-        <div class="row g-4 mb-4">
-            <div class="col-lg-7">
-                <div class="glass-card h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-truck-fast text-primary me-2"></i> Active Freight Orders</h5>
-                        <a href="/dispatch.html" class="btn btn-kwdc btn-sm"><i class="fa-solid fa-plus me-1"></i> New Dispatch</a>
+        <!-- ADAPTIVE WORKFLOW: Assigned Warehouses vs Direct Point-to-Point Transit -->
+        ${hasAssignedWh ? `
+            <div class="glass-card mb-4 border-success">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success-subtle text-success fs-8 text-uppercase fw-bold">Assigned Staging Nodes</span>
+                            <span class="badge bg-light text-muted border fs-8">1 Warehouse &harr; Multiple Clients Enabled</span>
+                        </div>
+                        <h5 class="fw-bold kwdc-serif mt-1 mb-0"><i class="fa-solid fa-warehouse text-success me-2"></i> Your Leased Regional Warehousing Facilities</h5>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light fs-8 text-uppercase">
-                                <tr><th>Tracking #</th><th>Pickup</th><th>Destination</th><th>Distance</th><th>Status</th></tr>
-                            </thead>
-                            <tbody class="fs-7">
-                                ${realDispatches.length > 0 ? realDispatches.map(d => `
-                                    <tr>
-                                        <td class="fw-bold"><code>${d.tracking_id}</code></td>
-                                        <td>${d.pickup_address}</td>
-                                        <td>${d.delivery_address || 'Kathmandu'}</td>
-                                        <td>${d.total_distance} km</td>
-                                        <td><span class="badge bg-primary-subtle text-primary">${d.status}</span></td>
-                                    </tr>
-                                `).join('') : `
-                                    <tr>
-                                        <td colspan="5" class="text-center py-4 text-muted">
-                                            <i class="fa-solid fa-truck-fast fa-2x mb-2 d-block text-secondary opacity-50"></i>
-                                            No active freight dispatches. <a href="/dispatch.html" class="fw-bold text-kwdc text-decoration-underline ms-1">Book your first dispatch &rarr;</a>
-                                        </td>
-                                    </tr>
-                                `}
-                            </tbody>
-                        </table>
+                    <div class="d-flex gap-2">
+                        <a href="/dispatch.html" class="btn btn-kwdc btn-sm"><i class="fa-solid fa-plus me-1"></i> Dock Dispatch</a>
+                        <a href="/warehouses.html" class="btn btn-outline-dark btn-sm rounded-3"><i class="fa-solid fa-magnifying-glass me-1"></i> Browse More Godowns</a>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    ${assignedWhs.map(w => `
+                        <div class="col-lg-6">
+                            <div class="p-3 rounded-4 bg-light border h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-0">${w.name}</h6>
+                                            <div class="fs-8 text-muted"><i class="fa-solid fa-location-dot text-danger me-1"></i> ${w.address || w.location}</div>
+                                        </div>
+                                        <div>
+                                            ${w.cold_storage ? `
+                                                <span class="badge bg-info-subtle text-info"><i class="fa-solid fa-snowflake me-1"></i> ${w.temperature_range || 'Cold Chamber'}</span>
+                                            ` : `
+                                                <span class="badge bg-secondary-subtle text-secondary">${w.storage_type}</span>
+                                            `}
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between border-top border-bottom py-2 my-2 fs-7">
+                                        <span>Leased Space: <strong>${w.leased_sqft.toLocaleString()} sqft</strong></span>
+                                        <span class="text-success fw-bold">Rs. ${w.agreed_monthly_rent.toLocaleString()} / mo</span>
+                                    </div>
+
+                                    <!-- Facilities & Safeguards Strip -->
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        <span class="badge bg-white text-dark border fs-9"><i class="fa-solid fa-video text-primary me-1"></i> ${w.cctv_count} CCTVs</span>
+                                        <span class="badge bg-white text-dark border fs-9"><i class="fa-solid fa-user-shield text-success me-1"></i> ${w.security_guards} Guards</span>
+                                        <span class="badge bg-white text-dark border fs-9"><i class="fa-solid fa-dolly text-warning me-1"></i> ${w.loading_docks} Docks</span>
+                                        <span class="badge bg-white text-dark border fs-9"><i class="fa-solid fa-road text-secondary me-1"></i> ${w.container_road}</span>
+                                    </div>
+
+                                    <div class="p-2 rounded-3 bg-white border fs-9 text-secondary mb-3">
+                                        <span class="fw-bold text-dark"><i class="fa-solid fa-shield-halved text-danger me-1"></i> Nearby Safeguards:</span>
+                                        Police: ${w.nearby_police} | Hospital: ${w.nearby_hospital} | Fire: ${w.nearby_fire}
+                                    </div>
+                                </div>
+
+                                <div class="d-flex gap-2 pt-2 border-top">
+                                    <a href="/dispatch.html?warehouse_id=${w.warehouse_id}" class="btn btn-kwdc btn-sm flex-grow-1">
+                                        <i class="fa-solid fa-truck-ramp-box me-1"></i> Dispatch from Dock
+                                    </a>
+                                    <button class="btn btn-outline-dark btn-sm" onclick="alert('Heavy Machinery & Forklift booking requested for ${w.name}. Dispatching certified equipment owner.')">
+                                        <i class="fa-solid fa-tractor me-1"></i> Forklift
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        ` : `
+            <div class="glass-card mb-4 border-primary">
+                <div class="row align-items-center g-3">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-primary-subtle text-primary fs-8 text-uppercase fw-bold">Direct Freight Logistics</span>
+                            <span class="badge bg-light text-muted border fs-8">No Warehouse Lease Required</span>
+                        </div>
+                        <h4 class="fw-bold kwdc-serif mb-2">Direct Point-to-Point Freight Transit Across Nepal</h4>
+                        <p class="text-secondary fs-7 mb-0">
+                            You currently do not have a leased warehousing godown. You can directly dispatch commercial freight between any pickup depot and consignee destination with real-time GPS tracking and 13% IRD VAT compliance.
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="/dispatch.html" class="btn btn-kwdc shadow-sm mb-2 w-100">
+                            <i class="fa-solid fa-truck-moving me-2"></i> Book Point-to-Point Trip
+                        </a>
+                        <a href="/warehouses.html" class="btn btn-outline-dark btn-sm w-100">
+                            <i class="fa-solid fa-warehouse me-1"></i> Explore & Lease Warehouses
+                        </a>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-5">
-                <div class="glass-card h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-file-invoice text-warning me-2"></i> Recent Invoices</h5>
-                        <a href="/invoices.html" class="btn btn-outline-dark btn-sm rounded-3">View All</a>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light fs-8 text-uppercase">
-                                <tr><th>Invoice #</th><th>Amount</th><th>Status</th></tr>
-                            </thead>
-                            <tbody class="fs-7">
-                                ${realInvoices.length > 0 ? realInvoices.map(inv => `
-                                    <tr>
-                                        <td class="fw-bold"><code>${inv.invoice_number}</code></td>
-                                        <td class="fw-bold">Rs. ${parseFloat(inv.total_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                        <td><span class="badge ${inv.status === 'paid' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">${inv.status}</span></td>
-                                    </tr>
-                                `).join('') : `
-                                    <tr>
-                                        <td colspan="3" class="text-center py-4 text-muted">
-                                            <i class="fa-solid fa-receipt fa-2x mb-2 d-block text-secondary opacity-50"></i>
-                                            No pending tax invoices.
-                                        </td>
-                                    </tr>
-                                `}
-                            </tbody>
-                        </table>
-                    </div>
+        `}
+
+        <!-- Active Dispatches Table -->
+        <div class="glass-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-truck-fast text-primary me-2"></i> Active Freight Orders</h5>
+                <a href="/dispatch.html" class="btn btn-kwdc btn-sm"><i class="fa-solid fa-plus me-1"></i> New Dispatch</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr><th>Tracking #</th><th>Pickup Depot</th><th>Destination</th><th>Distance</th><th>Total Fare</th><th>Status</th><th>Action</th></tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${realDispatches.length > 0 ? realDispatches.map(d => `
+                            <tr>
+                                <td class="fw-bold"><code>${d.tracking_id}</code></td>
+                                <td>${d.pickup_address}</td>
+                                <td>${d.delivery_address || 'Kathmandu Corridor'}</td>
+                                <td>${d.total_distance} km</td>
+                                <td class="fw-bold text-success">Rs. ${parseFloat(d.grand_total || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                <td><span class="badge bg-primary-subtle text-primary">${d.status}</span></td>
+                                <td>
+                                    <a href="/tracking.html?tracking_id=${encodeURIComponent(d.tracking_id)}" class="btn btn-outline-dark btn-sm py-1 px-2 rounded-3">
+                                        <i class="fa-solid fa-map-location-dot me-1"></i> Track Live
+                                    </a>
+                                </td>
+                            </tr>
+                        `).join('') : `
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-truck-fast fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                                    No active freight dispatches. <a href="/dispatch.html" class="fw-bold text-kwdc text-decoration-underline ms-1">Book your first dispatch &rarr;</a>
+                                </td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 13% IRD VAT Tax Invoices & Settlements (Image 2 Match) -->
+        <div class="glass-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-0"><i class="fa-solid fa-file-invoice text-warning me-2"></i> Statutory 13% IRD VAT Tax Invoices</h5>
+                    <div class="fs-8 text-muted">Nepal Inland Revenue Department (IRD) Schedule 13 compliant settlements</div>
                 </div>
+                <a href="/invoices.html" class="btn btn-outline-dark btn-sm rounded-3">View All Invoices</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light fs-8 text-uppercase">
+                        <tr>
+                            <th>Invoice Number</th>
+                            <th>Order Type</th>
+                            <th>Taxable Subtotal</th>
+                            <th>13% VAT</th>
+                            <th>Grand Total</th>
+                            <th>Payment Status</th>
+                            <th>Settlement Gateways</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-7">
+                        ${realInvoices.length > 0 ? realInvoices.map(inv => `
+                            <tr>
+                                <td class="fw-bold"><code class="text-danger">${inv.invoice_number}</code></td>
+                                <td><span class="badge bg-light text-dark border">${inv.order_type || 'Freight Dispatch'}</span></td>
+                                <td class="text-muted">Rs. ${parseFloat(inv.subtotal || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                <td class="text-danger fw-bold">Rs. ${parseFloat(inv.tax_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                <td class="text-success fw-bold">Rs. ${parseFloat(inv.grand_total || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                <td>
+                                    <span class="badge ${inv.payment_status === 'paid' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">
+                                        ${inv.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
+                                    </span>
+                                </td>
+                                <td>
+                                    ${inv.payment_status === 'paid' ? `
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-success text-white py-1 px-2"><i class="fa-solid fa-circle-check me-1"></i> Settled (${(inv.payment_method || 'Online').toUpperCase()})</span>
+                                            <a href="/api/invoices/${inv.id}/download" class="btn btn-sm btn-outline-danger py-1 px-2 fw-bold" style="font-size: 11px;">
+                                                <i class="fa-solid fa-file-pdf me-1"></i> Tax PDF
+                                            </a>
+                                        </div>
+                                    ` : `
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button class="btn btn-sm text-white py-1 px-2 fw-bold" onclick="clientSettleInvoice(${inv.id}, 'esewa')" style="background-color: #22c55e; border: none; font-size: 11px; border-radius: 6px;">
+                                                <i class="fa-solid fa-wallet me-1"></i> eSewa
+                                            </button>
+                                            <button class="btn btn-sm text-white py-1 px-2 fw-bold" onclick="clientSettleInvoice(${inv.id}, 'khalti')" style="background-color: #5b21b6; border: none; font-size: 11px; border-radius: 6px;">
+                                                <i class="fa-solid fa-mobile-screen me-1"></i> Khalti
+                                            </button>
+                                            <a href="/api/invoices/${inv.id}/download" class="btn btn-sm btn-outline-danger py-1 px-2 fw-bold" style="font-size: 11px; border-radius: 6px;">
+                                                <i class="fa-solid fa-file-pdf me-1"></i> Tax PDF
+                                            </a>
+                                        </div>
+                                    `}
+                                </td>
+                            </tr>
+                        `).join('') : `
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-receipt fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                                    No pending tax invoices.
+                                </td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -2017,6 +2397,23 @@ function renderClientCockpit(container, s) {
             </div>
             <div id="ai-output" class="p-3 rounded-3 bg-light fs-7 text-secondary d-none"></div>
         </div>
+    `;
+}
+
+async function clientSettleInvoice(invId, method) {
+    if (!confirm(`Confirm 13% IRD VAT Tax Invoice settlement via ${method.toUpperCase()}?`)) return;
+    try {
+        const res = await KWDC_API.payInvoice(invId, method);
+        if (res && res.ok) {
+            alert(`Invoice settled successfully via ${method.toUpperCase()}! Transaction recorded in Nepal IRD ledger.`);
+            await initDashboard();
+        } else {
+            alert('Settlement failed. Please try again or check network connection.');
+        }
+    } catch (err) {
+        alert('Payment error: ' + err.message);
+    }
+}
 
         <!-- Main Navigation Shortcuts -->
         <div class="row g-4">

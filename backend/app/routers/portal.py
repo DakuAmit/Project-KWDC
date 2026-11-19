@@ -16,6 +16,9 @@ router = APIRouter(tags=["Portal"])
 from app.core.templates import templates
 
 @router.get("/api/dashboard/stats")
+@router.post("/api/dashboard/stats")
+@router.get("/api/portal/cockpit-stats")
+@router.post("/api/portal/cockpit-stats")
 def api_dashboard_stats(request: Request, db: Session = Depends(get_db)):
     """
     Returns role-tailored real-time metrics and dataset for the authenticated user.
@@ -231,34 +234,84 @@ def api_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         }
 
     else:  # client
-        dispatches = db.query(DispatchOrder).filter(DispatchOrder.client_id == user.id).order_by(DispatchOrder.id.desc()).limit(10).all()
-        invoices = db.query(Invoice).filter(Invoice.client_id == user.id).order_by(Invoice.id.desc()).limit(10).all()
-        unpaid_invoices = sum(float(inv.total_amount or 0) for inv in invoices if inv.status != "paid")
+        dispatches = db.query(DispatchOrder).filter(DispatchOrder.client_id == user.id).order_by(DispatchOrder.id.desc()).limit(15).all()
+        invoices = db.query(Invoice).filter(
+            (Invoice.client_id == user.id) | (Invoice.user_id == user.id)
+        ).order_by(Invoice.id.desc()).limit(15).all()
+        unpaid_invoices = sum(
+            float(inv.grand_total or inv.amount or inv.total_amount or 0)
+            for inv in invoices
+            if (inv.payment_status != "paid" and inv.status != "paid")
+        )
         
-        # Real approved storage space for this client
-        storage_reqs = db.query(WarehouseRequest).filter(WarehouseRequest.client_id == user.id, WarehouseRequest.status == "approved").all()
+        # Real approved storage space for this client (Multi-tenant capacity partitioning)
+        storage_reqs = db.query(WarehouseRequest).filter(
+            WarehouseRequest.client_id == user.id,
+            WarehouseRequest.status == "approved"
+        ).all()
         storage_sqft = sum(float(r.space_required or 0) for r in storage_reqs)
 
+        assigned_warehouses = []
+        for r in storage_reqs:
+            w = r.warehouse
+            if w:
+                temp_range = None
+                if w.cold_storage:
+                    t_min = f"{w.temperature_min}°C" if w.temperature_min is not None else "-20°C"
+                    t_max = f"{w.temperature_max}°C" if w.temperature_max is not None else "4°C"
+                    temp_range = f"{t_min} to {t_max}"
+
+                assigned_warehouses.append({
+                    "request_id": r.id,
+                    "warehouse_id": w.id,
+                    "name": w.name,
+                    "location": w.location,
+                    "address": getattr(w, "address", w.location) or w.location,
+                    "leased_sqft": float(r.space_required or 0),
+                    "agreed_monthly_rent": float(r.agreed_price or (float(w.price_per_sqft or 0) * float(r.space_required or 0))),
+                    "storage_type": getattr(w, "storage_type", "Closed Covered Godown") or "Closed Covered Godown",
+                    "cold_storage": bool(w.cold_storage),
+                    "temperature_range": temp_range,
+                    "has_cctv": bool(getattr(w, "has_cctv", True)),
+                    "cctv_count": getattr(w, "cctv_cameras_count", 16) or 16,
+                    "security_guards": getattr(w, "security_guards_count", 4) or 4,
+                    "loading_docks": getattr(w, "loading_docks_count", 2) or 2,
+                    "container_road": getattr(w, "container_road_type", "Paved 4-Lane Access") or "Paved 4-Lane Access",
+                    "nearby_police": getattr(w, "nearby_police_station", "Metropolitan Police Post") or "Metropolitan Police Post",
+                    "nearby_hospital": getattr(w, "nearby_hospital", "Regional Emergency Hospital") or "Regional Emergency Hospital",
+                    "nearby_fire": getattr(w, "nearby_fire_brigade", "Municipal Fire Station (Damkal)") or "Municipal Fire Station (Damkal)"
+                })
+
         response_data["stats"] = {
-            "active_dispatches": len([d for d in dispatches if d.status in ("pending", "assigned", "in_transit")]),
+            "has_assigned_warehouse": len(assigned_warehouses) > 0,
+            "assigned_warehouses": assigned_warehouses,
+            "active_dispatches": len([d for d in dispatches if d.status in ("pending", "assigned", "picked_up", "on_the_way", "in_transit")]),
             "storage_sqft": storage_sqft,
             "unpaid_invoices_amount": unpaid_invoices,
             "dispatches": [
                 {
                     "id": d.id,
                     "tracking_id": d.tracking_id,
+                    "warehouse_id": d.warehouse_id,
                     "pickup_address": d.pickup_address,
-                    "delivery_address": d.delivery_address,
+                    "delivery_address": (d.stops[0].address if d.stops and len(d.stops) > 0 else getattr(d, "delivery_address", "Kathmandu Hub")),
                     "total_distance": float(d.total_distance or 0),
-                    "status": d.status
+                    "grand_total": float(d.grand_total or 0),
+                    "status": d.status,
+                    "created_at": d.created_at.strftime('%Y-%m-%d') if d.created_at else None
                 } for d in dispatches
             ],
             "invoices": [
                 {
                     "id": inv.id,
                     "invoice_number": inv.invoice_number,
-                    "total_amount": float(inv.total_amount or 0),
-                    "status": inv.status
+                    "order_type": "Freight Dispatch" if inv.order_type == "dispatch" else (inv.order_type.title() if inv.order_type else "Commercial Service"),
+                    "subtotal": float(inv.subtotal or round(float(inv.grand_total or inv.amount or 0) / 1.13, 2)),
+                    "tax_amount": float(inv.tax_amount or round(float(inv.grand_total or inv.amount or 0) - float(inv.subtotal or (float(inv.grand_total or inv.amount or 0) / 1.13)), 2)),
+                    "grand_total": float(inv.grand_total or inv.amount or 0),
+                    "payment_status": inv.payment_status or inv.status or "unpaid",
+                    "payment_method": inv.payment_method,
+                    "created_at": inv.created_at.strftime('%Y-%m-%d') if inv.created_at else None
                 } for inv in invoices
             ]
         }

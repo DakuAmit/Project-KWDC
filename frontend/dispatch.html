@@ -48,31 +48,52 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="glass-card mb-4">
-                <h3 class="fw-bold kwdc-serif mb-1">New Freight Dispatch Shipment</h3>
-                <p class="text-muted fs-7">Route planning with automatic admin distance margins and 13% IRD VAT calculation</p>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h3 class="fw-bold kwdc-serif mb-1">New Freight Dispatch Shipment</h3>
+                        <p class="text-muted fs-7 mb-0">Multi-node warehouse staging or point-to-point transit across Nepal with 13% IRD VAT</p>
+                    </div>
+                    <span id="dispatch-mode-badge" class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fs-7">
+                        <i class="fa-solid fa-truck-moving me-1"></i> Point-to-Point Transit
+                    </span>
+                </div>
             </div>
 
+            <!-- Feedback Alert -->
+            <div id="dispatch-alert" class="alert d-none mb-4" role="alert"></div>
+
             <form id="dispatch-form">
+                <!-- 1. Origin Depot -->
                 <div class="glass-card mb-4">
-                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-location-dot text-danger me-2"></i> 1. Origin Depot Address</h5>
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-location-dot text-danger me-2"></i> 1. Origin Depot & Pickup Details</h5>
+                    
                     <div class="mb-3">
-                        <label class="form-label fs-7 fw-bold">Pickup Warehouse</label>
-                        <input type="text" id="pickup_address" class="form-control" value="Kalimati Cold Store, Ward 14, Kathmandu" required>
+                        <label class="form-label fs-7 fw-bold">Dispatch Origin Mode</label>
+                        <select id="origin_selector" class="form-select" onchange="onOriginChange()">
+                            <option value="adhoc">Direct Point-to-Point Pickup (No Warehouse Required)</option>
+                        </select>
+                        <div class="form-text fs-8 text-muted">Select an assigned warehouse loading dock or enter any custom commercial pickup address.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fs-7 fw-bold">Pickup Street Address / Depot</label>
+                        <input type="text" id="pickup_address" class="form-control" placeholder="e.g. Kalimati Fruit & Vegetable Market, Ward 14, Kathmandu" value="Kalimati Wholesale Terminal, Kathmandu" required>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fs-7 fw-bold">Contact Person</label>
-                            <input type="text" id="pickup_person" class="form-control" value="Dispatch Manager" required>
+                            <label class="form-label fs-7 fw-bold">Pickup Contact Person</label>
+                            <input type="text" id="pickup_person" class="form-control" value="Sita Thapa" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fs-7 fw-bold">Contact Phone</label>
+                            <label class="form-label fs-7 fw-bold">Pickup Contact Phone</label>
                             <input type="tel" id="pickup_phone" class="form-control" value="9801112233" required>
                         </div>
                     </div>
                 </div>
 
+                <!-- 2. Vehicle & Distance Calculation -->
                 <div class="glass-card mb-4">
-                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-truck text-warning me-2"></i> 2. Vehicle & Distance Calculation</h5>
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-truck text-warning me-2"></i> 2. Vehicle Class & Route Distance</h5>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fs-7 fw-bold">Vehicle Class</label>
@@ -85,13 +106,14 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fs-7 fw-bold">Transit Distance (km)</label>
-                            <input type="number" step="0.5" id="distance" class="form-control" value="18.5" oninput="calculate()" required>
+                            <input type="number" step="0.5" min="1" id="distance" class="form-control" value="18.5" oninput="calculate()" required>
                         </div>
                     </div>
                 </div>
 
+                <!-- 3. Delivery Drop-Off -->
                 <div class="glass-card mb-4">
-                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-map-pin text-primary me-2"></i> 3. Delivery Drop-Off</h5>
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-map-pin text-primary me-2"></i> 3. Delivery Destination & Consignee</h5>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fs-7 fw-bold">Consignee Name</label>
@@ -102,14 +124,15 @@
                             <input type="tel" id="drop_phone" class="form-control" value="9802223344" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label fs-7 fw-bold">Drop-Off Street Address</label>
+                            <label class="form-label fs-7 fw-bold">Drop-Off Destination Street Address</label>
                             <input type="text" id="drop_address" class="form-control" value="Ring Road Junction, Balkumari, Lalitpur" required>
                         </div>
                     </div>
                 </div>
 
+                <!-- 4. Official Pricing & IRD VAT -->
                 <div class="glass-card border-warning mb-4">
-                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-calculator text-success me-2"></i> Official Pricing & IRD VAT</h5>
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-calculator text-success me-2"></i> Official Pricing & 13% IRD VAT Breakdown</h5>
                     <div class="p-3 rounded-3 bg-light mb-3">
                         <div class="d-flex justify-content-between mb-2 fs-7">
                             <span class="text-muted">Base Driver Tariff:</span>
@@ -135,8 +158,8 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-kwdc w-100 shadow fs-6">
-                    <i class="fa-solid fa-satellite-dish me-2"></i> Confirm Order & Launch Realtime GPS Telemetry
+                <button type="submit" id="btn-submit-dispatch" class="btn btn-kwdc w-100 shadow fs-6 py-3">
+                    <i class="fa-solid fa-satellite-dish me-2"></i> Confirm Booking & Generate 13% IRD VAT Invoice
                 </button>
             </form>
         </div>
@@ -145,6 +168,61 @@
 
 <script src="/js/api.js"></script>
 <script>
+let assignedWarehousesList = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await initAssignedWarehouses();
+    await calculate();
+});
+
+async function initAssignedWarehouses() {
+    try {
+        const stats = await KWDC_API.getDashboardStats();
+        if (stats && stats.stats && stats.stats.assigned_warehouses) {
+            assignedWarehousesList = stats.stats.assigned_warehouses;
+            const selector = document.getElementById('origin_selector');
+            
+            if (assignedWarehousesList.length > 0) {
+                assignedWarehousesList.forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = `wh_${w.warehouse_id}`;
+                    opt.innerText = `[Leased Dock] ${w.name} (${w.location}) - ${w.leased_sqft} sqft`;
+                    selector.appendChild(opt);
+                });
+            }
+
+            // Check URL param ?warehouse_id=
+            const urlParams = new URLSearchParams(window.location.search);
+            const whParam = urlParams.get('warehouse_id');
+            if (whParam) {
+                selector.value = `wh_${whParam}`;
+                onOriginChange();
+            }
+        }
+    } catch (err) {
+        console.warn('Could not load client assigned warehouses:', err);
+    }
+}
+
+function onOriginChange() {
+    const val = document.getElementById('origin_selector').value;
+    const badge = document.getElementById('dispatch-mode-badge');
+    const pickupInput = document.getElementById('pickup_address');
+
+    if (val.startsWith('wh_')) {
+        const whId = parseInt(val.replace('wh_', ''));
+        const wh = assignedWarehousesList.find(w => w.warehouse_id === whId);
+        if (wh) {
+            pickupInput.value = `${wh.name}, Loading Bay, ${wh.address || wh.location}`;
+            badge.className = 'badge bg-success-subtle text-success px-3 py-2 rounded-pill fs-7';
+            badge.innerHTML = `<i class="fa-solid fa-warehouse me-1"></i> Warehouse Dock Dispatch (${wh.name})`;
+        }
+    } else {
+        badge.className = 'badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fs-7';
+        badge.innerHTML = '<i class="fa-solid fa-truck-moving me-1"></i> Point-to-Point Transit';
+    }
+}
+
 async function calculate() {
     const dist = document.getElementById('distance').value || 18.5;
     const veh = document.getElementById('vehicle_type').value;
@@ -159,10 +237,73 @@ async function calculate() {
     }
 }
 
-document.getElementById('dispatch-form').addEventListener('submit', function(e) {
+document.getElementById('dispatch-form').addEventListener('submit', async function(e) {
     e.preventDefault();
-    alert('Dispatch Order created! Redirecting to live telemetry map...');
-    window.location.href = '/tracking.html';
+    const btn = document.getElementById('btn-submit-dispatch');
+    const alertBox = document.getElementById('dispatch-alert');
+    alertBox.className = 'alert d-none';
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Booking shipment & auditing IRD VAT in database...';
+
+    const originVal = document.getElementById('origin_selector').value;
+    let whId = null;
+    if (originVal.startsWith('wh_')) {
+        whId = parseInt(originVal.replace('wh_', ''));
+    }
+
+    const payload = {
+        pickup_address: document.getElementById('pickup_address').value,
+        pickup_contact_person: document.getElementById('pickup_person').value,
+        pickup_contact_phone: document.getElementById('pickup_phone').value,
+        vehicle_type: document.getElementById('vehicle_type').value,
+        total_distance: parseFloat(document.getElementById('distance').value || 10.0),
+        warehouse_id: whId,
+        delivery_address: document.getElementById('drop_address').value,
+        recipient_name: document.getElementById('drop_name').value,
+        recipient_phone: document.getElementById('drop_phone').value,
+        bill_type: 'regular',
+        pan_number: '601234567'
+    };
+
+    try {
+        const res = await KWDC_API.createDispatch(payload);
+        if (res && res.ok && res.data) {
+            const d = res.data.dispatch || {};
+            const inv = res.data.invoice || {};
+            alertBox.className = 'alert alert-success d-block shadow-sm';
+            alertBox.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <h6 class="fw-bold mb-1"><i class="fa-solid fa-circle-check text-success me-2"></i> Shipment Confirmed & Assigned!</h6>
+                        <div class="fs-7">
+                            Tracking Code: <strong>${d.tracking_id}</strong> | IRD Tax Invoice: <strong>${inv.invoice_number}</strong> (Rs. ${inv.grand_total ? inv.grand_total.toFixed(2) : ''})
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/tracking.html?tracking_id=${encodeURIComponent(d.tracking_id)}" class="btn btn-dark btn-sm rounded-3">
+                            <i class="fa-solid fa-map-location-dot me-1"></i> Live Tracking
+                        </a>
+                        <a href="/dashboard.html" class="btn btn-outline-dark btn-sm rounded-3">
+                            Dashboard
+                        </a>
+                    </div>
+                </div>
+            `;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            const errDetail = (res && res.data && res.data.detail) ? res.data.detail : 'Failed to book dispatch shipment.';
+            alertBox.className = 'alert alert-danger d-block';
+            alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-2"></i> ${errDetail}`;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-2"></i> Confirm Booking & Generate 13% IRD VAT Invoice';
+        }
+    } catch (err) {
+        alertBox.className = 'alert alert-danger d-block';
+        alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-2"></i> Connection error: ${err.message || 'Server unreachable'}`;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-2"></i> Confirm Booking & Generate 13% IRD VAT Invoice';
+    }
 });
 </script>
 </body>

@@ -18,10 +18,14 @@ class DispatchCreate(BaseModel):
     pickup_contact_person: Optional[str] = None
     pickup_contact_phone: Optional[str] = None
     vehicle_type: str = "truck"
-    stops: List[StopCreate]
+    stops: List[StopCreate] = []
     total_distance: float = 0.0
     bill_type: str = "regular"
     pan_number: Optional[str] = None
+    warehouse_id: Optional[int] = None
+    delivery_address: Optional[str] = None
+    recipient_name: Optional[str] = None
+    recipient_phone: Optional[str] = None
 
 class PriceCalculateRequest(BaseModel):
     distance: float
