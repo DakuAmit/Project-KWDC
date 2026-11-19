@@ -143,7 +143,7 @@ let currentUser = null;
 let activeRole = 'client';
 let liveStats = null;
 
-document.addEventListener("DOMContentLoaded", async function () {
+async function initDashboard() {
     currentUser = KWDC_API.getUser();
     if (!currentUser) {
         window.location.href = '/login.html';
@@ -156,21 +156,28 @@ document.addEventListener("DOMContentLoaded", async function () {
     const isSuperAdmin = (currentUser.is_admin || currentUser.role === 'admin');
 
     if (isSuperAdmin) {
-        document.getElementById('admin-view-switcher').classList.remove('d-none');
+        const switcher = document.getElementById('admin-view-switcher');
+        if (switcher) switcher.classList.remove('d-none');
         activeRole = requestedRole || 'admin';
-        document.getElementById('entity-selector').value = activeRole;
+        const sel = document.getElementById('entity-selector');
+        if (sel) sel.value = activeRole;
     } else {
-        activeRole = currentUser.role || 'client';
+        activeRole = requestedRole || currentUser.role || 'client';
     }
 
     // Populate Topbar Profile
-    document.getElementById('user-name').innerText = currentUser.name;
-    document.getElementById('user-email').innerText = currentUser.email;
-    document.getElementById('user-avatar').innerText = currentUser.name ? currentUser.name[0].toUpperCase() : 'U';
+    const nameEl = document.getElementById('user-name');
+    if (nameEl) nameEl.innerText = currentUser.name || 'User';
+    const emailEl = document.getElementById('user-email');
+    if (emailEl) emailEl.innerText = currentUser.email || '';
+    const avatarEl = document.getElementById('user-avatar');
+    if (avatarEl) avatarEl.innerText = currentUser.name ? currentUser.name[0].toUpperCase() : 'U';
     if (currentUser.user_code) {
         const codeBadge = document.getElementById('user-code-badge');
-        codeBadge.innerText = currentUser.user_code;
-        codeBadge.classList.remove('d-none');
+        if (codeBadge) {
+            codeBadge.innerText = currentUser.user_code;
+            codeBadge.classList.remove('d-none');
+        }
     }
 
     // Update Role Badge Styling
@@ -186,14 +193,16 @@ document.addEventListener("DOMContentLoaded", async function () {
         console.warn("Could not fetch real-time stats, loading standard cockpit view.", e);
     }
 
-    renderRoleCockpit(activeRole, liveStats);
-});
+    await renderRoleCockpit(activeRole, liveStats);
+}
 
-function switchEntityView(role) {
+document.addEventListener("DOMContentLoaded", initDashboard);
+
+async function switchEntityView(role) {
     activeRole = role;
     updateRoleBadge(role);
     renderSidebarNav(role);
-    renderRoleCockpit(role, liveStats);
+    await renderRoleCockpit(role, liveStats);
     const url = new URL(window.location);
     url.searchParams.set('role', role);
     window.history.replaceState({}, '', url);
@@ -311,22 +320,24 @@ function renderSidebarNav(role) {
     container.innerHTML = html;
 }
 
-function renderRoleCockpit(role, stats) {
+async function renderRoleCockpit(role, stats) {
     const container = document.getElementById('role-cockpit-container');
     if (!container) return;
 
+    const s = (stats && stats.stats) ? { ...stats.stats, ...stats } : (stats || {});
+
     if (role === 'admin') {
-        renderAdminCockpit(container, stats);
+        renderAdminCockpit(container, s);
     } else if (role === 'property_owner') {
-        renderPropertyCockpit(container, stats);
+        await renderPropertyCockpit(container, s);
     } else if (role === 'driver') {
-        renderDriverCockpit(container, stats);
+        await renderDriverCockpit(container, s);
     } else if (role === 'equipment_owner') {
-        renderEquipmentCockpit(container, stats);
+        await renderEquipmentCockpit(container, s);
     } else if (role === 'security_agency') {
-        renderSecurityCockpit(container, stats);
+        await renderSecurityCockpit(container, s);
     } else {
-        renderClientCockpit(container, stats);
+        renderClientCockpit(container, s);
     }
 }
 
@@ -1607,15 +1618,26 @@ async function handlePropertyRequestAction(requestId, status) {
     }
 }
 
-    `;
-}
-
 // 3. Commercial Driver Cockpit
-function renderDriverCockpit(container, s) {
-    document.getElementById('cockpit-title').innerText = 'Commercial Driver Telemetry & Active Deliveries';
+async function renderDriverCockpit(container, s) {
+    const titleEl = document.getElementById('cockpit-title');
+    if (titleEl) titleEl.innerText = 'Commercial Driver Telemetry & Active Deliveries';
+    
+    s = (s && s.stats) ? { ...s.stats, ...s } : (s || {});
+    if (!s.assigned_jobs && !s.jobs) {
+        try {
+            const overview = await KWDC_API.getDriverOverview();
+            if (overview) {
+                s = { ...s, ...overview };
+            }
+        } catch(e) {
+            console.warn("Could not fetch driver overview", e);
+        }
+    }
+
     const settledPayouts = s.settled_payouts || 0;
     const pendingFares = s.pending_fares || 0;
-    const jobs = s.jobs || s.assigned_jobs || [];
+    const jobs = s.assigned_jobs || s.jobs || [];
 
     container.innerHTML = `
         <div class="row g-4 mb-4">
@@ -1777,9 +1799,23 @@ async function driverPromptPOD(orderId) {
 }
 
 // 4. Heavy Equipment Owner Cockpit
-function renderEquipmentCockpit(container, s) {
-    document.getElementById('cockpit-title').innerText = 'Heavy Equipment & Certified Machinery Fleet';
-    const totalMachinery = s.total_machinery || (s.counts ? s.counts.total_machinery : 0) || 0;
+async function renderEquipmentCockpit(container, s) {
+    const titleEl = document.getElementById('cockpit-title');
+    if (titleEl) titleEl.innerText = 'Heavy Equipment & Certified Machinery Fleet';
+    
+    s = (s && s.stats) ? { ...s.stats, ...s } : (s || {});
+    if (!s.equipment) {
+        try {
+            const eqData = await KWDC_API.getEquipmentOverview();
+            if (eqData) {
+                s = { ...s, ...eqData };
+            }
+        } catch(e) {
+            console.warn("Could not fetch equipment overview", e);
+        }
+    }
+
+    const totalMachinery = s.total_machinery || (s.counts ? s.counts.total_machinery : 0) || (s.equipment ? s.equipment.length : 0);
     const activeLeases = s.active_leases || (s.counts ? s.counts.active_leases : 0) || 0;
     const monthlyRev = s.monthly_revenue || 0;
     const equipment = s.equipment || [];
@@ -1885,10 +1921,24 @@ async function equipmentPromptAdd() {
 }
 
 // 5. Licensed Security Agency Cockpit (5 UML Use Cases)
-function renderSecurityCockpit(container, s) {
-    document.getElementById('cockpit-title').innerText = 'Perimeter Guarding & Incident Command Cockpit';
-    const activePosts = s.active_posts || 0;
-    const guardsOnDuty = s.guards_on_duty || 0;
+async function renderSecurityCockpit(container, s) {
+    const titleEl = document.getElementById('cockpit-title');
+    if (titleEl) titleEl.innerText = 'Perimeter Guarding & Incident Command Cockpit';
+    
+    s = (s && s.stats) ? { ...s.stats, ...s } : (s || {});
+    if (!s.agency && !s.assignments) {
+        try {
+            const secData = await KWDC_API.getSecurityOverview();
+            if (secData) {
+                s = { ...s, ...secData };
+            }
+        } catch(e) {
+            console.warn("Could not fetch security overview", e);
+        }
+    }
+
+    const activePosts = s.active_posts || (s.assignments ? s.assignments.length : 0);
+    const guardsOnDuty = s.guards_on_duty || (s.roster ? s.roster.filter(r => r.status === 'on_duty').length : 0);
     const incidentsResolved = s.incidents_resolved || 0;
     const assignments = s.assignments || [];
     const incidents = s.incidents || [];
@@ -2136,8 +2186,12 @@ async function securityPromptGenerateInvoice() {
 
 // 6. Enterprise Client / Shipper Cockpit
 function renderClientCockpit(container, s) {
-    document.getElementById('cockpit-title').innerText = 'Enterprise Client Operations Cockpit';
-    const dispatches = s.active_dispatches || 0;
+    const titleEl = document.getElementById('cockpit-title');
+    if (titleEl) titleEl.innerText = 'Enterprise Client Operations Cockpit';
+    
+    s = (s && s.stats) ? { ...s.stats, ...s } : (s || {});
+
+    const dispatches = s.active_dispatches || (s.dispatches ? s.dispatches.length : 0);
     const storageSqft = s.storage_sqft || 0;
     const unpaidInv = s.unpaid_invoices_amount || 0;
     const realDispatches = s.dispatches || [];
@@ -2413,32 +2467,6 @@ async function clientSettleInvoice(invId, method) {
     } catch (err) {
         alert('Payment error: ' + err.message);
     }
-}
-
-        <!-- Main Navigation Shortcuts -->
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="glass-card h-100">
-                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-truck-fast text-primary me-2"></i> Freight Operations</h5>
-                    <p class="text-muted fs-7">Schedule multi-stop cargo shipments across Nepal with automated admin margin tiers and 13% VAT invoicing.</p>
-                    <div class="d-flex gap-2">
-                        <a href="/dispatch.html" class="btn btn-kwdc"><i class="fa-solid fa-plus me-1"></i> New Dispatch</a>
-                        <a href="/tracking.html" class="btn btn-outline-dark rounded-3"><i class="fa-solid fa-location-crosshairs me-1"></i> Live Tracking</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="glass-card h-100">
-                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-warehouse text-success me-2"></i> Commercial Warehouses</h5>
-                    <p class="text-muted fs-7">Browse and reserve ambient and cold storage space with verified fire and security safeguards.</p>
-                    <div class="d-flex gap-2">
-                        <a href="/warehouses.html" class="btn btn-outline-success rounded-3"><i class="fa-solid fa-search me-1"></i> Search Storage</a>
-                        <a href="/invoices.html" class="btn btn-outline-dark rounded-3"><i class="fa-solid fa-receipt me-1"></i> Invoices</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
 }
 
 async function askAI() {
