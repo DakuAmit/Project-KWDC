@@ -34,12 +34,14 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 def get_current_user_from_request(request: Request, db: Session):
-    # Check session cookie first, then Bearer token in Authorization header
-    token = request.cookies.get(settings.SESSION_COOKIE_NAME)
+    # Check explicit Authorization header first, then session cookie
+    auth_header = request.headers.get("Authorization")
+    token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+
     if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header[7:]
+        token = request.cookies.get(settings.SESSION_COOKIE_NAME)
 
     if not token:
         return None

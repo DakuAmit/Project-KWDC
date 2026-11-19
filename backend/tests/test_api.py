@@ -351,3 +351,111 @@ def test_admin_console_drawers_api():
     # Deactivate tier
     tier_del_resp = client.delete(f"/api/admin/settings/margin-tiers/{tier_id}", headers=admin_headers)
     assert tier_del_resp.status_code == 200
+
+def test_property_owner_multi_tenant_and_facility_governance():
+    # 1. Register Property Owner User
+    po_email = "owner@birgunjlogistics.com"
+    reg_resp = client.post("/api/auth/register", json={
+        "name": "Birgunj Logistics Real Estate",
+        "email": po_email,
+        "password": "SecurePassword2026!",
+        "phone": "9841998877",
+        "role": "property_owner",
+        "address": "Dry Port Road, Parsa"
+    })
+    assert reg_resp.status_code == 200
+
+    # Verify Email
+    db = SessionLocal()
+    po_user = db.query(User).filter(User.email == po_email).first()
+    code = po_user.email_verification_token
+    db.close()
+
+    verify_resp = client.post("/api/auth/verify-code", json={"email": po_email, "code": code})
+    assert verify_resp.status_code == 200
+    po_token = verify_resp.json()["access_token"]
+    po_headers = {"Authorization": f"Bearer {po_token}"}
+
+    # 2. List New Commercial Warehouse with All Advanced Facilities
+    create_wh_resp = client.post("/api/warehouses", json={
+        "name": "Birgunj Integrated Cold & Dry Godown",
+        "location": "Birgunj Dry Port, Parsa",
+        "address": "Corridor 4, Ward 22",
+        "kataho_code": "BRG-DRY-99",
+        "facilities": "Closed Covered Godown • 40ft Heavy Container Highway Access",
+        "area_sqft": 10000.0,
+        "price_per_sqft": 45.0,
+        "cold_storage": True,
+        "temperature_min": -25.0,
+        "temperature_max": 4.0,
+        "humidity_control": True,
+        "cctv_count": 16,
+        "guards_count": 4,
+        "loading_dock": True,
+        "parking_spaces": 10,
+        "nearby_police": "Birgunj District Police - 1.2km",
+        "nearby_hospital": "Narayani Sub-Regional Hospital - 2km",
+        "nearby_fire": "Birgunj Damkal Fire Station - 2.5km",
+        "nearby_fuel": "Nepal Oil Corp Depot Pump - 600m",
+        "nearby_bank": "Nabil Bank Dry Port Branch - 400m",
+        "description": "Multi-temperature certified logistics facility with dedicated multi-tenant docking."
+    }, headers=po_headers)
+    assert create_wh_resp.status_code == 200
+    wh_id = create_wh_resp.json()["warehouse"]["id"]
+
+    # 3. Client 1 (contact@himalayancargo.np) reserves 3,000 sqft
+    cl_login = client.post("/api/auth/login", json={"email": "contact@himalayancargo.np", "password": "BrandNewPassword2026!"})
+    cl_token = cl_login.json()["access_token"]
+    cl_headers = {"Authorization": f"Bearer {cl_token}"}
+
+    res1 = client.post(f"/api/warehouses/{wh_id}/reserve", json={
+        "space_required": 3000.0,
+        "purpose": "Pharmaceutical cold chain batch staging"
+    }, headers=cl_headers)
+    assert res1.status_code == 200
+    req1_id = res1.json()["reservation_id"]
+    inv1 = res1.json()["invoice"]
+    assert inv1["subtotal"] == 135000.0  # 3000 * 45
+    assert inv1["vat_amount"] == 17550.0  # 13% VAT
+    assert inv1["grand_total"] == 152550.0
+
+    # 4. Multi-Tenant Lease 2: Client 1 reserves another 4,000 sqft (1 Warehouse <-> Multiple Leases)
+    res2 = client.post(f"/api/warehouses/{wh_id}/reserve", json={
+        "space_required": 4000.0,
+        "purpose": "Packaged food dry goods storage"
+    }, headers=cl_headers)
+    assert res2.status_code == 200
+    assert res2.json()["invoice"]["subtotal"] == 180000.0
+
+    # 5. Capacity Check: Client attempts to reserve 4,000 sqft (Only 3,000 sqft available) -> Must fail with HTTP 400
+    res_overflow = client.post(f"/api/warehouses/{wh_id}/reserve", json={
+        "space_required": 4000.0,
+        "purpose": "Overflow cargo"
+    }, headers=cl_headers)
+    assert res_overflow.status_code == 400
+    assert "exceeds available capacity" in res_overflow.json()["detail"]
+
+    # 6. Property Owner Overview API
+    overview_resp = client.get("/api/property-owner/overview", headers=po_headers)
+    assert overview_resp.status_code == 200
+    overview_data = overview_resp.json()
+    assert overview_data["summary"]["total_properties"] >= 1
+    assert overview_data["summary"]["total_capacity_sqft"] >= 10000.0
+    assert overview_data["summary"]["total_leased_sqft"] >= 7000.0
+    assert overview_data["summary"]["total_available_sqft"] <= 3000.0
+    assert overview_data["summary"]["active_tenants_count"] >= 2
+    assert len(overview_data["warehouses"]) >= 1
+    target_wh = next(w for w in overview_data["warehouses"] if w["id"] == wh_id)
+    assert target_wh["cctv_count"] == 16
+    assert target_wh["guards_count"] == 4
+    assert target_wh["nearby_police"] == "Birgunj District Police - 1.2km"
+    assert target_wh["cold_storage"] is True
+    assert target_wh["temperature_min"] == -25.0
+
+    # 7. Property Owner Space Request Status Management
+    patch_resp = client.patch(f"/api/property-owner/requests/{req1_id}", json={
+        "status": "approved",
+        "admin_notes": "Dock bay 3 allocated. Temperature logging active."
+    }, headers=po_headers)
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["request"]["status"] == "approved"

@@ -96,11 +96,25 @@ class WarehouseCreatePayload(BaseModel):
     address: Optional[str] = None
     area_sqft: float
     price_per_sqft: float
+    description: Optional[str] = None
+    kataho_code: Optional[str] = None
+    facilities: Optional[str] = None  # Storage classification: Closed Godown, Open Yard Free Space, etc.
     cold_storage: bool = False
     temperature_min: Optional[float] = None
     temperature_max: Optional[float] = None
-    description: Optional[str] = None
-    kataho_code: Optional[str] = None
+    humidity_control: bool = False
+    cctv_count: int = 0
+    guards_count: int = 0
+    fire_extinguishers: int = 0
+    loading_dock: bool = False
+    parking_spaces: int = 0
+    parking_type: Optional[str] = "open"
+    nearby_police: Optional[str] = None
+    nearby_fire: Optional[str] = None
+    nearby_hospital: Optional[str] = None
+    nearby_bank: Optional[str] = None
+    nearby_fuel: Optional[str] = None
+    nearby_market: Optional[str] = None
 
 class WarehouseReservePayload(BaseModel):
     space_required: float
@@ -115,24 +129,50 @@ api_router = APIRouter(prefix="/api/warehouses", tags=["Warehouses API"])
 @router.get("/api/warehouses")
 def get_api_warehouses(db: Session = Depends(get_db)):
     warehouses = db.query(Warehouse).order_by(Warehouse.id.desc()).all()
-    return [
-        {
+    results = []
+    for w in warehouses:
+        total_sqft = float(w.area_sqft or 0)
+        approved_reqs = [r for r in w.requests if r.status == "approved"]
+        leased_sqft = sum(float(r.space_required or 0) for r in approved_reqs)
+        available_sqft = max(0.0, total_sqft - leased_sqft)
+        occupancy_pct = round((leased_sqft / total_sqft * 100), 1) if total_sqft > 0 else 0.0
+
+        results.append({
             "id": w.id,
             "name": w.name,
             "location": w.location,
             "address": w.address,
-            "area_sqft": float(w.area_sqft or 0),
+            "area_sqft": total_sqft,
+            "leased_sqft": leased_sqft,
+            "available_sqft": available_sqft,
+            "occupancy_pct": occupancy_pct,
+            "active_tenants_count": len(approved_reqs),
+            "pending_requests_count": len([r for r in w.requests if r.status == "pending"]),
             "price_per_sqft": float(w.price_per_sqft or 0),
             "cold_storage": bool(w.cold_storage),
             "temperature_min": float(w.temperature_min or 0) if w.temperature_min is not None else None,
             "temperature_max": float(w.temperature_max or 0) if w.temperature_max is not None else None,
+            "humidity_control": bool(w.humidity_control),
+            "facilities": w.facilities or "Closed Covered Godown",
+            "cctv_count": w.cctv_count or 0,
+            "guards_count": w.guards_count or 0,
+            "fire_extinguishers": w.fire_extinguishers or 0,
+            "loading_dock": bool(w.loading_dock),
+            "parking_spaces": w.parking_spaces or 0,
+            "parking_type": w.parking_type or "open",
+            "nearby_police": w.nearby_police,
+            "nearby_fire": w.nearby_fire,
+            "nearby_hospital": w.nearby_hospital,
+            "nearby_bank": w.nearby_bank,
+            "nearby_fuel": w.nearby_fuel,
+            "nearby_market": w.nearby_market,
             "kataho_code": w.kataho_code,
             "description": w.description,
             "status": w.status,
             "user_id": w.user_id,
             "created_at": w.created_at.isoformat() if w.created_at else None
-        } for w in warehouses
-    ]
+        })
+    return results
 
 @api_router.post("")
 @api_router.post("/")
@@ -152,6 +192,20 @@ def create_api_warehouse(payload: WarehouseCreatePayload, request: Request, db: 
         cold_storage=payload.cold_storage,
         temperature_min=payload.temperature_min if payload.cold_storage else None,
         temperature_max=payload.temperature_max if payload.cold_storage else None,
+        humidity_control=payload.humidity_control,
+        facilities=payload.facilities or "Closed Covered Godown",
+        cctv_count=payload.cctv_count,
+        guards_count=payload.guards_count,
+        fire_extinguishers=payload.fire_extinguishers,
+        loading_dock=payload.loading_dock,
+        parking_spaces=payload.parking_spaces,
+        parking_type=payload.parking_type or "open",
+        nearby_police=payload.nearby_police,
+        nearby_fire=payload.nearby_fire,
+        nearby_hospital=payload.nearby_hospital,
+        nearby_bank=payload.nearby_bank,
+        nearby_fuel=payload.nearby_fuel,
+        nearby_market=payload.nearby_market,
         description=payload.description,
         kataho_code=payload.kataho_code,
         status="approved"
@@ -170,6 +224,7 @@ def create_api_warehouse(payload: WarehouseCreatePayload, request: Request, db: 
             "area_sqft": float(new_wh.area_sqft or 0),
             "price_per_sqft": float(new_wh.price_per_sqft or 0),
             "cold_storage": bool(new_wh.cold_storage),
+            "facilities": new_wh.facilities,
             "status": new_wh.status
         }
     }
@@ -185,11 +240,23 @@ def reserve_api_warehouse(warehouse_id: int, payload: WarehouseReservePayload, r
     if not wh:
         raise HTTPException(status_code=404, detail="Warehouse not found")
 
+    # Multi-tenant partitioning check
+    total_sqft = float(wh.area_sqft or 0)
+    approved_reqs = [r for r in wh.requests if r.status == "approved"]
+    leased_sqft = sum(float(r.space_required or 0) for r in approved_reqs)
+    available_sqft = max(0.0, total_sqft - leased_sqft)
+
+    if payload.space_required > available_sqft:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Requested space ({payload.space_required:,.0f} sqft) exceeds available capacity ({available_sqft:,.0f} sqft) at {wh.name}."
+        )
+
     subtotal = round(payload.space_required * float(wh.price_per_sqft or 35.0), 2)
     vat_13 = round(subtotal * 0.13, 2)
     grand_total = round(subtotal + vat_13, 2)
 
-    # 1. Create space reservation
+    # 1. Create space reservation (partition)
     wh_req = WarehouseRequest(
         client_id=user.id,
         warehouse_id=wh.id,

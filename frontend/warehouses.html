@@ -17,7 +17,7 @@
         h1, h2, h3, .kwdc-serif { font-family: 'Newsreader', Georgia, serif; }
         body { background: #f8fafc; color: #1e293b; min-height: 100vh; }
         .glass-card {
-            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(16px);
             border: 1px solid rgba(226, 232, 240, 0.85); border-radius: 16px; padding: 24px; margin-bottom: 24px;
         }
         .btn-kwdc {
@@ -25,6 +25,12 @@
             font-weight: 600; border-radius: 10px; padding: 8px 18px; border: none;
         }
         .btn-kwdc:hover { color: white; opacity: 0.95; }
+        .facility-badge {
+            background: #f1f5f9; color: #475569; font-size: 11px; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;
+        }
+        .nearby-badge {
+            background: #fff7ed; color: #c2410c; font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid #ffedd5;
+        }
     </style>
 </head>
 <body>
@@ -39,6 +45,9 @@
         </a>
         <div class="ms-auto d-flex gap-2">
             <a href="/dashboard.html" class="btn btn-outline-dark btn-sm rounded-3">Dashboard</a>
+            <a href="/KTM-WDC_Entity_Use_Cases.pdf" target="_blank" class="btn btn-outline-danger btn-sm rounded-3">
+                <i class="fa-solid fa-file-pdf me-1"></i> Architecture PDF
+            </a>
             <a href="/invoices.html" class="btn btn-outline-secondary btn-sm rounded-3">Invoices</a>
             <a href="/dispatch.html" class="btn btn-outline-warning btn-sm rounded-3">Dispatches</a>
         </div>
@@ -51,16 +60,49 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <h3 class="fw-bold kwdc-serif mb-1">Commercial Warehousing Facilities</h3>
-                <p class="text-muted fs-7 mb-0">Live verified database of ambient and cold storage facilities with Kataho codes</p>
+                <p class="text-muted fs-7 mb-0">Multi-tenant ambient and temperature-controlled facilities with nearby emergency safeguards</p>
             </div>
-            <button class="btn btn-kwdc" data-bs-toggle="modal" data-bs-target="#newWarehouseModal">
-                <i class="fa-solid fa-plus me-1"></i> List New Facility
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-kwdc" data-bs-toggle="modal" data-bs-target="#newWarehouseModal">
+                    <i class="fa-solid fa-plus me-1"></i> List New Facility
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Alert Box -->
     <div id="alert-box" class="alert d-none mb-4" role="alert"></div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="glass-card p-3 mb-4">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0" id="filter-search" placeholder="Search by name, city, or Kataho code..." oninput="applyFilters()">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="filter-storage-type" onchange="applyFilters()">
+                    <option value="all">All Storage Types</option>
+                    <option value="Closed Covered Godown">Closed Covered Godown</option>
+                    <option value="Open Yard Free Space">Open Yard Free Space</option>
+                    <option value="Cold Storage Chamber">Cold Storage Chamber</option>
+                    <option value="Mezzanine Racking">Mezzanine Racking</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="filter-atmospheric" onchange="applyFilters()">
+                    <option value="all">All Atmospheric Controls</option>
+                    <option value="cold_only">Cold Storage Units Only</option>
+                    <option value="ambient_only">Dry / Ambient Storage Only</option>
+                </select>
+            </div>
+            <div class="col-md-2 text-md-end text-muted fs-8" id="warehouse-count-badge">
+                Showing 0 facilities
+            </div>
+        </div>
+    </div>
 
     <!-- Dynamic Warehouse Grid -->
     <div class="row g-4" id="warehouse-grid">
@@ -82,51 +124,141 @@
             <form id="new-warehouse-form">
                 <div class="modal-body px-4 py-3">
                     <div class="row g-3">
+                        <!-- Basic Info -->
                         <div class="col-md-7">
                             <label class="form-label fw-bold fs-8 text-uppercase">Facility Name</label>
                             <input type="text" class="form-control rounded-3" id="wh-name" placeholder="e.g. Birgunj Dry Port Logistics Hub" required>
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-bold fs-8 text-uppercase">City / Region</label>
-                            <input type="text" class="form-control rounded-3" id="wh-location" placeholder="e.g. Kathmandu, Birgunj" required>
+                            <input type="text" class="form-control rounded-3" id="wh-location" placeholder="e.g. Birgunj, Parsa" required>
                         </div>
                         <div class="col-md-8">
-                            <label class="form-label fw-bold fs-8 text-uppercase">Street Address / Kataho Code</label>
-                            <input type="text" class="form-control rounded-3" id="wh-address" placeholder="e.g. Ring Road, Balaju, Ward 16">
+                            <label class="form-label fw-bold fs-8 text-uppercase">Street Address / Landmark</label>
+                            <input type="text" class="form-control rounded-3" id="wh-address" placeholder="e.g. Dry Port Access Corridor, Ward 22">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-bold fs-8 text-uppercase">Kataho Code</label>
-                            <input type="text" class="form-control rounded-3" id="wh-kataho" placeholder="e.g. KTM-BAL-01">
+                            <label class="form-label fw-bold fs-8 text-uppercase">Kataho Geocode</label>
+                            <input type="text" class="form-control rounded-3" id="wh-kataho" placeholder="e.g. BRG-DRY-01">
+                        </div>
+
+                        <!-- Storage Classification -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold fs-8 text-uppercase">Storage Classification</label>
+                            <select class="form-select rounded-3" id="wh-storage-type" required>
+                                <option value="Closed Covered Godown">Closed Covered Godown (FMCG, Dry Goods)</option>
+                                <option value="Open Yard Free Space">Open Yard Free Space (Containers, Structural Cargo)</option>
+                                <option value="Cold Storage Chamber">Cold Storage Chamber (Perishables, Pharma)</option>
+                                <option value="Mezzanine Racking Distribution Center">Mezzanine Racking Distribution Center</option>
+                            </select>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label fw-bold fs-8 text-uppercase">Road Access Type</label>
+                            <select class="form-select rounded-3" id="wh-road-type">
+                                <option value="40ft Container Highway Pitch">40ft Heavy Container Highway Access</option>
+                                <option value="30ft Industrial Pitch Road">30ft Industrial Pitch Road</option>
+                                <option value="20ft Two-Way Commercial Pitch">20ft Two-Way Commercial Pitch</option>
+                                <option value="Secondary Gravel Truck Track">Secondary Gravel Truck Track</option>
+                            </select>
+                        </div>
+
+                        <!-- Space & Pricing -->
+                        <div class="col-md-6">
                             <label class="form-label fw-bold fs-8 text-uppercase">Total Storage Space (sqft)</label>
-                            <input type="number" class="form-control rounded-3" id="wh-area" placeholder="10000" min="100" required>
+                            <input type="number" class="form-control rounded-3" id="wh-area" placeholder="15000" min="100" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold fs-8 text-uppercase">Monthly Rate (Rs. / sqft)</label>
-                            <input type="number" step="0.5" class="form-control rounded-3" id="wh-price" placeholder="35" min="1" required>
+                            <input type="number" step="0.5" class="form-control rounded-3" id="wh-price" placeholder="45" min="1" required>
                         </div>
+
+                        <!-- Atmospheric / Cold Storage -->
                         <div class="col-12">
-                            <div class="form-check form-switch mt-2">
-                                <input class="form-check-input" type="checkbox" id="wh-cold" onchange="document.getElementById('temp-box').classList.toggle('d-none', !this.checked)">
-                                <label class="form-check-label fw-bold" for="wh-cold">Temperature-Controlled / Cold Storage Unit</label>
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="wh-cold" onchange="toggleColdFields(this.checked)">
+                                    <label class="form-check-label fw-bold" for="wh-cold">Temperature-Controlled / Cold Storage Unit</label>
+                                </div>
+                                <div class="row g-2 d-none" id="temp-fields-row">
+                                    <div class="col-md-4">
+                                        <label class="form-label fs-8 text-muted">Temperature Category Preset</label>
+                                        <select class="form-select form-select-sm" id="wh-temp-preset" onchange="applyTempPreset(this.value)">
+                                            <option value="custom">Custom Thresholds</option>
+                                            <option value="freeze">Deep Freeze (-25°C to -18°C)</option>
+                                            <option value="chilled">Chilled Cold Store (0°C to 4°C)</option>
+                                            <option value="pharma">Pharmaceutical Cold (2°C to 8°C)</option>
+                                            <option value="ambient">Ambient Controlled (15°C to 25°C)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fs-8 text-muted">Min Temp (°C)</label>
+                                        <input type="number" step="0.5" class="form-control form-control-sm" id="wh-temp-min" placeholder="-18">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fs-8 text-muted">Max Temp (°C)</label>
+                                        <input type="number" step="0.5" class="form-control form-control-sm" id="wh-temp-max" placeholder="4">
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <div class="form-check pb-1">
+                                            <input class="form-check-input" type="checkbox" id="wh-humidity">
+                                            <label class="form-check-label fs-8" for="wh-humidity">Humidity (% RH)</label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-12 d-none" id="temp-box">
-                            <div class="row g-2 p-3 bg-light rounded-3">
-                                <div class="col-6">
-                                    <label class="form-label fs-8">Min Temp (°C)</label>
-                                    <input type="number" step="0.5" class="form-control form-control-sm" id="wh-temp-min" placeholder="-18">
+
+                        <!-- On-Site Facilities -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold fs-8 text-uppercase text-secondary">Available On-Site Facilities</label>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label fs-8">24/7 CCTV Cameras</label>
+                                    <input type="number" class="form-control form-control-sm" id="wh-cctv" placeholder="16" min="0" value="8">
                                 </div>
-                                <div class="col-6">
-                                    <label class="form-label fs-8">Max Temp (°C)</label>
-                                    <input type="number" step="0.5" class="form-control form-control-sm" id="wh-temp-max" placeholder="4">
+                                <div class="col-md-3">
+                                    <label class="form-label fs-8">Security Guards Count</label>
+                                    <input type="number" class="form-control form-control-sm" id="wh-guards" placeholder="4" min="0" value="2">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fs-8">Dedicated Parking Bays</label>
+                                    <input type="number" class="form-control form-control-sm" id="wh-parking" placeholder="10" min="0" value="6">
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <div class="form-check pb-1">
+                                        <input class="form-check-input" type="checkbox" id="wh-dock" checked>
+                                        <label class="form-check-label fs-8 fw-bold" for="wh-dock">Loading Dock Bays</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Nearby Essential Facilities -->
                         <div class="col-12">
-                            <label class="form-label fw-bold fs-8 text-uppercase">Facility Description & Specifications</label>
-                            <textarea class="form-control rounded-3" id="wh-desc" rows="3" placeholder="Security guards, CCTV cameras, loading bays, 3-phase industrial power..."></textarea>
+                            <label class="form-label fw-bold fs-8 text-uppercase text-danger"><i class="fa-solid fa-shield-halved me-1"></i> Nearby Essential Safeguards (Distance / Location)</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-sm" id="wh-police" placeholder="Nearest Police Station (e.g. Ward Police Balaju - 800m)">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-sm" id="wh-hospital" placeholder="Nearest Hospital (e.g. National Medical College - 1.2km)">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-sm" id="wh-fire" placeholder="Damkal / Fire Brigade (e.g. Birgunj Fire Post - 2km)">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-sm" id="wh-fuel" placeholder="Fuel Station (e.g. Nepal Oil Corp Pump - 500m)">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-sm" id="wh-bank" placeholder="Bank / ATM (e.g. Nabil Bank SME - 400m)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold fs-8 text-uppercase">Facility Description & Multi-Tenant Staging Notes</label>
+                            <textarea class="form-control rounded-3" id="wh-desc" rows="2" placeholder="Industrial backup generators, high bay LED lighting, certified perimeter fencing..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -141,41 +273,43 @@
     </div>
 </div>
 
-<!-- Modal: Reserve Space -->
+<!-- Modal: Reserve Space (Multi-Tenant Partitioning) -->
 <div class="modal fade" id="reserveModal" tabindex="-1" aria-labelledby="reserveModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-bottom px-4 py-3">
-                <h5 class="modal-title fw-bold" id="reserveModalLabel"><i class="fa-solid fa-calendar-check text-warning me-2"></i> Reserve Storage Space</h5>
+                <h5 class="modal-title fw-bold" id="reserveModalLabel"><i class="fa-solid fa-calendar-check text-warning me-2"></i> Reserve Partitioned Storage Space</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="reserve-form">
                 <input type="hidden" id="res-wh-id">
                 <div class="modal-body px-4 py-3">
                     <div class="mb-3">
-                        <label class="form-label text-muted fs-8 text-uppercase fw-bold">Selected Warehouse</label>
+                        <label class="form-label text-muted fs-8 text-uppercase fw-bold">Selected Warehouse Facility</label>
                         <div class="fw-bold fs-6" id="res-wh-name">-</div>
                         <div class="text-muted fs-7" id="res-wh-rate">-</div>
+                        <div class="text-success fs-8 mt-1" id="res-wh-avail"><i class="fa-solid fa-circle-check"></i> Available: - sqft</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold fs-8 text-uppercase">Required Space (sqft)</label>
                         <input type="number" class="form-control rounded-3" id="res-space" placeholder="1000" min="50" required oninput="calcEstimate()">
+                        <div class="text-danger fs-8 d-none mt-1" id="res-space-err">Requested space exceeds available capacity!</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold fs-8 text-uppercase">Goods Description / Purpose</label>
-                        <input type="text" class="form-control rounded-3" id="res-purpose" placeholder="e.g. FMCG dry cargo, pharmaceuticals">
+                        <label class="form-label fw-bold fs-8 text-uppercase">Goods Description / Staging Purpose</label>
+                        <input type="text" class="form-control rounded-3" id="res-purpose" placeholder="e.g. FMCG dry cargo, cold perishables, pharmaceuticals">
                     </div>
                     <div class="p-3 bg-light rounded-3">
                         <div class="d-flex justify-content-between fs-7 mb-1">
-                            <span>Subtotal (Monthly):</span>
+                            <span>Subtotal (Monthly Lease):</span>
                             <strong id="est-subtotal">Rs. 0.00</strong>
                         </div>
                         <div class="d-flex justify-content-between fs-7 mb-1 text-danger">
-                            <span>Nepal 13% VAT:</span>
+                            <span>Nepal 13% IRD VAT:</span>
                             <strong id="est-vat">Rs. 0.00</strong>
                         </div>
                         <div class="d-flex justify-content-between fs-6 border-top pt-2 text-success fw-bold">
-                            <span>Grand Total Invoice:</span>
+                            <span>Grand Total Statutory Invoice:</span>
                             <strong id="est-total">Rs. 0.00</strong>
                         </div>
                     </div>
@@ -194,7 +328,9 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/js/api.js"></script>
 <script>
+let allWarehouses = [];
 let currentRate = 35.0;
+let currentMaxAvail = 999999;
 
 function showAlert(msg, isSuccess = true) {
     const b = document.getElementById('alert-box');
@@ -204,57 +340,172 @@ function showAlert(msg, isSuccess = true) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function toggleColdFields(isCold) {
+    document.getElementById('temp-fields-row').classList.toggle('d-none', !isCold);
+}
+
+function applyTempPreset(val) {
+    const minInput = document.getElementById('wh-temp-min');
+    const maxInput = document.getElementById('wh-temp-max');
+    if (val === 'freeze') {
+        minInput.value = -25;
+        maxInput.value = -18;
+    } else if (val === 'chilled') {
+        minInput.value = 0;
+        maxInput.value = 4;
+    } else if (val === 'pharma') {
+        minInput.value = 2;
+        maxInput.value = 8;
+    } else if (val === 'ambient') {
+        minInput.value = 15;
+        maxInput.value = 25;
+    }
+}
+
 async function loadWarehouses() {
     const grid = document.getElementById('warehouse-grid');
     try {
-        const warehouses = await KWDC_API.getWarehouses();
-        if (!warehouses || warehouses.length === 0) {
-            grid.innerHTML = `
-                <div class="col-12">
-                    <div class="glass-card text-center py-5">
-                        <div style="width:64px;height:64px;background:#fff7ed;color:#ea580c;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;">
-                            <i class="fa-solid fa-warehouse"></i>
-                        </div>
-                        <h4 class="fw-bold mb-2">No Warehouses Listed in Database</h4>
-                        <p class="text-muted fs-7 max-w-md mx-auto mb-4">
-                            The commercial registry is currently clean. Property owners and administrators can list verified ambient and cold storage facilities directly.
-                        </p>
-                        <button class="btn btn-kwdc" data-bs-toggle="modal" data-bs-target="#newWarehouseModal">
-                            <i class="fa-solid fa-plus me-1"></i> List the First Facility
-                        </button>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        grid.innerHTML = warehouses.map(w => `
-            <div class="col-md-6 col-lg-4">
-                <div class="glass-card h-100 d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="fw-bold mb-0">${escapeHtml(w.name)}</h5>
-                        ${w.cold_storage 
-                            ? `<span class="badge bg-info-subtle text-info"><i class="fa-solid fa-snowflake me-1"></i> ${w.temperature_min ?? -4}°C to ${w.temperature_max ?? 4}°C</span>`
-                            : `<span class="badge bg-secondary-subtle text-secondary">Dry Goods</span>`
-                        }
-                    </div>
-                    <div class="text-muted fs-8 mb-2">
-                        <i class="fa-solid fa-location-dot text-danger me-1"></i> ${escapeHtml(w.location)} ${w.address ? '&bull; ' + escapeHtml(w.address) : ''}
-                    </div>
-                    <p class="text-secondary fs-7 flex-grow-1">${w.description ? escapeHtml(w.description) : 'Commercial logistics warehousing facility with 24/7 access.'}</p>
-                    <div class="d-flex justify-content-between border-top border-bottom py-2 my-2 fs-7">
-                        <span>Space: <strong>${(w.area_sqft || 0).toLocaleString()} sqft</strong></span>
-                        <span class="text-success fw-bold">Rs. ${parseFloat(w.price_per_sqft || 0).toLocaleString()} / sqft / mo</span>
-                    </div>
-                    <button class="btn btn-kwdc w-100 mt-2" onclick="openReserveModal(${w.id}, '${escapeJs(w.name)}', ${w.price_per_sqft || 35})">
-                        <i class="fa-solid fa-calendar-check me-1"></i> Reserve Storage Space
-                    </button>
-                </div>
-            </div>
-        `).join('');
+        allWarehouses = await KWDC_API.getWarehouses();
+        applyFilters();
     } catch(err) {
         grid.innerHTML = `<div class="col-12"><div class="alert alert-danger">Error loading warehouses: ${err.message}</div></div>`;
     }
+}
+
+function applyFilters() {
+    const query = (document.getElementById('filter-search')?.value || '').toLowerCase().trim();
+    const typeFilter = document.getElementById('filter-storage-type')?.value || 'all';
+    const atmoFilter = document.getElementById('filter-atmospheric')?.value || 'all';
+
+    let filtered = allWarehouses.filter(w => {
+        const textMatch = !query || 
+            (w.name && w.name.toLowerCase().includes(query)) ||
+            (w.location && w.location.toLowerCase().includes(query)) ||
+            (w.address && w.address.toLowerCase().includes(query)) ||
+            (w.kataho_code && w.kataho_code.toLowerCase().includes(query));
+
+        let typeMatch = true;
+        if (typeFilter !== 'all') {
+            typeMatch = (w.facilities && w.facilities.includes(typeFilter));
+        }
+
+        let atmoMatch = true;
+        if (atmoFilter === 'cold_only') {
+            atmoMatch = !!w.cold_storage;
+        } else if (atmoFilter === 'ambient_only') {
+            atmoMatch = !w.cold_storage;
+        }
+
+        return textMatch && typeMatch && atmoMatch;
+    });
+
+    document.getElementById('warehouse-count-badge').innerText = `Showing ${filtered.length} of ${allWarehouses.length} facilities`;
+    renderWarehouseCards(filtered);
+}
+
+function renderWarehouseCards(warehouses) {
+    const grid = document.getElementById('warehouse-grid');
+    if (!warehouses || warehouses.length === 0) {
+        grid.innerHTML = `
+            <div class="col-12">
+                <div class="glass-card text-center py-5">
+                    <div style="width:64px;height:64px;background:#fff7ed;color:#ea580c;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;">
+                        <i class="fa-solid fa-warehouse"></i>
+                    </div>
+                    <h4 class="fw-bold mb-2">No Matching Storage Facilities</h4>
+                    <p class="text-muted fs-7 max-w-md mx-auto mb-4">
+                        No facilities match your active search filters. Try adjusting your category or list a new commercial warehouse.
+                    </p>
+                    <button class="btn btn-kwdc" data-bs-toggle="modal" data-bs-target="#newWarehouseModal">
+                        <i class="fa-solid fa-plus me-1"></i> List New Facility
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = warehouses.map(w => {
+        const total = w.area_sqft || 0;
+        const leased = w.leased_sqft || 0;
+        const avail = w.available_sqft !== undefined ? w.available_sqft : total;
+        const occ = w.occupancy_pct || 0;
+        const tenants = w.active_tenants_count || 0;
+
+        let tempPill = '';
+        if (w.cold_storage) {
+            tempPill = `<span class="badge bg-info-subtle text-info"><i class="fa-solid fa-snowflake me-1"></i> ${w.temperature_min ?? -4}°C to ${w.temperature_max ?? 4}°C ${w.humidity_control ? '• RH' : ''}</span>`;
+        } else {
+            tempPill = `<span class="badge bg-secondary-subtle text-secondary">Dry Goods</span>`;
+        }
+
+        let storageTypeBadge = `<span class="badge bg-light text-dark border">${escapeHtml(w.facilities || 'Closed Covered Godown')}</span>`;
+
+        // Progress bar color
+        let barColor = 'bg-success';
+        if (occ > 80) barColor = 'bg-danger';
+        else if (occ > 50) barColor = 'bg-warning';
+
+        return `
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card h-100 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h5 class="fw-bold mb-1">${escapeHtml(w.name)}</h5>
+                            <div class="d-flex gap-1 flex-wrap">${storageTypeBadge} ${tempPill}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-muted fs-8 mb-2">
+                        <i class="fa-solid fa-location-dot text-danger me-1"></i> ${escapeHtml(w.location)} ${w.address ? '&bull; ' + escapeHtml(w.address) : ''}
+                        ${w.kataho_code ? `<span class="badge bg-dark-subtle text-dark ms-1">${escapeHtml(w.kataho_code)}</span>` : ''}
+                    </div>
+
+                    <p class="text-secondary fs-7 mb-2 line-clamp-2">${w.description ? escapeHtml(w.description) : 'Commercial logistics warehousing facility with 24/7 access.'}</p>
+
+                    <!-- Available On-Site Facilities -->
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        ${w.cctv_count ? `<span class="facility-badge"><i class="fa-solid fa-video text-primary"></i> ${w.cctv_count} CCTV</span>` : ''}
+                        ${w.guards_count ? `<span class="facility-badge"><i class="fa-solid fa-user-shield text-success"></i> ${w.guards_count} Guards</span>` : ''}
+                        ${w.loading_dock ? `<span class="facility-badge"><i class="fa-solid fa-dolly text-warning"></i> Dock Bay</span>` : ''}
+                        ${w.parking_spaces ? `<span class="facility-badge"><i class="fa-solid fa-square-parking text-info"></i> ${w.parking_spaces} Bays</span>` : ''}
+                    </div>
+
+                    <!-- Nearby Essential Facilities -->
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        ${w.nearby_police ? `<span class="nearby-badge" title="Nearby Police"><i class="fa-solid fa-building-shield"></i> ${escapeHtml(w.nearby_police)}</span>` : ''}
+                        ${w.nearby_hospital ? `<span class="nearby-badge" title="Nearby Hospital"><i class="fa-solid fa-hospital"></i> ${escapeHtml(w.nearby_hospital)}</span>` : ''}
+                        ${w.nearby_fire ? `<span class="nearby-badge" title="Nearby Damkal"><i class="fa-solid fa-fire-extinguisher"></i> ${escapeHtml(w.nearby_fire)}</span>` : ''}
+                    </div>
+
+                    <!-- Multi-Tenant Capacity Breakdown -->
+                    <div class="p-2 bg-light rounded-3 mb-3 fs-8">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Capacity: <strong>${total.toLocaleString()} sqft</strong></span>
+                            <span class="text-success fw-bold">Available: ${avail.toLocaleString()} sqft</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar ${barColor}" role="progressbar" style="width: ${occ}%;" aria-valuenow="${occ}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted fs-8 mt-1">
+                            <span>${tenants} Active ${tenants === 1 ? 'Client' : 'Clients'}</span>
+                            <span>${occ}% Leased</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
+                        <div>
+                            <span class="fs-8 text-muted d-block">Monthly Rate</span>
+                            <span class="text-success fw-bold fs-6">Rs. ${parseFloat(w.price_per_sqft || 0).toLocaleString()} <span class="fs-8 fw-normal text-muted">/sqft</span></span>
+                        </div>
+                        <button class="btn btn-kwdc btn-sm" onclick="openReserveModal(${w.id}, '${escapeJs(w.name)}', ${w.price_per_sqft || 35}, ${avail})" ${avail <= 0 ? 'disabled' : ''}>
+                            <i class="fa-solid fa-calendar-check me-1"></i> ${avail <= 0 ? 'Fully Leased' : 'Reserve Space'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function escapeHtml(str) {
@@ -267,11 +518,19 @@ function escapeJs(str) {
     return String(str).replace(/'/g, "\\'");
 }
 
-function openReserveModal(id, name, rate) {
+function openReserveModal(id, name, rate, avail) {
     document.getElementById('res-wh-id').value = id;
     document.getElementById('res-wh-name').innerText = name;
-    document.getElementById('res-wh-rate').innerText = `Rate: Rs. ${rate} / sqft / month`;
+    document.getElementById('res-wh-rate').innerText = `Monthly Tariff: Rs. ${rate} / sqft`;
+    document.getElementById('res-wh-avail').innerHTML = `<i class="fa-solid fa-circle-check"></i> Available for Lease: <strong>${(avail || 0).toLocaleString()} sqft</strong>`;
+    
     currentRate = parseFloat(rate) || 35.0;
+    currentMaxAvail = parseFloat(avail) || 999999;
+    
+    document.getElementById('res-space').max = currentMaxAvail;
+    document.getElementById('res-space-err').classList.add('d-none');
+    document.getElementById('res-submit-btn').disabled = false;
+
     calcEstimate();
     const modal = new bootstrap.Modal(document.getElementById('reserveModal'));
     modal.show();
@@ -279,6 +538,18 @@ function openReserveModal(id, name, rate) {
 
 function calcEstimate() {
     const space = parseFloat(document.getElementById('res-space').value) || 0;
+    const errBox = document.getElementById('res-space-err');
+    const submitBtn = document.getElementById('res-submit-btn');
+
+    if (space > currentMaxAvail) {
+        errBox.classList.remove('d-none');
+        errBox.innerText = `Requested space (${space.toLocaleString()} sqft) exceeds available balance (${currentMaxAvail.toLocaleString()} sqft).`;
+        submitBtn.disabled = true;
+    } else {
+        errBox.classList.add('d-none');
+        submitBtn.disabled = false;
+    }
+
     const sub = Math.round(space * currentRate * 100) / 100;
     const vat = Math.round(sub * 0.13 * 100) / 100;
     const tot = Math.round((sub + vat) * 100) / 100;
@@ -300,11 +571,22 @@ document.getElementById('new-warehouse-form').addEventListener('submit', async f
         location: document.getElementById('wh-location').value.trim(),
         address: document.getElementById('wh-address').value.trim(),
         kataho_code: document.getElementById('wh-kataho').value.trim(),
+        facilities: `${document.getElementById('wh-storage-type').value} • ${document.getElementById('wh-road-type').value}`,
         area_sqft: parseFloat(document.getElementById('wh-area').value),
         price_per_sqft: parseFloat(document.getElementById('wh-price').value),
         cold_storage: document.getElementById('wh-cold').checked,
         temperature_min: document.getElementById('wh-temp-min').value ? parseFloat(document.getElementById('wh-temp-min').value) : null,
         temperature_max: document.getElementById('wh-temp-max').value ? parseFloat(document.getElementById('wh-temp-max').value) : null,
+        humidity_control: document.getElementById('wh-humidity').checked,
+        cctv_count: parseInt(document.getElementById('wh-cctv').value) || 0,
+        guards_count: parseInt(document.getElementById('wh-guards').value) || 0,
+        parking_spaces: parseInt(document.getElementById('wh-parking').value) || 0,
+        loading_dock: document.getElementById('wh-dock').checked,
+        nearby_police: document.getElementById('wh-police').value.trim() || null,
+        nearby_hospital: document.getElementById('wh-hospital').value.trim() || null,
+        nearby_fire: document.getElementById('wh-fire').value.trim() || null,
+        nearby_fuel: document.getElementById('wh-fuel').value.trim() || null,
+        nearby_bank: document.getElementById('wh-bank').value.trim() || null,
         description: document.getElementById('wh-desc').value.trim()
     };
 
@@ -342,7 +624,8 @@ document.getElementById('reserve-form').addEventListener('submit', async functio
     if (res.ok) {
         bootstrap.Modal.getInstance(document.getElementById('reserveModal')).hide();
         document.getElementById('reserve-form').reset();
-        showAlert(`Reservation confirmed! IRD Tax Invoice <strong>${res.data?.invoice?.invoice_number}</strong> generated. <a href="/invoices.html" class="alert-link text-decoration-underline ms-2">View Invoices &rarr;</a>`);
+        showAlert(`Space partitioned successfully! IRD Schedule 13 Tax Invoice <strong>${res.data?.invoice?.invoice_number}</strong> issued. <a href="/invoices.html" class="alert-link text-decoration-underline ms-2">View Invoices &rarr;</a>`);
+        loadWarehouses();
     } else {
         showAlert(res.data?.detail || 'Failed to reserve storage. Please check login session.', false);
     }

@@ -15,6 +15,7 @@ from app.routers import (
     admin_api_router,
     driver_router,
     property_router,
+    property_api_router,
     equipment_router,
     security_router,
     warehouse_router,
@@ -80,6 +81,7 @@ app.include_router(admin_router)
 app.include_router(admin_api_router)
 app.include_router(driver_router)
 app.include_router(property_router)
+app.include_router(property_api_router)
 app.include_router(equipment_router)
 app.include_router(security_router)
 app.include_router(warehouse_router)

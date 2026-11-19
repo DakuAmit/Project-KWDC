@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 408" width="100%" height="100%" style="background:#ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- Subject Boundary Box -->
+  <rect x="220" y="20" width="680" height="368" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6" ry="6"/>
+  <rect x="220" y="20" width="680" height="36" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" rx="6" ry="6"/>
+  <text x="238" y="43" font-size="13" font-weight="600" fill="#334155">Commercial Real Estate & Storage Capacity Governance</text>
+
+  <!-- Actor Box -->
+  <rect x="20" y="176.0" width="170" height="56" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" rx="6" ry="6"/>
+  <text x="105.0" y="209.0" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Warehouse Property Owner</text>
+
+  <path d="M 190 204.0 L 200 204.0 L 200 94.0 L 242 94.0" fill="none" stroke="#64748b" stroke-width="1.2"/>
+
+  <rect x="242" y="78.0" width="260" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="372.0" y="98.0" font-size="11.5" font-weight="500" fill="#0f172a" text-anchor="middle">Register Commercial Facility</text>
+
+  <line x1="502" y1="94.0" x2="630" y2="94.0" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4, 3" marker-end="url(#arrow)"/>
+  <rect x="538.0" y="84.0" width="56" height="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="4" ry="4"/>
+  <text x="566.0" y="98.0" font-size="10" font-style="italic" fill="#64748b" text-anchor="middle">include</text>
+  
+  <rect x="630" y="78.0" width="250" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="755.0" y="98.0" font-size="11" font-weight="500" fill="#0f172a" text-anchor="middle">Configure Open Yard vs Closed Godown</text>
+
+  <path d="M 190 204.0 L 200 204.0 L 200 138.0 L 242 138.0" fill="none" stroke="#64748b" stroke-width="1.2"/>
+
+  <rect x="242" y="122.0" width="260" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="372.0" y="142.0" font-size="11.5" font-weight="500" fill="#0f172a" text-anchor="middle">Configure Cold Storage Chamber</text>
+
+  <line x1="502" y1="138.0" x2="630" y2="138.0" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4, 3" marker-end="url(#arrow)"/>
+  <rect x="538.0" y="128.0" width="56" height="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="4" ry="4"/>
+  <text x="566.0" y="142.0" font-size="10" font-style="italic" fill="#64748b" text-anchor="middle">extend</text>
+  
+  <rect x="630" y="122.0" width="250" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="755.0" y="142.0" font-size="11" font-weight="500" fill="#0f172a" text-anchor="middle">Set Temp (-25°C to 8°C & Humidity)</text>
+
+  <path d="M 190 204.0 L 200 204.0 L 200 182.0 L 242 182.0" fill="none" stroke="#64748b" stroke-width="1.2"/>
+
+  <rect x="242" y="166.0" width="260" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="372.0" y="186.0" font-size="11.5" font-weight="500" fill="#0f172a" text-anchor="middle">Declare Infrastructure & Safeguards</text>
+
+  <line x1="502" y1="182.0" x2="630" y2="182.0" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4, 3" marker-end="url(#arrow)"/>
+  <rect x="538.0" y="172.0" width="56" height="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="4" ry="4"/>
+  <text x="566.0" y="186.0" font-size="10" font-style="italic" fill="#64748b" text-anchor="middle">include</text>
+  
+  <rect x="630" y="166.0" width="250" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="755.0" y="186.0" font-size="11" font-weight="500" fill="#0f172a" text-anchor="middle">Log Road Access, Police, Damkal & Hospital</text>
+
+  <path d="M 190 204.0 L 200 204.0 L 200 226.0 L 242 226.0" fill="none" stroke="#64748b" stroke-width="1.2"/>
+
+  <rect x="242" y="210.0" width="260" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="372.0" y="230.0" font-size="11.5" font-weight="500" fill="#0f172a" text-anchor="middle">Manage Multi-Tenant Leases</text>
+
+  <line x1="502" y1="226.0" x2="630" y2="226.0" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4, 3" marker-end="url(#arrow)"/>
+  <rect x="538.0" y="216.0" width="56" height="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="4" ry="4"/>
+  <text x="566.0" y="230.0" font-size="10" font-style="italic" fill="#64748b" text-anchor="middle">include</text>
+  
+  <rect x="630" y="210.0" width="250" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="755.0" y="230.0" font-size="11" font-weight="500" fill="#0f172a" text-anchor="middle">Partition Space (1 WHS ↔ N Clients)</text>
+
+  <path d="M 190 204.0 L 200 204.0 L 200 270.0 L 242 270.0" fill="none" stroke="#64748b" stroke-width="1.2"/>
+
+  <rect x="242" y="254.0" width="260" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="372.0" y="274.0" font-size="11.5" font-weight="500" fill="#0f172a" text-anchor="middle">Review & Approve Space Inquiries</text>
+
+  <line x1="502" y1="270.0" x2="630" y2="270.0" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4, 3" marker-end="url(#arrow)"/>
+  <rect x="538.0" y="260.0" width="56" height="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="4" ry="4"/>
+  <text x="566.0" y="274.0" font-size="10" font-style="italic" fill="#64748b" text-anchor="middle">extend</text>
+  
+  <rect x="630" y="254.0" width="250" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="755.0" y="274.0" font-size="11" font-weight="500" fill="#0f172a" text-anchor="middle">Issue IRD Schedule 13 (13% VAT) Invoice</text>
+
+  <path d="M 190 204.0 L 200 204.0 L 200 314.0 L 242 314.0" fill="none" stroke="#64748b" stroke-width="1.2"/>
+
+  <rect x="242" y="298.0" width="260" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="372.0" y="318.0" font-size="11.5" font-weight="500" fill="#0f172a" text-anchor="middle">Contract On-Site Security & Machinery</text>
+
+  <line x1="502" y1="314.0" x2="630" y2="314.0" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4, 3" marker-end="url(#arrow)"/>
+  <rect x="538.0" y="304.0" width="56" height="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="4" ry="4"/>
+  <text x="566.0" y="318.0" font-size="10" font-style="italic" fill="#64748b" text-anchor="middle">extend</text>
+  
+  <rect x="630" y="298.0" width="250" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="755.0" y="318.0" font-size="11" font-weight="500" fill="#0f172a" text-anchor="middle">Request Forklift & Licensed Guard Detail</text>
+
+  <path d="M 190 204.0 L 200 204.0 L 200 358.0 L 242 358.0" fill="none" stroke="#64748b" stroke-width="1.2"/>
+
+  <rect x="242" y="342.0" width="380" height="32" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5" rx="16" ry="16"/>
+  <text x="432.0" y="362.0" font-size="11.5" font-weight="500" fill="#0f172a" text-anchor="middle">Audit Occupancy & Rental Cashflow</text>
+
+</svg>

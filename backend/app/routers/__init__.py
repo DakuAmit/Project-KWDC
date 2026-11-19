@@ -2,7 +2,7 @@ from app.routers.auth import router as auth_router
 from app.routers.portal import router as portal_router
 from app.routers.admin import router as admin_router, api_router as admin_api_router
 from app.routers.driver import router as driver_router
-from app.routers.property import router as property_router
+from app.routers.property import router as property_router, api_router as property_api_router
 from app.routers.equipment import router as equipment_router
 from app.routers.security import router as security_router
 from app.routers.warehouse import router as warehouse_router, api_router as warehouse_api_router
@@ -21,6 +21,7 @@ __all__ = [
     "admin_api_router",
     "driver_router",
     "property_router",
+    "property_api_router",
     "equipment_router",
     "security_router",
     "warehouse_router",

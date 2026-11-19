@@ -10,6 +10,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
+sys.path.insert(0, os.path.dirname(__file__))
+from generate_uml_diagrams import create_reportlab_uml_diagram, UML_ENTITIES
+
 class NumberedCanvas(canvas.Canvas):
     """
     Two-pass canvas to dynamically compute and render 'Page X of Y' in footer.
@@ -245,11 +248,19 @@ def build_pdf(filename="KTM-WDC_Entity_Use_Cases.pdf"):
     # ---------------------------------------------------------
     # ENTITY 1: WAREHOUSE PROPERTY OWNER
     # ---------------------------------------------------------
+    story.append(PageBreak())
     story.append(Paragraph("2. Entity 1: Warehouse Property Owner (Commercial Real Estate)", h1_style))
     story.append(Paragraph(
         "<b>Role Definition:</b> Owners of commercial real estate who monetize storage space by listing verified facilities, configuring safety parameters, and leasing capacity to multiple enterprise shippers.",
         body_style
     ))
+    story.append(Spacer(1, 4))
+    story.append(create_reportlab_uml_diagram(
+        UML_ENTITIES[0]["actor"],
+        UML_ENTITIES[0]["subject"],
+        UML_ENTITIES[0]["items"]
+    ))
+    story.append(Spacer(1, 10))
 
     po_use_cases = [
         ("UC-PO-01", "Register Commercial Facility", "Enter facility name, physical address, Kataho geocode, and geographic GPS coordinates."),
@@ -284,13 +295,19 @@ def build_pdf(filename="KTM-WDC_Entity_Use_Cases.pdf"):
     # ---------------------------------------------------------
     # ENTITY 2: ENTERPRISE CLIENT (SHIPPER / CONSIGNEE)
     # ---------------------------------------------------------
-    story.append(KeepTogether([
-        Paragraph("3. Entity 2: Enterprise Client (Shipper & Consignee)", h1_style),
-        Paragraph(
-            "<b>Role Definition:</b> Enterprise businesses, importers, manufacturers, and trading houses moving commercial goods across Nepal. The platform adaptively serves both warehouse-holding clients and stand-alone logistics shippers.",
-            body_style
-        )
-    ]))
+    story.append(PageBreak())
+    story.append(Paragraph("3. Entity 2: Enterprise Client (Shipper & Consignee)", h1_style))
+    story.append(Paragraph(
+        "<b>Role Definition:</b> Enterprise businesses, importers, manufacturers, and trading houses moving commercial goods across Nepal. The platform adaptively serves both warehouse-holding clients and stand-alone logistics shippers.",
+        body_style
+    ))
+    story.append(Spacer(1, 4))
+    story.append(create_reportlab_uml_diagram(
+        UML_ENTITIES[1]["actor"],
+        UML_ENTITIES[1]["subject"],
+        UML_ENTITIES[1]["items"]
+    ))
+    story.append(Spacer(1, 10))
 
     cl_use_cases = [
         ("UC-CL-01", "Filter Facilities by Proximity & Cold Storage", "Search commercial facilities by Kataho code, city, access road type, temperature range, and nearby emergency facilities."),
@@ -327,13 +344,19 @@ def build_pdf(filename="KTM-WDC_Entity_Use_Cases.pdf"):
     # ---------------------------------------------------------
     # ENTITY 3: COMMERCIAL DRIVER
     # ---------------------------------------------------------
-    story.append(KeepTogether([
-        Paragraph("4. Entity 3: Commercial Driver (Transit Execution & Telemetry)", h1_style),
-        Paragraph(
-            "<b>Role Definition:</b> Licensed commercial vehicle operators (pickups, 2-ton, 5-ton, and container trucks) fulfilling point-to-point and warehouse-dock delivery trips across Nepal.",
-            body_style
-        )
-    ]))
+    story.append(PageBreak())
+    story.append(Paragraph("4. Entity 3: Commercial Driver (Transit Execution & Telemetry)", h1_style))
+    story.append(Paragraph(
+        "<b>Role Definition:</b> Licensed commercial vehicle operators (pickups, 2-ton, 5-ton, and container trucks) fulfilling point-to-point and warehouse-dock delivery trips across Nepal.",
+        body_style
+    ))
+    story.append(Spacer(1, 4))
+    story.append(create_reportlab_uml_diagram(
+        UML_ENTITIES[2]["actor"],
+        UML_ENTITIES[2]["subject"],
+        UML_ENTITIES[2]["items"]
+    ))
+    story.append(Spacer(1, 10))
 
     dr_use_cases = [
         ("UC-DR-01", "Vehicle Registration & Bluebook KYC", "Upload driving license, government vehicle bluebook, and vehicle category (pickup, mini-truck, heavy container)."),
@@ -366,13 +389,19 @@ def build_pdf(filename="KTM-WDC_Entity_Use_Cases.pdf"):
     # ---------------------------------------------------------
     # ENTITY 4: HEAVY EQUIPMENT OWNER & OPERATOR
     # ---------------------------------------------------------
-    story.append(KeepTogether([
-        Paragraph("5. Entity 4: Heavy Equipment Owner (Machinery Fleet & Leasing)", h1_style),
-        Paragraph(
-            "<b>Role Definition:</b> Owners of specialized material handling machinery (forklifts, cranes, pallet jacks, stackers, front loaders) who service warehouse docks and project staging sites.",
-            body_style
-        )
-    ]))
+    story.append(PageBreak())
+    story.append(Paragraph("5. Entity 4: Heavy Equipment Owner (Machinery Fleet & Leasing)", h1_style))
+    story.append(Paragraph(
+        "<b>Role Definition:</b> Owners of specialized material handling machinery (forklifts, cranes, pallet jacks, stackers, front loaders) who service warehouse docks and project staging sites.",
+        body_style
+    ))
+    story.append(Spacer(1, 4))
+    story.append(create_reportlab_uml_diagram(
+        UML_ENTITIES[3]["actor"],
+        UML_ENTITIES[3]["subject"],
+        UML_ENTITIES[3]["items"]
+    ))
+    story.append(Spacer(1, 10))
 
     eq_use_cases = [
         ("UC-EQ-01", "Register Heavy Equipment Fleet", "Register machine name, equipment category (forklift, crane, pallet jack, loader), model year, and serial number."),
@@ -403,13 +432,19 @@ def build_pdf(filename="KTM-WDC_Entity_Use_Cases.pdf"):
     # ---------------------------------------------------------
     # ENTITY 5: LICENSED SECURITY AGENCY
     # ---------------------------------------------------------
-    story.append(KeepTogether([
-        Paragraph("6. Entity 5: Licensed Security Agency (Perimeter Guarding & Escort)", h1_style),
-        Paragraph(
-            "<b>Role Definition:</b> Government-licensed private security firms providing armed and unarmed security guards, perimeter patrols, and emergency response for high-value warehouse godowns and transit cargo.",
-            body_style
-        )
-    ]))
+    story.append(PageBreak())
+    story.append(Paragraph("6. Entity 5: Licensed Security Agency (Perimeter Guarding & Escort)", h1_style))
+    story.append(Paragraph(
+        "<b>Role Definition:</b> Government-licensed private security firms providing armed and unarmed security guards, perimeter patrols, and emergency response for high-value warehouse godowns and transit cargo.",
+        body_style
+    ))
+    story.append(Spacer(1, 4))
+    story.append(create_reportlab_uml_diagram(
+        UML_ENTITIES[4]["actor"],
+        UML_ENTITIES[4]["subject"],
+        UML_ENTITIES[4]["items"]
+    ))
+    story.append(Spacer(1, 10))
 
     sec_use_cases = [
         ("UC-SC-01", "Agency Accreditation & License KYC", "Submit Ministry of Home Affairs security operational license, company registration, and official PAN/VAT certificate."),

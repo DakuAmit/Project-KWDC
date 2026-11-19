@@ -349,6 +349,27 @@ const KWDC_API = {
             method: 'DELETE'
         });
         return (res && res.ok);
+    },
+
+    // ==========================================
+    // Warehouse Property Owner API Services
+    // ==========================================
+    async getPropertyOverview() {
+        const res = await this.request('/api/property-owner/overview');
+        return (res && res.ok) ? await res.json() : null;
+    },
+
+    async updatePropertyRequest(requestId, status, adminNotes = '') {
+        const res = await this.request(`/api/property-owner/requests/${requestId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, admin_notes: adminNotes })
+        });
+        if (res) {
+            let data = {};
+            try { data = await res.json(); } catch(_) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+        return { ok: false, data: null };
     }
 };
 
