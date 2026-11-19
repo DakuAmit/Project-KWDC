@@ -144,7 +144,8 @@ document.getElementById('login-form').addEventListener('submit', async function(
     try {
         const data = await KWDC_API.login(email, password);
         if (data && data.access_token) {
-            window.location.href = '/dashboard.html';
+            const userRole = (data.user && (data.user.is_admin || data.user.role === 'admin')) ? 'admin' : ((data.user && data.user.role) || 'client');
+            window.location.href = KWDC_API.getDashboardUrl(userRole);
         } else {
             errBox.innerText = 'Invalid email address or password. Please try again.';
             errBox.classList.remove('d-none');

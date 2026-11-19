@@ -145,7 +145,8 @@ document.getElementById('reg-form').addEventListener('submit', async function(e)
         if (res.ok && data.access_token) {
             KWDC_API.setToken(data.access_token);
             KWDC_API.setUser(data.user);
-            window.location.href = '/dashboard.html?registered=true';
+            const userRole = (data.user && data.user.role) ? data.user.role : role;
+            window.location.href = KWDC_API.getDashboardUrl(userRole) + '&registered=true';
         } else {
             errBox.innerText = data.detail || 'Registration failed. Please check your information.';
             errBox.classList.remove('d-none');

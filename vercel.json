@@ -89,6 +89,30 @@
       "dest": "/frontend/dashboard.html"
     },
     {
+      "src": "/admin",
+      "dest": "/frontend/dashboard.html?role=admin"
+    },
+    {
+      "src": "/driver/dashboard",
+      "dest": "/frontend/dashboard.html?role=driver"
+    },
+    {
+      "src": "/property-owner/dashboard",
+      "dest": "/frontend/dashboard.html?role=property_owner"
+    },
+    {
+      "src": "/equipment-owner/dashboard",
+      "dest": "/frontend/dashboard.html?role=equipment_owner"
+    },
+    {
+      "src": "/security/dashboard",
+      "dest": "/frontend/dashboard.html?role=security_agency"
+    },
+    {
+      "src": "/client/dashboard",
+      "dest": "/frontend/dashboard.html?role=client"
+    },
+    {
       "src": "/warehouses",
       "dest": "/frontend/warehouses.html"
     },

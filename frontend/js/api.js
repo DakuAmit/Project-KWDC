@@ -82,6 +82,19 @@ const KWDC_API = {
         return null;
     },
 
+    getDashboardUrl(role) {
+        const r = (role || 'client').toLowerCase();
+        return `/dashboard.html?role=${encodeURIComponent(r)}`;
+    },
+
+    async getDashboardStats() {
+        const res = await this.request('/api/dashboard/stats');
+        if (res && res.ok) {
+            return await res.json();
+        }
+        return null;
+    },
+
     async calculatePrice(distance, vehicleType = 'truck', stopsCount = 1) {
         const res = await this.request('/dispatch/calculate-price', {
             method: 'POST',

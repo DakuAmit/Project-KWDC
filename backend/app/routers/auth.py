@@ -142,16 +142,23 @@ def logout():
 
 # RESTful JSON endpoints for API consumers
 @router.post("/api/auth/login", response_model=TokenResponse)
-def api_login(payload: LoginRequest, db: Session = Depends(get_db)):
+def api_login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
     token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
+    response.set_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        max_age=86400,
+        samesite="lax"
+    )
     return {"access_token": token, "token_type": "bearer", "user": user}
 
 @router.post("/api/auth/register", response_model=TokenResponse)
-def api_register(payload: RegisterRequest, request: Request, db: Session = Depends(get_db)):
+def api_register(payload: RegisterRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="An account with this email address already exists.")
@@ -204,6 +211,13 @@ def api_register(payload: RegisterRequest, request: Request, db: Session = Depen
     )
 
     token = create_access_token({"sub": str(new_user.id), "email": new_user.email, "role": new_user.role})
+    response.set_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        max_age=86400,
+        samesite="lax"
+    )
     return {"access_token": token, "token_type": "bearer", "user": new_user}
 
 @router.get("/api/auth/verify-email")
