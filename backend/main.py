@@ -23,14 +23,29 @@ app.include_router(admin.router)
 app.include_router(incharge.router)
 app.include_router(fleet.router)
 
-# Template Engine & Static Files
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "frontend", "templates"))
+# Template Engine & Static Files with Robust Vercel Paths
+current_dir = os.path.dirname(os.path.abspath(__file__)) # .../backend
+BASE_DIR = os.path.dirname(current_dir) # .../project-warehouse
 
-# Static Directory
-static_dir = os.path.join(BASE_DIR, "frontend", "static")
-os.makedirs(static_dir, exist_ok=True)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+template_candidates = [
+    os.path.join(BASE_DIR, "frontend", "templates"),
+    os.path.join(os.getcwd(), "frontend", "templates"),
+    os.path.join(os.path.dirname(os.getcwd()), "frontend", "templates"),
+]
+template_dir = next((d for d in template_candidates if os.path.isdir(d)), template_candidates[0])
+templates = Jinja2Templates(directory=template_dir)
+
+# Static Directory (Safe for Serverless)
+static_candidates = [
+    os.path.join(BASE_DIR, "frontend", "static"),
+    os.path.join(os.getcwd(), "frontend", "static"),
+]
+static_dir = next((d for d in static_candidates if os.path.isdir(d)), static_candidates[0])
+try:
+    os.makedirs(static_dir, exist_ok=True)
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+except Exception as e:
+    print("Static files mount warning (harmless on serverless):", e)
 
 # ---------------------------------------------------------------------------
 # WebSocket Telemetry Stream Manager
@@ -62,38 +77,37 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            # Broadcast vehicle coordinate ping to all connected tracking maps
             await telemetry_manager.broadcast_gps(data)
     except WebSocketDisconnect:
         telemetry_manager.disconnect(websocket)
 
 
 # ---------------------------------------------------------------------------
-# Frontend Page Renderers
+# Frontend Page Renderers (Starlette 0.38+ keyword syntax)
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 def index_page(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="index.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/owner", response_class=HTMLResponse)
 def owner_dashboard(request: Request):
-    return templates.TemplateResponse("owner_dashboard.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="owner_dashboard.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/marketplace", response_class=HTMLResponse)
 def marketplace_page(request: Request):
-    return templates.TemplateResponse("marketplace.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="marketplace.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(request: Request):
-    return templates.TemplateResponse("admin_dashboard.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/incharge", response_class=HTMLResponse)
 def incharge_page(request: Request):
-    return templates.TemplateResponse("incharge_dashboard.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="incharge_dashboard.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/fleet", response_class=HTMLResponse)
 def fleet_page(request: Request):
-    return templates.TemplateResponse("fleet_dashboard.html", {"request": request, "app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="fleet_dashboard.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/health")
 def health_check():
