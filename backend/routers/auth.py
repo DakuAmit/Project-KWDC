@@ -65,7 +65,7 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # Send OTP Email via Brevo
+    # Send OTP Email
     email_dispatched = send_otp_email(
         to_email=new_user.email,
         to_name=new_user.full_name,
@@ -73,11 +73,28 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
     )
 
     return {
-        "message": f"Welcome to KTM-WDC! A 6-digit verification code has been dispatched to {new_user.email}.",
+        "message": f"Welcome to KTM-WDC! A 6-digit verification code has been sent to {new_user.email}.",
         "email": new_user.email,
         "email_dispatched": email_dispatched,
         "role": new_user.role.value
     }
+
+@router.post("/resend-otp")
+def resend_otp(payload: dict, db: Session = Depends(get_db)):
+    """Resends a new 6-digit OTP verification code."""
+    email = (payload.get("email") or "").strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    otp_code = f"{random.randint(100000, 999999)}"
+    now = datetime.now(timezone.utc)
+    user.otp_code = otp_code
+    user.otp_expires_at = now + timedelta(minutes=15)
+    db.commit()
+
+    send_otp_email(to_email=user.email, to_name=user.full_name, otp_code=otp_code)
+    return {"message": f"A new 6-digit verification code has been sent to {user.email}."}
 
 @router.post("/verify-otp", response_model=TokenResponse)
 def verify_otp(payload: VerifyOtpRequest, response: Response, db: Session = Depends(get_db)):

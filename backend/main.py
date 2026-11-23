@@ -83,31 +83,19 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 
 
 # ---------------------------------------------------------------------------
-# Frontend Page Renderers (Starlette 0.38+ keyword syntax)
+# Frontend Page Renderers (Role-Based Access)
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 def index_page(request: Request):
-    return templates.TemplateResponse(request=request, name="v0_portal.html", context={"app_name": settings.APP_NAME})
-
-@app.get("/portal", response_class=HTMLResponse)
-def portal_page(request: Request):
-    return templates.TemplateResponse(request=request, name="v0_portal.html", context={"app_name": settings.APP_NAME})
-
-@app.get("/classic", response_class=HTMLResponse)
-def classic_index_page(request: Request):
     return templates.TemplateResponse(request=request, name="index.html", context={"app_name": settings.APP_NAME})
-
-@app.get("/owner", response_class=HTMLResponse)
-def owner_dashboard(request: Request):
-    return templates.TemplateResponse(request=request, name="owner_dashboard.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/marketplace", response_class=HTMLResponse)
 def marketplace_page(request: Request):
     return templates.TemplateResponse(request=request, name="marketplace.html", context={"app_name": settings.APP_NAME})
 
-@app.get("/admin", response_class=HTMLResponse)
-def admin_page(request: Request):
-    return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"app_name": settings.APP_NAME})
+@app.get("/owner", response_class=HTMLResponse)
+def owner_dashboard(request: Request):
+    return templates.TemplateResponse(request=request, name="owner_dashboard.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/incharge", response_class=HTMLResponse)
 def incharge_page(request: Request):
@@ -116,6 +104,10 @@ def incharge_page(request: Request):
 @app.get("/fleet", response_class=HTMLResponse)
 def fleet_page(request: Request):
     return templates.TemplateResponse(request=request, name="fleet_dashboard.html", context={"app_name": settings.APP_NAME})
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(request: Request):
+    return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/health")
 def health_check():

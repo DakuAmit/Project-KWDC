@@ -103,30 +103,21 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="kwdcNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="publicNavLinks">
                     <li class="nav-item">
                         <a class="nav-link" href="/"><i class="bi bi-house me-1"></i> Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/marketplace"><i class="bi bi-grid-3x3-gap me-1"></i> Storage Marketplace</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/owner"><i class="bi bi-person-badge me-1"></i> Space Owner</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/incharge"><i class="bi bi-clipboard2-check me-1"></i> Warehouse Incharge</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/fleet"><i class="bi bi-truck me-1"></i> Fleet Partner</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-warning" href="/admin"><i class="bi bi-shield-lock-fill me-1"></i> SuperAdmin</a>
+                        <a class="nav-link" href="/marketplace"><i class="bi bi-search me-1"></i> Find Storage</a>
                     </li>
                 </ul>
                 <div class="d-flex align-items-center gap-2">
                     <div id="authStatusArea">
+                        <button class="btn btn-outline-warning btn-sm fw-bold me-2" data-bs-toggle="modal" data-bs-target="#loginModal" onclick="openRegisterTab()">
+                            <i class="bi bi-handshake me-1"></i> Partner With Us
+                        </button>
                         <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#loginModal">
-                            <i class="bi bi-box-arrow-in-right me-1"></i> Sign In / Register
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
                         </button>
                     </div>
                 </div>
@@ -235,14 +226,19 @@
 
                             <!-- OTP Verification Step (Hidden initially) -->
                             <div id="otpVerificationArea" style="display: none;" class="mt-3 p-3 bg-light rounded border text-center">
-                                <h6 class="fw-bold text-primary mb-1">Enter 6-Digit Email OTP</h6>
-                                <p class="text-muted small mb-2">A verification code was dispatched to <strong id="otpTargetEmail"></strong> via Brevo.</p>
+                                <div class="text-success fs-2 mb-1"><i class="bi bi-envelope-check"></i></div>
+                                <h6 class="fw-bold text-dark mb-1">Enter 6-Digit Verification Code</h6>
+                                <p class="text-muted small mb-3">A verification code has been sent to <strong id="otpTargetEmail"></strong>.<br>Please check your inbox or spam folder.</p>
                                 <div class="d-flex justify-content-center mb-3">
-                                    <input type="text" id="otpCodeInput" class="form-control text-center fw-bold fs-4" style="letter-spacing: 8px; max-width: 200px;" maxlength="6" placeholder="••••••">
+                                    <input type="text" id="otpCodeInput" class="form-control text-center fw-bold fs-3" style="letter-spacing: 8px; max-width: 220px;" maxlength="6" placeholder="••••••">
                                 </div>
-                                <button class="btn btn-primary btn-sm fw-bold px-4" onclick="handleVerifyOtp()">
-                                    Verify & Activate Account
+                                <button class="btn btn-primary fw-bold px-4 mb-2" onclick="handleVerifyOtp()">
+                                    <i class="bi bi-shield-check me-1"></i> Verify & Activate Account
                                 </button>
+                                <div class="small mt-2">
+                                    Didn't receive the email? <a href="#" onclick="handleResendOtp(event)" class="text-primary text-decoration-none fw-bold">Resend Code</a>
+                                    <br><span class="text-muted" style="font-size: 11px;">(Staging Test Code: <code>123456</code>)</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -269,22 +265,47 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        function openRegisterTab() {
+            const regTab = document.getElementById('tab-register');
+            if (regTab) {
+                const triggerEl = new bootstrap.Tab(regTab);
+                triggerEl.show();
+            }
+        }
+
         // Check local auth state
         function updateAuthHeader() {
             const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
             const area = document.getElementById('authStatusArea');
             if (user) {
+                let roleDashboardLink = '';
+                let roleLabel = user.user_role;
+                if (user.user_role === 'superadmin') {
+                    roleDashboardLink = '<li><a class="dropdown-item fw-bold text-warning" href="/admin"><i class="bi bi-shield-lock-fill me-2"></i>SuperAdmin Console</a></li>';
+                    roleLabel = 'SuperAdmin';
+                } else if (user.user_role === 'property_owner') {
+                    roleDashboardLink = '<li><a class="dropdown-item fw-bold text-primary" href="/owner"><i class="bi bi-box-seam me-2"></i>My Properties</a></li>';
+                    roleLabel = 'Property Owner';
+                } else if (user.user_role === 'fleet_partner') {
+                    roleDashboardLink = '<li><a class="dropdown-item fw-bold text-info" href="/fleet"><i class="bi bi-truck me-2"></i>My Fleet</a></li>';
+                    roleLabel = 'Fleet Partner';
+                } else if (user.user_role === 'warehouse_incharge') {
+                    roleDashboardLink = '<li><a class="dropdown-item fw-bold text-success" href="/incharge"><i class="bi bi-clipboard2-check me-2"></i>Incharge Portal</a></li>';
+                    roleLabel = 'Warehouse Incharge';
+                } else {
+                    roleDashboardLink = '<li><a class="dropdown-item fw-bold text-primary" href="/marketplace"><i class="bi bi-grid-3x3-gap me-2"></i>Storage Marketplace</a></li>';
+                    roleLabel = 'Commercial Client';
+                }
+
                 area.innerHTML = `
                     <div class="dropdown">
                         <button class="btn btn-warning btn-sm dropdown-toggle fw-bold" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle me-1"></i> ${user.full_name} (${user.user_role})
+                            <i class="bi bi-person-circle me-1"></i> ${user.full_name} (${roleLabel})
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li><span class="dropdown-item-text small text-muted">Role: <strong>${user.user_role}</strong></span></li>
+                            <li><span class="dropdown-item-text small text-muted">Signed in as: <strong>${roleLabel}</strong></span></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/owner"><i class="bi bi-box-seam me-2"></i>My Properties</a></li>
-                            <li><a class="dropdown-item" href="/fleet"><i class="bi bi-truck me-2"></i>My Fleet</a></li>
-                            <li><a class="dropdown-item" href="/incharge"><i class="bi bi-clipboard2-check me-2"></i>Incharge Portal</a></li>
+                            ${roleDashboardLink}
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item text-danger" onclick="handleLogout()"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</button></li>
                         </ul>
@@ -292,8 +313,11 @@
                 `;
             } else {
                 area.innerHTML = `
+                    <button class="btn btn-outline-warning btn-sm fw-bold me-2" data-bs-toggle="modal" data-bs-target="#loginModal" onclick="openRegisterTab()">
+                        <i class="bi bi-handshake me-1"></i> Partner With Us
+                    </button>
                     <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#loginModal">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In / Register
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
                     </button>
                 `;
             }
@@ -316,8 +340,19 @@
                     localStorage.setItem('kwdc_user', JSON.stringify(data));
                     const modal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
                     if (modal) modal.hide();
-                    updateAuthHeader();
-                    window.location.reload();
+                    
+                    // Auto-redirect directly to the authorized role dashboard
+                    if (data.user_role === 'superadmin') {
+                        window.location.href = '/admin';
+                    } else if (data.user_role === 'property_owner') {
+                        window.location.href = '/owner';
+                    } else if (data.user_role === 'fleet_partner') {
+                        window.location.href = '/fleet';
+                    } else if (data.user_role === 'warehouse_incharge') {
+                        window.location.href = '/incharge';
+                    } else {
+                        window.location.href = '/marketplace';
+                    }
                 } else {
                     alert('Login failed: ' + (data.detail || 'Invalid credentials'));
                 }
@@ -364,10 +399,29 @@
             }
         }
 
+        async function handleResendOtp(e) {
+            if (e) e.preventDefault();
+            if (!pendingRegistrationEmail) {
+                alert('No pending registration found.');
+                return;
+            }
+            try {
+                const res = await fetch('/api/auth/resend-otp', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: pendingRegistrationEmail})
+                });
+                const data = await res.json();
+                alert(data.message || 'Verification code resent.');
+            } catch (err) {
+                alert('Error resending verification code: ' + err.message);
+            }
+        }
+
         async function handleVerifyOtp() {
             const otp_code = document.getElementById('otpCodeInput').value.trim();
             if (otp_code.length !== 6) {
-                alert('Please enter the complete 6-digit OTP code.');
+                alert('Please enter the complete 6-digit verification code.');
                 return;
             }
 
@@ -381,8 +435,17 @@
                 if (res.ok) {
                     localStorage.setItem('kwdc_token', data.access_token);
                     localStorage.setItem('kwdc_user', JSON.stringify(data));
-                    alert('Account successfully verified! Welcome to the KTM-WDC network.');
-                    window.location.reload();
+                    alert('Account successfully verified! Welcome to KTM-WDC.');
+                    
+                    if (data.user_role === 'property_owner') {
+                        window.location.href = '/owner';
+                    } else if (data.user_role === 'fleet_partner') {
+                        window.location.href = '/fleet';
+                    } else if (data.user_role === 'warehouse_incharge') {
+                        window.location.href = '/incharge';
+                    } else {
+                        window.location.href = '/marketplace';
+                    }
                 } else {
                     alert('Verification failed: ' + (data.detail || 'Invalid code'));
                 }
