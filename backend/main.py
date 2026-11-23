@@ -83,27 +83,31 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 
 
 # ---------------------------------------------------------------------------
-# Frontend Page Renderers (Role-Based Access)
+# Frontend Page Renderers (Native v0 Design System & Executive Admin)
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 def index_page(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html", context={"app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="v0/home.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/marketplace", response_class=HTMLResponse)
 def marketplace_page(request: Request):
-    return templates.TemplateResponse(request=request, name="marketplace.html", context={"app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="v0/marketplace.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/owner", response_class=HTMLResponse)
 def owner_dashboard(request: Request):
-    return templates.TemplateResponse(request=request, name="owner_dashboard.html", context={"app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="v0/owner.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/incharge", response_class=HTMLResponse)
 def incharge_page(request: Request):
-    return templates.TemplateResponse(request=request, name="incharge_dashboard.html", context={"app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="v0/incharge.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/fleet", response_class=HTMLResponse)
 def fleet_page(request: Request):
-    return templates.TemplateResponse(request=request, name="fleet_dashboard.html", context={"app_name": settings.APP_NAME})
+    return templates.TemplateResponse(request=request, name="v0/fleet.html", context={"app_name": settings.APP_NAME})
+
+@app.get("/invoice", response_class=HTMLResponse)
+def invoice_page(request: Request):
+    return templates.TemplateResponse(request=request, name="v0/invoice.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(request: Request):

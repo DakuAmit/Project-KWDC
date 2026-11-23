@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Storage Marketplace — KTM-WDC</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Inter','Geist','sans-serif'], mono: ['JetBrains Mono','Geist Mono','monospace'] },
+  colors: { navy: { 950:'#0b1222', 900:'#0f172a', 800:'#1e293b' } }
+}}};
+</script>
+<style>
+  dialog::backdrop { background: rgba(11,18,34,.7); backdrop-filter: blur(4px); }
+  dialog[open] { animation: pop .18s ease-out; }
+  @keyframes pop { from { opacity:0; transform: translateY(8px) scale(.98);} to {opacity:1; transform:none;} }
+  input[type=range] { accent-color: #2563eb; }
+  .block-cell { transition: background-color .2s, border-color .2s, color .2s; }
+  .toggle input:checked + span { background:#2563eb; }
+  .toggle input:checked + span::after { transform: translateX(18px); }
+  .toggle span::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:9999px; background:#fff; transition:transform .2s; }
+  .toggle input:focus-visible + span { outline: 2px solid #2563eb; outline-offset: 2px; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased">
+
+<header class="bg-navy-900 text-white sticky top-0 z-30">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <a href="#" class="flex items-center gap-3">
+      <span class="w-9 h-9 rounded-lg bg-amber-500 text-navy-900 grid place-items-center"><i data-lucide="warehouse" class="w-5 h-5"></i></span>
+      <span class="leading-tight">
+        <span class="flex items-center gap-2 font-bold">KTM-WDC <span class="text-[10px] font-bold bg-red-600 px-1.5 py-0.5 rounded">NEPAL</span></span>
+        <span class="block text-[11px] text-slate-400">Storage Marketplace</span>
+      </span>
+    </a>
+    <nav class="hidden md:flex items-center gap-1 text-sm" aria-label="Primary">
+      <a href="#" aria-current="page" class="px-3 py-2 rounded-md bg-white/10">Find Storage</a>
+      <a href="#" class="px-3 py-2 rounded-md text-slate-300 hover:text-white">My Bookings</a>
+      <a href="#" class="px-3 py-2 rounded-md text-slate-300 hover:text-white">Tax Invoices</a>
+      <a href="#" class="px-3 py-2 rounded-md text-slate-300 hover:text-white">Freight</a>
+    </nav>
+    <span class="flex items-center gap-2 bg-white/5 rounded-full pl-1 pr-3 py-1 text-sm">
+      <span class="w-7 h-7 rounded-full bg-emerald-500 grid place-items-center text-xs font-bold">HT</span>
+      <span class="hidden sm:inline">Himalayan Traders</span>
+    </span>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+  <section class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+    <div>
+      <p class="text-sm font-medium text-blue-600">Verified, audited community storage</p>
+      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-balance">Book exactly the floor space you need.</h1>
+      <p class="text-slate-600 mt-1 text-pretty">Every listing is partitioned into 10% floor blocks. Transparent tariffs, statutory VAT, no hidden fees.</p>
+    </div>
+    <p class="text-sm text-slate-500" id="resultCount" aria-live="polite"></p>
+  </section>
+
+  <form id="filters" class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-end gap-4 shadow-sm mb-8" aria-label="Search filters">
+    <fieldset class="flex-1">
+      <legend class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Space Type</legend>
+      <div class="flex flex-wrap gap-2" id="typeChips">
+        <label class="cursor-pointer"><input type="radio" name="type" value="all" class="peer sr-only" checked><span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 text-sm font-medium peer-checked:bg-navy-900 peer-checked:text-white peer-checked:border-navy-900 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500">All</span></label>
+        <label class="cursor-pointer"><input type="radio" name="type" value="Basement" class="peer sr-only"><span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 text-sm font-medium peer-checked:bg-navy-900 peer-checked:text-white peer-checked:border-navy-900 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500"><i data-lucide="arrow-down-to-line" class="w-4 h-4"></i>Basement</span></label>
+        <label class="cursor-pointer"><input type="radio" name="type" value="Shutter" class="peer sr-only"><span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 text-sm font-medium peer-checked:bg-navy-900 peer-checked:text-white peer-checked:border-navy-900 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500"><i data-lucide="store" class="w-4 h-4"></i>Shutter</span></label>
+        <label class="cursor-pointer"><input type="radio" name="type" value="Godown" class="peer sr-only"><span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 text-sm font-medium peer-checked:bg-navy-900 peer-checked:text-white peer-checked:border-navy-900 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500"><i data-lucide="warehouse" class="w-4 h-4"></i>Godown</span></label>
+      </div>
+    </fieldset>
+    <div class="lg:w-48">
+      <label for="minSqft" class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2 block">Min Sq Ft</label>
+      <div class="relative">
+        <input id="minSqft" name="min" type="number" min="0" step="100" placeholder="e.g. 500" class="w-full h-10 rounded-lg border border-slate-200 pl-3 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">sq ft</span>
+      </div>
+    </div>
+    <label class="toggle flex items-center gap-3 cursor-pointer h-10 px-3 rounded-lg border border-slate-200">
+      <input type="checkbox" id="coldOnly" class="sr-only">
+      <span class="relative w-11 h-6 rounded-full bg-slate-300 shrink-0" aria-hidden="true"></span>
+      <span class="text-sm font-medium flex items-center gap-1.5"><i data-lucide="snowflake" class="w-4 h-4 text-sky-500"></i>Cold Storage only</span>
+    </label>
+  </form>
+
+  <section aria-label="Available warehouses">
+    <ul id="grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"></ul>
+    <div id="empty" class="hidden text-center py-16 bg-white border border-dashed border-slate-300 rounded-2xl">
+      <i data-lucide="search-x" class="w-8 h-8 mx-auto text-slate-400"></i>
+      <p class="mt-3 font-semibold">No spaces match those filters</p>
+      <p class="text-sm text-slate-500">Try lowering the minimum area or turning off Cold Storage.</p>
+    </div>
+  </section>
+</main>
+
+<!-- Booking modal -->
+<dialog id="bookModal" class="w-[min(960px,calc(100vw-1.5rem))] max-h-[calc(100vh-1.5rem)] rounded-2xl p-0 shadow-2xl overflow-hidden" aria-labelledby="bkTitle">
+  <div class="flex flex-col max-h-[calc(100vh-1.5rem)]">
+    <div class="bg-navy-900 text-white px-5 sm:px-6 py-4 flex items-start justify-between gap-4">
+      <div>
+        <p class="text-xs font-medium text-amber-400">Book 10% Floor Block</p>
+        <h2 id="bkTitle" class="text-lg font-bold"></h2>
+        <p id="bkMeta" class="text-sm text-slate-400"></p>
+      </div>
+      <button type="button" data-close class="w-9 h-9 rounded-lg border border-white/20 grid place-items-center hover:bg-white/10" aria-label="Close booking"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+
+    <form id="bookForm" class="overflow-y-auto">
+      <div id="bookBody" class="grid md:grid-cols-2">
+        <div class="p-5 sm:p-6 flex flex-col gap-5 border-b md:border-b-0 md:border-r border-slate-200">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label for="reqSlider" class="text-sm font-semibold">Requested floor area</label>
+              <output id="reqOut" for="reqSlider" class="font-mono text-sm font-semibold"></output>
+            </div>
+            <input id="reqSlider" type="range" class="w-full" step="10">
+            <div class="flex justify-between text-xs text-slate-500 mt-1"><span id="sMin"></span><span id="sMax"></span></div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-sm font-semibold">2D Floor Plan</p>
+              <p class="text-xs text-slate-500"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-blue-600 align-middle mr-1"></span>Allocated <span class="inline-block w-2.5 h-2.5 rounded-sm bg-slate-200 align-middle ml-2 mr-1"></span>Available</p>
+            </div>
+            <div class="rounded-xl bg-slate-100 p-3 border border-slate-200">
+              <div id="floorPlan" class="grid grid-cols-5 gap-2" role="img"></div>
+              <div class="mt-2 flex items-center justify-center gap-2 text-[11px] text-slate-500 border-t border-dashed border-slate-300 pt-2">
+                <i data-lucide="truck" class="w-3.5 h-3.5"></i><span>Loading bay &amp; access corridor preserved</span>
+              </div>
+            </div>
+            <p class="mt-3 text-xs text-slate-600 bg-blue-50 border border-blue-100 rounded-lg p-2.5 font-mono" id="ruleText"></p>
+          </div>
+        </div>
+
+        <div class="p-5 sm:p-6 flex flex-col gap-5 bg-slate-50">
+          <div class="bg-white rounded-xl border border-slate-200">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <p class="text-sm font-semibold flex items-center gap-2"><i data-lucide="receipt-text" class="w-4 h-4 text-slate-500"></i>Financial Ledger</p>
+              <span class="text-xs text-slate-500">per month</span>
+            </div>
+            <dl class="px-4 py-2 text-sm divide-y divide-slate-100">
+              <div class="flex justify-between gap-4 py-2.5"><dt class="text-slate-600">Base Storage Tariff<span id="tariffNote" class="block text-xs text-slate-400"></span></dt><dd id="lBase" class="font-mono font-semibold"></dd></div>
+              <div class="flex justify-between gap-4 py-2.5"><dt class="text-slate-600">KWDC Sovereign Margin (10%)</dt><dd id="lMargin" class="font-mono font-semibold"></dd></div>
+              <div class="flex justify-between gap-4 py-2.5"><dt class="text-slate-600">Nepal 13% Statutory IRD VAT<span class="block text-xs text-slate-400">on tariff + margin</span></dt><dd id="lVat" class="font-mono font-semibold"></dd></div>
+            </dl>
+            <div class="px-4 py-3 bg-navy-900 text-white rounded-b-xl flex justify-between items-center">
+              <span class="text-sm font-semibold">Gross Monthly Total</span>
+              <span id="lTotal" class="font-mono text-lg font-bold text-amber-400"></span>
+            </div>
+          </div>
+
+          <div>
+            <label for="pan" class="text-sm font-semibold">Client PAN <span class="font-normal text-slate-500">(optional)</span></label>
+            <input id="pan" inputmode="numeric" maxlength="9" placeholder="9-digit PAN / VAT number" aria-describedby="panHelp" class="mt-1.5 w-full h-10 rounded-lg border border-slate-200 bg-white px-3 font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500 aria-[invalid=true]:border-red-500">
+            <p id="panHelp" class="text-xs text-slate-500 mt-1">Add it to claim input VAT credit on your invoice.</p>
+          </div>
+
+          <p class="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+            <i data-lucide="shield-check" class="w-4 h-4 shrink-0 mt-px"></i>
+            <span><strong>Privacy Shield Protected:</strong> KTM-WDC acts as your corporate counterparty. The property owner never sees your identity or contact details.</span>
+          </p>
+
+          <button type="submit" class="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600">
+            <i data-lucide="file-check-2" class="w-5 h-5"></i>Confirm &amp; Generate IRD Tax Invoice
+          </button>
+        </div>
+      </div>
+
+      <div id="invoice" class="hidden p-5 sm:p-8">
+        <div class="max-w-xl mx-auto">
+          <div class="flex items-center gap-3 mb-5">
+            <span class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 grid place-items-center"><i data-lucide="check" class="w-5 h-5"></i></span>
+            <div><p class="font-bold">Booking confirmed</p><p class="text-sm text-slate-500">Your Schedule 13 tax invoice has been issued.</p></div>
+          </div>
+          <div class="border border-slate-200 rounded-xl overflow-hidden">
+            <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex justify-between gap-4">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500 font-semibold">Tax Invoice</p>
+                <p class="font-bold">Kathmandu Warehousing &amp; Distribution Center</p>
+                <p class="text-xs text-slate-500">Seller PAN 609812345 · Kathmandu, Nepal</p>
+              </div>
+              <div class="text-right text-xs"><p class="text-slate-500">Invoice No.</p><p id="invNo" class="font-mono font-semibold"></p><p id="invDate" class="text-slate-500 mt-1"></p></div>
+            </div>
+            <div class="px-5 py-4 flex flex-col sm:flex-row gap-5">
+              <dl id="invLines" class="flex-1 text-sm space-y-1.5"></dl>
+              <div class="flex flex-col items-center gap-1 shrink-0">
+                <div id="invQr" class="w-28 h-28 [&>svg]:w-full [&>svg]:h-full"></div>
+                <p class="text-[10px] text-slate-500">Scan to verify on IRD</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" data-close class="mt-5 w-full h-11 rounded-xl bg-navy-900 text-white font-semibold">Done</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script>
+const LISTINGS = [
+  { id:'KW-2081-0142', title:'Dry Basement, Teku Bazaar', type:'Basement', landmark:'Behind Teku Hospital, near Bishnumati bridge', city:'Kathmandu', road:12, roadNote:'pickup lane', sqft:1369, rate:22, amen:['3-Phase','CCTV'], occ:0.8 },
+  { id:'KW-2081-0177', title:'Twin Shutters, Balkhu Ring Road', type:'Shutter', landmark:'Opposite Balkhu Fruit & Veg Market', city:'Lalitpur', road:20, roadNote:'truck road', sqft:2200, rate:18, amen:['Forklift Ramp','CCTV'], occ:0.6 },
+  { id:'KW-2081-0203', title:'Cold Chain Godown, Kalimati', type:'Godown', landmark:'500 m from Kalimati Wholesale Market', city:'Kathmandu', road:24, roadNote:'truck road', sqft:4800, rate:34, amen:['3-Phase','Cold Storage','Forklift Ramp'], occ:0.3 },
+  { id:'KW-2081-0219', title:'Bonded Godown, Birgunj ICD', type:'Godown', landmark:'Adjacent to Sirsiya Dry Port gate 2', city:'Birgunj', road:40, roadNote:'container road', sqft:10950, rate:12, amen:['3-Phase','Forklift Ramp'], occ:0.5 },
+  { id:'KW-2081-0231', title:'Corner Shutter, Satdobato', type:'Shutter', landmark:'Satdobato chowk, beside ANFA complex', city:'Lalitpur', road:16, roadNote:'mini-truck road', sqft:684, rate:26, amen:['CCTV'], occ:0 },
+  { id:'KW-2081-0248', title:'Pharma Basement, Maharajgunj', type:'Basement', landmark:'Near Teaching Hospital back gate', city:'Kathmandu', road:14, roadNote:'pickup lane', sqft:1711, rate:38, amen:['3-Phase','Cold Storage','CCTV'], occ:0.2 },
+];
+const AMEN_ICON = { '3-Phase':['zap','text-amber-600'], 'Forklift Ramp':['forklift','text-slate-700'], 'Cold Storage':['snowflake','text-sky-500'], 'CCTV':['cctv','text-slate-500'] };
+const TYPE_ICON = { Basement:'arrow-down-to-line', Shutter:'store', Godown:'warehouse' };
+const npr = n => 'NPR ' + Math.round(n).toLocaleString('en-IN');
+const sq = n => Math.round(n).toLocaleString('en-IN') + ' sq ft';
+
+const grid = document.getElementById('grid');
+function render() {
+  const f = new FormData(document.getElementById('filters'));
+  const type = f.get('type'), min = +f.get('min') || 0, cold = document.getElementById('coldOnly').checked;
+  const list = LISTINGS.filter(l => (type==='all'||l.type===type) && l.sqft>=min && (!cold||l.amen.includes('Cold Storage')));
+  document.getElementById('resultCount').textContent = `${list.length} of ${LISTINGS.length} verified spaces`;
+  document.getElementById('empty').classList.toggle('hidden', list.length>0);
+  grid.innerHTML = list.map(l => {
+    const free = Math.round((1-l.occ)*10);
+    return `<li class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-start justify-between gap-3">
+        <span class="w-11 h-11 rounded-xl bg-navy-900 text-amber-400 grid place-items-center"><i data-lucide="${TYPE_ICON[l.type]}" class="w-5 h-5"></i></span>
+        <span class="text-xs font-semibold px-2 py-1 rounded-md ${free?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500'}">${free}/10 blocks free</span>
+      </div>
+      <div>
+        <h3 class="font-bold text-lg leading-snug">${l.title}</h3>
+        <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1"><i data-lucide="map-pin" class="w-4 h-4 mt-0.5 shrink-0 text-slate-400"></i>${l.landmark}, ${l.city}</p>
+        <p class="text-sm text-slate-700 font-medium flex items-center gap-1.5 mt-1"><i data-lucide="truck" class="w-4 h-4 text-slate-400"></i>${l.road} ft ${l.roadNote}</p>
+      </div>
+      <div class="flex flex-wrap gap-1.5">${l.amen.map(a=>`<span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-1"><i data-lucide="${AMEN_ICON[a][0]}" class="w-3.5 h-3.5 ${AMEN_ICON[a][1]}"></i>${a}</span>`).join('')}</div>
+      <div class="grid grid-cols-3 gap-2 text-center border-y border-slate-100 py-3">
+        <div><p class="text-[11px] text-slate-500">Total</p><p class="font-mono text-sm font-semibold">${Math.round(l.sqft).toLocaleString('en-IN')}</p></div>
+        <div><p class="text-[11px] text-slate-500">1 block</p><p class="font-mono text-sm font-semibold">${Math.round(l.sqft*0.1).toLocaleString('en-IN')}</p></div>
+        <div><p class="text-[11px] text-slate-500">Rs./sq ft</p><p class="font-mono text-sm font-semibold">${l.rate}</p></div>
+      </div>
+      <p class="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 rounded-lg p-2.5"><i data-lucide="shield-check" class="w-4 h-4 shrink-0"></i><span><strong>Privacy Shield Protected:</strong> KTM-WDC acts as your corporate counterparty.</span></p>
+      <button type="button" data-book="${l.id}" ${free?'':'disabled'} class="mt-auto h-11 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed text-navy-900 font-semibold flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500">
+        <i data-lucide="layout-grid" class="w-4 h-4"></i>${free?'Book 10% Floor Block':'Fully booked'}
+      </button>
+    </li>`;}).join('');
+  lucide.createIcons();
+}
+document.getElementById('filters').addEventListener('input', render);
+document.getElementById('filters').addEventListener('submit', e => e.preventDefault());
+
+const modal = document.getElementById('bookModal');
+const slider = document.getElementById('reqSlider');
+let cur = null;
+
+grid.addEventListener('click', e => {
+  const b = e.target.closest('[data-book]'); if (!b) return;
+  cur = LISTINGS.find(l => l.id === b.dataset.book);
+  const block = cur.sqft*0.1, occBlocks = Math.round(cur.occ*10), maxFree = (10-occBlocks)*block;
+  document.getElementById('bkTitle').textContent = cur.title;
+  document.getElementById('bkMeta').textContent = `${cur.id} · ${cur.city} · ${sq(cur.sqft)} total · Rs. ${cur.rate}/sq ft/mo`;
+  slider.min = 10; slider.max = Math.floor(maxFree); slider.value = Math.min(Math.round(block*1.4), Math.floor(maxFree));
+  document.getElementById('sMin').textContent = '10 sq ft';
+  document.getElementById('sMax').textContent = sq(maxFree) + ' free';
+  document.getElementById('pan').value = '';
+  document.getElementById('bookBody').classList.remove('hidden');
+  document.getElementById('invoice').classList.add('hidden');
+  update();
+  modal.showModal();
+});
+modal.addEventListener('click', e => { if (e.target === modal || e.target.closest('[data-close]')) modal.close(); });
+
+function calc() {
+  const req = +slider.value, block = cur.sqft*0.1;
+  const n = Math.ceil(req/block), alloc = n*block;
+  const base = alloc*cur.rate, margin = base*0.10, vat = (base+margin)*0.13;
+  return { req, block, n, alloc, base, margin, vat, total: base+margin+vat };
+}
+function update() {
+  const c = calc(), occBlocks = Math.round(cur.occ*10);
+  document.getElementById('reqOut').textContent = sq(c.req);
+  document.getElementById('ruleText').textContent =
+    `Ceil(${Math.round(c.req)} / ${Math.round(c.block)}) × ${Math.round(c.block)} = ${c.n} block${c.n>1?'s':''} → ${sq(c.alloc)} allocated`;
+  const cells = [];
+  for (let i=0;i<10;i++) {
+    const taken = i >= 10-occBlocks, mine = !taken && i < c.n;
+    const cls = taken ? 'bg-slate-300 border-slate-300 text-slate-500 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,.4)_4px,rgba(255,255,255,.4)_8px)]'
+              : mine ? 'bg-blue-600 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-400';
+    cells.push(`<div class="block-cell aspect-square rounded-lg border-2 ${cls} flex flex-col items-center justify-center text-xs font-semibold"><span>B${i+1}</span><span class="text-[10px] font-normal">${taken?'Rented':mine?'Yours':'Free'}</span></div>`);
+  }
+  const fp = document.getElementById('floorPlan');
+  fp.innerHTML = cells.join('');
+  fp.setAttribute('aria-label', `Floor plan: ${c.n} of 10 blocks allocated to you, ${occBlocks} already rented`);
+  document.getElementById('tariffNote').textContent = `${sq(c.alloc)} × Rs. ${cur.rate}`;
+  document.getElementById('lBase').textContent = npr(c.base);
+  document.getElementById('lMargin').textContent = npr(c.margin);
+  document.getElementById('lVat').textContent = npr(c.vat);
+  document.getElementById('lTotal').textContent = npr(c.total);
+}
+slider.addEventListener('input', update);
+
+const pan = document.getElementById('pan');
+pan.addEventListener('input', () => { pan.value = pan.value.replace(/\D/g,''); pan.removeAttribute('aria-invalid'); document.getElementById('panHelp').textContent='Add it to claim input VAT credit on your invoice.'; document.getElementById('panHelp').className='text-xs text-slate-500 mt-1'; });
+
+document.getElementById('bookForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (pan.value && pan.value.length !== 9) {
+    pan.setAttribute('aria-invalid','true');
+    const h = document.getElementById('panHelp'); h.textContent = 'PAN must be exactly 9 digits, or leave it blank.'; h.className='text-xs text-red-600 mt-1';
+    pan.focus(); return;
+  }
+  const c = calc(), no = 'KWDC/2081-82/' + String(Math.floor(Math.random()*9000)+1000);
+  document.getElementById('invNo').textContent = no;
+  document.getElementById('invDate').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const rows = [
+    ['Space', cur.title], ['Allocation', `${c.n} block${c.n>1?'s':''} · ${sq(c.alloc)}`],
+    ['Buyer PAN', pan.value || 'Not provided'],
+    ['Base Storage Tariff', npr(c.base)], ['KWDC Sovereign Margin (10%)', npr(c.margin)], ['IRD VAT (13%)', npr(c.vat)],
+  ];
+  document.getElementById('invLines').innerHTML = rows.map(([k,v])=>`<div class="flex justify-between gap-4"><dt class="text-slate-500">${k}</dt><dd class="font-medium text-right">${v}</dd></div>`).join('')
+    + `<div class="flex justify-between gap-4 pt-2 mt-2 border-t border-slate-200"><dt class="font-semibold">Gross Monthly Total</dt><dd class="font-mono font-bold">${npr(c.total)}</dd></div>`;
+  const qr = qrcode(0,'M'); qr.addData(`IRD|${no}|609812345|${pan.value||'-'}|${Math.round(c.total)}`); qr.make();
+  document.getElementById('invQr').innerHTML = qr.createSvgTag({ cellSize:3, margin:0, scalable:true });
+  document.getElementById('bookBody').classList.add('hidden');
+  document.getElementById('invoice').classList.remove('hidden');
+  lucide.createIcons();
+});
+
+render();
+</script>
+<script>
+(function(){
+  var routeMap = {
+    'storage marketplace': '/marketplace',
+    'find storage': '/marketplace',
+    'space owner': '/owner',
+    'list empty space': '/owner',
+    'fleet partner': '/fleet',
+    'incharge': '/incharge',
+    'reserve these blocks': '/marketplace',
+    'superadmin': '/admin',
+    'ird tax invoice': '/invoice',
+    'home': '/'
+  };
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (href && (href.startsWith('/') || href.startsWith('http') || href.startsWith('#'))) return;
+    var t = (a.textContent || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    var k = Object.keys(routeMap).find(function(x) { return t === x || t.indexOf(x) === 0; });
+    if (k) {
+      e.preventDefault();
+      window.location.href = routeMap[k];
+    }
+  }, true);
+})();
+</script></body>
+</html>

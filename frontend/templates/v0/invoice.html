@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tax Invoice KWDC-2083-0001 — KTM-WDC</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Inter','system-ui','sans-serif'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
+  colors: { navy: '#0f172a', nepal: '#dc2626', amber: '#f59e0b' }
+}}};
+</script>
+<style>
+  .guilloche{background-image:repeating-radial-gradient(circle at 0 0,transparent 0,transparent 6px,rgba(15,23,42,.035) 7px,transparent 8px),repeating-radial-gradient(circle at 100% 100%,transparent 0,transparent 6px,rgba(220,38,38,.03) 7px,transparent 8px)}
+  .watermark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-weight:800;font-size:7rem;letter-spacing:.1em;color:rgba(15,23,42,.035);transform:rotate(-24deg);user-select:none}
+  #qr svg{width:100%;height:100%;display:block}
+  @media print{
+    body{background:#fff!important}
+    .no-print{display:none!important}
+    .sheet{box-shadow:none!important;border:none!important;margin:0!important;max-width:none!important}
+    @page{size:A4;margin:12mm}
+  }
+</style>
+</head>
+<body class="bg-slate-200 font-sans text-navy antialiased">
+
+<div class="no-print sticky top-0 z-10 bg-navy text-white">
+  <div class="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
+    <div class="flex items-center gap-2 text-sm">
+      <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+      <span class="font-medium">IRD-synced tax invoice</span>
+      <span class="hidden text-slate-400 sm:inline">· Schedule 13 · CBMS acknowledged</span>
+    </div>
+    <div class="flex gap-2">
+      <button id="copyBtn" class="rounded-lg border border-white/15 px-3 py-1.5 text-sm font-medium hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber">Copy signature</button>
+      <button onclick="window.print()" class="rounded-lg bg-amber px-3 py-1.5 text-sm font-semibold text-navy hover:bg-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">Print / Save PDF</button>
+    </div>
+  </div>
+</div>
+
+<main class="px-3 py-6 sm:px-6 sm:py-10">
+<article class="sheet relative mx-auto max-w-4xl overflow-hidden rounded-xl border border-slate-300 bg-white shadow-xl" aria-labelledby="invTitle">
+  <div class="watermark" aria-hidden="true">KTM-WDC</div>
+  <div class="h-1.5 bg-gradient-to-r from-nepal via-navy to-nepal"></div>
+
+  <div class="relative p-5 sm:p-10">
+    <!-- Header -->
+    <header class="flex flex-col gap-6 border-b-2 border-navy pb-6 sm:flex-row sm:items-start sm:justify-between">
+      <div class="flex items-start gap-4">
+        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-navy text-amber" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect width="12" height="12" x="6" y="10"/></svg>
+        </div>
+        <div>
+          <h1 class="text-base font-extrabold leading-tight tracking-tight sm:text-xl">KATHMANDU WAREHOUSING &amp; DISTRIBUTION CENTER PVT. LTD.</h1>
+          <p class="mt-1 text-sm text-slate-600">Koteshwor-32, Kathmandu Metropolitan City, Bagmati Province, Nepal</p>
+          <p class="text-sm text-slate-600">+977-1-5970000 · billing@ktmwdc.com.np</p>
+          <p class="mt-2 inline-flex items-center gap-2 rounded-md bg-slate-100 px-2 py-1 text-sm">
+            <span class="text-slate-500">Seller PAN</span>
+            <span class="font-mono font-semibold tracking-wider">600987654</span>
+          </p>
+        </div>
+      </div>
+      <div class="sm:text-right">
+        <p id="invTitle" class="inline-block rounded bg-nepal px-3 py-1 text-sm font-bold uppercase tracking-[0.2em] text-white">Tax Invoice</p>
+        <p class="mt-1 text-xs text-slate-500">VAT Rules 2053 · Schedule 13 (Rule 17)</p>
+        <p class="mt-1 text-xs font-medium text-slate-500">Original — Buyer Copy</p>
+      </div>
+    </header>
+
+    <!-- Meta -->
+    <section class="grid gap-4 border-b border-slate-200 py-6 sm:grid-cols-2" aria-label="Invoice and buyer details">
+      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+        <dt class="text-slate-500">Tax Invoice No.</dt>
+        <dd class="font-mono font-semibold">KWDC-2083-0001</dd>
+        <dt class="text-slate-500">Invoice Date (AD)</dt>
+        <dd class="font-mono font-semibold">2026-11-23</dd>
+        <dt class="text-slate-500">Invoice Date (BS)</dt>
+        <dd class="font-mono">2083-08-07</dd>
+        <dt class="text-slate-500">Fiscal Year</dt>
+        <dd class="font-mono">2083/84</dd>
+        <dt class="text-slate-500">Payment Mode</dt>
+        <dd>Bank Transfer (ConnectIPS)</dd>
+      </dl>
+      <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Billed To (Buyer)</p>
+        <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+          <dt class="text-slate-500">Client Name</dt>
+          <dd class="font-semibold">Himalayan Traders Pvt. Ltd.</dd>
+          <dt class="text-slate-500">Address</dt>
+          <dd>Ward 5, Birgunj Sub-Metropolitan City, Parsa</dd>
+          <dt class="text-slate-500">Buyer PAN / VAT</dt>
+          <dd class="font-mono font-semibold tracking-wider">301245678</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Line items -->
+    <section class="py-6" aria-label="Invoice line items">
+      <div class="overflow-x-auto rounded-lg border border-navy">
+        <table class="w-full min-w-[560px] text-sm">
+          <caption class="sr-only">Tax invoice items and VAT computation</caption>
+          <thead class="bg-navy text-white">
+            <tr>
+              <th scope="col" class="w-12 px-3 py-3 text-left font-semibold">S.N.</th>
+              <th scope="col" class="px-3 py-3 text-left font-semibold">Item Description</th>
+              <th scope="col" class="whitespace-nowrap px-3 py-3 text-left font-semibold">Service Code</th>
+              <th scope="col" class="px-3 py-3 text-right font-semibold">Amount (NPR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-slate-200 align-top">
+              <td class="px-3 py-4 font-mono">1</td>
+              <td class="px-3 py-4">
+                <p class="font-semibold">Commercial Storage Reservation (10% Partition Block)</p>
+                <p class="mt-1 text-xs text-slate-500">Facility KW-2081-0203 · Kalimati Cold Chain Godown · Blocks B1–B2 · Service period 2026-11-23 to 2026-12-22</p>
+              </td>
+              <td class="px-3 py-4 font-mono text-slate-600">9967.10</td>
+              <td class="px-3 py-4 text-right font-mono">385,000.00</td>
+            </tr>
+          </tbody>
+          <tfoot class="text-sm">
+            <tr class="border-b border-slate-200">
+              <th scope="row" colspan="3" class="px-3 py-3 text-right font-medium text-slate-600">Taxable Base Amount</th>
+              <td class="px-3 py-3 text-right font-mono font-semibold">NPR 385,000.00</td>
+            </tr>
+            <tr class="border-b border-slate-200">
+              <th scope="row" colspan="3" class="px-3 py-3 text-right font-medium text-slate-600">13% Value Added Tax <span class="text-slate-400">(VAT Act 2052)</span></th>
+              <td class="px-3 py-3 text-right font-mono font-semibold">NPR 50,050.00</td>
+            </tr>
+            <tr class="bg-slate-100">
+              <th scope="row" colspan="3" class="px-3 py-4 text-right text-base font-bold">Total Invoiced Amount</th>
+              <td class="px-3 py-4 whitespace-nowrap text-right font-mono text-base font-bold text-nepal">NPR 435,050.00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="mt-3 rounded-md border-l-4 border-amber bg-amber-50 px-3 py-2 text-sm">
+        <span class="font-semibold">In words:</span> Nepalese Rupees Four Lakh Thirty-Five Thousand Fifty Only.
+      </p>
+    </section>
+
+    <!-- Footer: QR + signatures -->
+    <footer class="guilloche grid gap-6 rounded-lg border border-slate-200 p-5 sm:grid-cols-[176px_1fr]">
+      <figure class="flex flex-col items-center">
+        <div class="rounded-md border-2 border-navy bg-white p-2">
+          <div id="qr" class="h-36 w-36" role="img" aria-label="Verification QR code for tax invoice KWDC-2083-0001"></div>
+        </div>
+        <figcaption class="mt-2 text-center text-[11px] leading-tight text-slate-500">ISO/IEC 18004 QR · ECC Level M<br>Scan to verify at ird.gov.np</figcaption>
+      </figure>
+
+      <div class="flex min-w-0 flex-col gap-4">
+        <div>
+          <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+            IRD Cryptographic Signature (SHA-256 · ECDSA P-256)
+          </p>
+          <p id="sig" class="mt-1 break-all rounded-md bg-navy px-3 py-2 font-mono text-[11px] leading-relaxed text-emerald-300"></p>
+        </div>
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
+          <div><dt class="text-slate-500">CBMS Sync</dt><dd class="font-mono font-semibold text-emerald-700">ACK 200 · Real-time</dd></div>
+          <div><dt class="text-slate-500">Printed</dt><dd class="font-mono">2026-11-23 14:32 NPT</dd></div>
+          <div><dt class="text-slate-500">Copy</dt><dd class="font-mono">1 of 1</dd></div>
+        </dl>
+        <div class="mt-auto flex flex-wrap items-end justify-between gap-6 pt-2">
+          <p class="max-w-xs text-[11px] leading-snug text-slate-500">Computer-generated invoice issued under Rule 17 of the VAT Rules, 2053. Valid without physical seal once the QR verifies against the IRD registry.</p>
+          <div class="text-center">
+            <p class="font-serif text-lg italic text-navy/80" aria-hidden="true">R. Adhikari</p>
+            <div class="mt-1 w-44 border-t border-navy pt-1 text-xs font-medium">Authorized Signatory</div>
+            <p class="text-[11px] text-slate-500">For KTM-WDC Pvt. Ltd.</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+</article>
+</main>
+
+<script>
+  const invoice = {
+    seller: '600987654', buyer: '301245678', no: 'KWDC-2083-0001', date: '2026-11-23',
+    base: '385000.00', vat: '50050.00', total: '435050.00'
+  };
+  const signature = 'IRD-SIG:v1:MEUCIQDk7f2a9c41b0e8d63f5a7c2e19b84d0f6a3c57e921b4d8f0a6c3e75b1d29f4AiBx3c8e1f40a9d27b6e5c13f8a0d4b7e2c96f1a3d58b0e7c4f29a6d1b3e85c07';
+  document.getElementById('sig').textContent = signature;
+
+  const payload = [
+    'IRD-VAT-INV', invoice.seller, invoice.buyer, invoice.no, invoice.date,
+    invoice.base, invoice.vat, invoice.total, signature.slice(0, 48)
+  ].join('|');
+
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(payload);
+    qr.make();
+    document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  } catch (e) {
+    document.getElementById('qr').textContent = 'QR unavailable';
+  }
+
+  const copyBtn = document.getElementById('copyBtn');
+  copyBtn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(signature); copyBtn.textContent = 'Copied'; }
+    catch { copyBtn.textContent = 'Copy failed'; }
+    setTimeout(() => (copyBtn.textContent = 'Copy signature'), 1600);
+  });
+</script>
+<script>
+(function(){
+  var routeMap = {
+    'storage marketplace': '/marketplace',
+    'find storage': '/marketplace',
+    'space owner': '/owner',
+    'list empty space': '/owner',
+    'fleet partner': '/fleet',
+    'incharge': '/incharge',
+    'reserve these blocks': '/marketplace',
+    'superadmin': '/admin',
+    'ird tax invoice': '/invoice',
+    'home': '/'
+  };
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (href && (href.startsWith('/') || href.startsWith('http') || href.startsWith('#'))) return;
+    var t = (a.textContent || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    var k = Object.keys(routeMap).find(function(x) { return t === x || t.indexOf(x) === 0; });
+    if (k) {
+      e.preventDefault();
+      window.location.href = routeMap[k];
+    }
+  }, true);
+})();
+</script></body>
+</html>

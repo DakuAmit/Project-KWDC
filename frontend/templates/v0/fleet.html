@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fleet Partner Dashboard — KTM-WDC</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Inter','Geist','sans-serif'], mono: ['JetBrains Mono','Geist Mono','monospace'] },
+  colors: { navy: { 950:'#0b1222', 900:'#0f172a', 800:'#1e293b' } }
+}}};
+</script>
+<style>
+  .switch input:checked + span { background:#10b981; }
+  .switch input:checked + span::after { transform: translateX(24px); }
+  .switch span::after { content:''; position:absolute; top:4px; left:4px; width:20px; height:20px; border-radius:9999px; background:#fff; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .switch input:focus-visible + span { outline: 2px solid #34d399; outline-offset: 3px; }
+  @keyframes ping2 { 0% { transform:scale(1); opacity:.7 } 80%,100% { transform:scale(2.6); opacity:0 } }
+  .live .pulse-ring { animation: ping2 1.2s cubic-bezier(0,0,.2,1) infinite; }
+  .vehicle.selected { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  .driver.linked { border-color:#2563eb; background:#eff6ff; }
+  @media (prefers-reduced-motion: reduce) { .live .pulse-ring { animation:none; } }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased">
+
+<header class="bg-navy-900 text-white sticky top-0 z-30">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <a href="#" class="flex items-center gap-3">
+      <span class="w-9 h-9 rounded-lg bg-amber-500 text-navy-900 grid place-items-center"><i data-lucide="warehouse" class="w-5 h-5"></i></span>
+      <span class="leading-tight">
+        <span class="flex items-center gap-2 font-bold">KTM-WDC <span class="text-[10px] font-bold bg-red-600 px-1.5 py-0.5 rounded">NEPAL</span></span>
+        <span class="block text-[11px] text-slate-400">Fleet Partner Console</span>
+      </span>
+    </a>
+    <nav class="hidden md:flex items-center gap-1 text-sm" aria-label="Primary">
+      <a href="#" aria-current="page" class="px-3 py-2 rounded-md bg-white/10">Fleet</a>
+      <a href="#" class="px-3 py-2 rounded-md text-slate-300 hover:text-white">Freight Jobs</a>
+      <a href="#" class="px-3 py-2 rounded-md text-slate-300 hover:text-white">Payouts</a>
+      <a href="#" class="px-3 py-2 rounded-md text-slate-300 hover:text-white">Compliance</a>
+    </nav>
+    <span class="flex items-center gap-2 bg-white/5 rounded-full pl-1 pr-3 py-1 text-sm">
+      <span class="w-7 h-7 rounded-full bg-blue-500 grid place-items-center text-xs font-bold">SL</span>
+      <span class="hidden sm:inline">Sagarmatha Logistics</span>
+    </span>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+  <!-- Broadcast banner -->
+  <section id="banner" class="rounded-2xl bg-navy-900 text-white p-5 sm:p-6 mb-6 border border-white/5 overflow-hidden" aria-labelledby="bcTitle">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div class="flex items-start gap-4">
+        <span class="relative mt-1 w-4 h-4 shrink-0" aria-hidden="true">
+          <span class="pulse-ring absolute inset-0 rounded-full bg-emerald-400"></span>
+          <span id="liveDot" class="absolute inset-0 rounded-full bg-slate-500 transition-colors"></span>
+        </span>
+        <div>
+          <h1 id="bcTitle" class="text-lg sm:text-xl font-bold">Live GPS Telemetry Stream</h1>
+          <p class="text-sm text-slate-400 text-pretty">Broadcast vehicle positions to KTM-WDC dispatch and your clients&apos; shipment trackers.</p>
+          <p id="bcStatus" class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Offline · not broadcasting</p>
+        </div>
+      </div>
+      <label class="switch flex items-center gap-3 cursor-pointer select-none bg-white/5 hover:bg-white/10 rounded-xl pl-4 pr-3 py-3 self-start md:self-auto">
+        <span class="text-sm font-semibold">Start Live 100ms Broadcast</span>
+        <input id="bcToggle" type="checkbox" role="switch" class="sr-only" />
+        <span class="relative w-[52px] h-7 rounded-full bg-slate-600 transition-colors shrink-0"></span>
+      </label>
+    </div>
+
+    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+      <div class="rounded-xl bg-white/5 px-4 py-3">
+        <dt class="text-[11px] uppercase tracking-wide text-slate-400">Tick Rate</dt>
+        <dd class="font-mono text-lg font-semibold"><span id="hz">0</span><span class="text-slate-500 text-sm"> Hz</span></dd>
+      </div>
+      <div class="rounded-xl bg-white/5 px-4 py-3">
+        <dt class="text-[11px] uppercase tracking-wide text-slate-400">Packets Sent</dt>
+        <dd id="packets" class="font-mono text-lg font-semibold">0</dd>
+      </div>
+      <div class="rounded-xl bg-white/5 px-4 py-3">
+        <dt class="text-[11px] uppercase tracking-wide text-slate-400">Uplink Latency</dt>
+        <dd class="font-mono text-lg font-semibold"><span id="latency">—</span><span class="text-slate-500 text-sm"> ms</span></dd>
+      </div>
+      <div class="rounded-xl bg-white/5 px-4 py-3">
+        <dt class="text-[11px] uppercase tracking-wide text-slate-400">Vehicles Live</dt>
+        <dd class="font-mono text-lg font-semibold"><span id="liveCount">0</span><span class="text-slate-500 text-sm"> / 4</span></dd>
+      </div>
+    </dl>
+  </section>
+
+  <div class="flex flex-col lg:flex-row gap-6 items-start">
+
+    <!-- Fleet -->
+    <section class="w-full lg:flex-[1.45] min-w-0" aria-labelledby="fleetTitle">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 id="fleetTitle" class="text-lg font-bold">Registered Fleet Vehicles</h2>
+          <p class="text-sm text-slate-500">Bluebooks verified by KTM-WDC compliance</p>
+        </div>
+        <button type="button" class="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-navy-900 text-white text-sm font-semibold hover:bg-navy-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+          <i data-lucide="plus" class="w-4 h-4"></i>Add Vehicle
+        </button>
+      </div>
+      <ul id="fleetList" class="flex flex-col gap-3"></ul>
+    </section>
+
+    <!-- Drivers -->
+    <section class="w-full lg:flex-1 min-w-0 lg:sticky lg:top-20" aria-labelledby="driverTitle">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 id="driverTitle" class="text-lg font-bold">Driver Roster</h2>
+          <p id="driverSummary" class="text-sm text-slate-500"></p>
+        </div>
+        <button type="button" class="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>Add Driver
+        </button>
+      </div>
+      <ul id="driverList" class="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100 overflow-hidden"></ul>
+      <p class="mt-3 text-xs text-slate-500 flex items-start gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i>Drivers with pending Nagarikta (citizenship) verification can&apos;t be dispatched on client freight.</p>
+    </section>
+  </div>
+</main>
+
+<script>
+const vehicles = [
+  { id:'v1', name:'TVS NTORQ 125 Cargo', cls:'2-Wheeler', icon:'bike', payload:35, unit:'kg', load:22, bluebook:'Bagmati Pra. 03-011 Pa 4521', expiry:'Chaitra 2082', driver:'d1', status:'On Trip', route:'Teku → New Baneshwor', lat:27.6955, lng:85.3080 },
+  { id:'v2', name:'Tata Ace Gold', cls:'0.75-Ton Batta', icon:'truck', payload:750, unit:'kg', load:510, bluebook:'Bagmati Pra. 03-006 Cha 2187', expiry:'Baisakh 2083', driver:'d2', status:'On Trip', route:'Balkhu → Koteshwor', lat:27.6858, lng:85.2970 },
+  { id:'v3', name:'Mahindra Bolero Maxi', cls:'3-Ton Pickup', icon:'truck', payload:3, unit:'t', load:0, bluebook:'Bagmati Pra. 03-004 Ja 7730', expiry:'Jestha 2083', driver:'d3', status:'Idle', route:'Parked · Kalimati Yard', lat:27.6982, lng:85.2990 },
+  { id:'v4', name:'40-Foot Container Carrier', cls:'32-Ton Trailer', icon:'container', payload:32, unit:'t', load:27.5, bluebook:'Madhesh Pra. 02-001 Kha 1059', expiry:'Kartik 2083', driver:'d4', status:'On Trip', route:'Birgunj ICD → Hetauda', lat:27.0104, lng:84.8770 },
+];
+const drivers = [
+  { id:'d1', name:'Sujan Maharjan', phone:'+977-9841-223415', license:'03-06-41188201', cat:'A', citizen:'verified' },
+  { id:'d2', name:'Ramesh Tamang', phone:'+977-9851-078842', license:'03-06-39012457', cat:'B', citizen:'verified' },
+  { id:'d3', name:'Bikash Shrestha', phone:'+977-9803-554190', license:'03-06-44870312', cat:'F', citizen:'pending' },
+  { id:'d4', name:'Mohammad Ansari', phone:'+977-9845-610027', license:'02-06-20765519', cat:'G', citizen:'verified' },
+  { id:'d5', name:'Kiran Thapa', phone:'+977-9860-342771', license:'03-06-47031186', cat:'B', citizen:'rejected' },
+];
+const byId = Object.fromEntries(drivers.map(d => [d.id, d]));
+let selected = null;
+
+const statusStyle = { 'On Trip':'bg-blue-50 text-blue-700', 'Idle':'bg-slate-100 text-slate-600' };
+const citizenStyle = {
+  verified:{ label:'Citizenship Verified', cls:'bg-emerald-50 text-emerald-700', icon:'badge-check' },
+  pending:{ label:'Citizenship Pending', cls:'bg-amber-50 text-amber-800', icon:'clock' },
+  rejected:{ label:'Re-upload Required', cls:'bg-red-50 text-red-700', icon:'circle-alert' },
+};
+const fmtCap = v => v.unit === 'kg' ? `${v.payload} kg` : `${v.payload} t`;
+const fmtLoad = v => v.unit === 'kg' ? `${v.load} kg` : `${v.load} t`;
+
+function renderFleet() {
+  document.getElementById('fleetList').innerHTML = vehicles.map(v => {
+    const d = byId[v.driver];
+    const pct = Math.round(v.load / v.payload * 100);
+    return `
+    <li>
+      <article class="vehicle bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 transition ${selected===v.id?'selected':''}" data-vid="${v.id}">
+        <div class="flex items-start gap-4">
+          <span class="w-12 h-12 rounded-xl bg-navy-900 text-amber-400 grid place-items-center shrink-0"><i data-lucide="${v.icon}" class="w-6 h-6"></i></span>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="font-bold">${v.name}</h3>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${statusStyle[v.status]}">${v.status}</span>
+            </div>
+            <p class="text-sm text-slate-500">${v.cls}</p>
+          </div>
+          <button type="button" data-select="${v.id}" aria-pressed="${selected===v.id}" class="text-sm font-semibold text-blue-600 hover:text-blue-700 px-2 py-1 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">${selected===v.id?'Selected':'Details'}</button>
+        </div>
+
+        <div class="mt-4 flex flex-col sm:flex-row gap-3">
+          <div class="flex-1 rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5">
+            <p class="text-[11px] uppercase tracking-wide text-slate-500 flex items-center gap-1"><i data-lucide="book-check" class="w-3.5 h-3.5 text-emerald-600"></i>Verified Bluebook</p>
+            <p class="font-mono text-sm font-semibold mt-0.5">${v.bluebook}</p>
+            <p class="text-[11px] text-slate-500">Renewal due ${v.expiry}</p>
+          </div>
+          <div class="flex-1 rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5">
+            <div class="flex items-baseline justify-between">
+              <p class="text-[11px] uppercase tracking-wide text-slate-500">Payload Capacity</p>
+              <p class="font-mono text-sm font-semibold">${fmtCap(v)}</p>
+            </div>
+            <div class="h-2 rounded-full bg-slate-200 mt-2 overflow-hidden" role="progressbar" aria-label="Current load" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+              <div class="h-full rounded-full ${pct>85?'bg-amber-500':'bg-blue-600'}" style="width:${pct}%"></div>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">${v.load ? `${fmtLoad(v)} loaded · ${pct}%` : 'Empty · available for freight'}</p>
+          </div>
+        </div>
+
+        <div class="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm">
+          <p class="flex items-center gap-2 text-slate-600 min-w-0"><i data-lucide="route" class="w-4 h-4 text-slate-400 shrink-0"></i><span class="truncate">${v.route}</span></p>
+          <p class="flex items-center gap-2 text-slate-600"><i data-lucide="user-round" class="w-4 h-4 text-slate-400"></i>${d.name}</p>
+        </div>
+
+        <div class="telemetry mt-3 rounded-lg bg-navy-900 text-slate-300 px-3 py-2 font-mono text-xs flex flex-wrap gap-x-4 gap-y-1">
+          <span class="flex items-center gap-1.5"><span class="tdot w-1.5 h-1.5 rounded-full bg-slate-500"></span><span class="tstate">GPS idle</span></span>
+          <span>LAT <span class="tlat text-white">${v.lat.toFixed(5)}</span></span>
+          <span>LNG <span class="tlng text-white">${v.lng.toFixed(5)}</span></span>
+          <span>SPD <span class="tspd text-white">0</span> km/h</span>
+        </div>
+      </article>
+    </li>`;
+  }).join('');
+  lucide.createIcons();
+  applyTelemetryState();
+}
+
+function renderDrivers() {
+  const assigned = Object.fromEntries(vehicles.map(v => [v.driver, v]));
+  const linked = selected ? vehicles.find(v => v.id === selected).driver : null;
+  document.getElementById('driverList').innerHTML = drivers.map(d => {
+    const c = citizenStyle[d.citizen];
+    const v = assigned[d.id];
+    const initials = d.name.split(' ').map(s => s[0]).join('');
+    return `
+    <li class="driver p-4 border-l-4 border-transparent transition ${linked===d.id?'linked':''}">
+      <div class="flex items-start gap-3">
+        <span class="w-10 h-10 rounded-full bg-slate-100 text-slate-700 grid place-items-center text-sm font-bold shrink-0">${initials}</span>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <p class="font-semibold">${d.name}</p>
+            <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${c.cls}"><i data-lucide="${c.icon}" class="w-3 h-3"></i>${c.label}</span>
+          </div>
+          <a href="tel:${d.phone.replace(/-/g,'')}" class="mt-1 inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-blue-600"><i data-lucide="phone" class="w-3.5 h-3.5"></i>${d.phone}</a>
+          <p class="mt-1 text-xs text-slate-500 flex flex-wrap items-center gap-x-2">
+            <span class="flex items-center gap-1"><i data-lucide="id-card" class="w-3.5 h-3.5"></i>License <span class="font-mono text-slate-700">${d.license}</span></span>
+            <span class="font-semibold text-slate-700 bg-slate-100 rounded px-1.5">Cat. ${d.cat}</span>
+          </p>
+          <p class="mt-1.5 text-xs ${v?'text-blue-700':'text-slate-400'} flex items-center gap-1"><i data-lucide="${v?'link':'unlink'}" class="w-3.5 h-3.5"></i>${v ? `Assigned · ${v.name}` : 'Unassigned · reserve driver'}</p>
+        </div>
+      </div>
+    </li>`;
+  }).join('');
+  const ok = drivers.filter(d => d.citizen === 'verified').length;
+  document.getElementById('driverSummary').textContent = `${drivers.length} drivers · ${ok} dispatch-ready`;
+  lucide.createIcons();
+}
+
+document.getElementById('fleetList').addEventListener('click', e => {
+  const b = e.target.closest('[data-select]');
+  if (!b) return;
+  selected = selected === b.dataset.select ? null : b.dataset.select;
+  renderFleet(); renderDrivers();
+});
+
+// Telemetry simulation
+const toggle = document.getElementById('bcToggle');
+let timer = null, packets = 0;
+const speeds = { v1:28, v2:34, v3:0, v4:52 };
+
+function applyTelemetryState() {
+  const on = toggle.checked;
+  document.querySelectorAll('.vehicle').forEach(card => {
+    card.querySelector('.tdot').className = `tdot w-1.5 h-1.5 rounded-full ${on?'bg-emerald-400':'bg-slate-500'}`;
+    card.querySelector('.tstate').textContent = on ? 'GPS LIVE' : 'GPS idle';
+    card.querySelector('.tstate').classList.toggle('text-emerald-400', on);
+  });
+}
+
+function tick() {
+  packets += vehicles.length;
+  vehicles.forEach(v => {
+    const moving = v.status === 'On Trip';
+    if (moving) {
+      v.lat += (Math.random() - 0.35) * 0.00004;
+      v.lng += (Math.random() - 0.35) * 0.00004;
+      speeds[v.id] = Math.max(5, Math.min(v.id==='v4'?70:45, speeds[v.id] + (Math.random() - 0.5) * 3));
+    }
+    const card = document.querySelector(`[data-vid="${v.id}"]`);
+    if (!card) return;
+    card.querySelector('.tlat').textContent = v.lat.toFixed(5);
+    card.querySelector('.tlng').textContent = v.lng.toFixed(5);
+    card.querySelector('.tspd').textContent = moving ? Math.round(speeds[v.id]) : 0;
+  });
+  document.getElementById('packets').textContent = packets.toLocaleString('en-IN');
+  document.getElementById('latency').textContent = Math.round(38 + Math.random() * 24);
+}
+
+toggle.addEventListener('change', () => {
+  const on = toggle.checked;
+  document.getElementById('banner').classList.toggle('live', on);
+  document.getElementById('liveDot').className = `absolute inset-0 rounded-full transition-colors ${on?'bg-emerald-400':'bg-slate-500'}`;
+  const st = document.getElementById('bcStatus');
+  st.textContent = on ? 'Broadcasting · 4 vehicles · encrypted uplink' : 'Offline · not broadcasting';
+  st.className = `mt-2 text-xs font-semibold uppercase tracking-wide ${on?'text-emerald-400':'text-slate-500'}`;
+  document.getElementById('hz').textContent = on ? '10' : '0';
+  document.getElementById('liveCount').textContent = on ? '4' : '0';
+  if (!on) document.getElementById('latency').textContent = '—';
+  clearInterval(timer);
+  if (on) timer = setInterval(tick, 100);
+  applyTelemetryState();
+});
+
+renderFleet();
+renderDrivers();
+</script>
+<script>
+(function(){
+  var routeMap = {
+    'storage marketplace': '/marketplace',
+    'find storage': '/marketplace',
+    'space owner': '/owner',
+    'list empty space': '/owner',
+    'fleet partner': '/fleet',
+    'incharge': '/incharge',
+    'reserve these blocks': '/marketplace',
+    'superadmin': '/admin',
+    'ird tax invoice': '/invoice',
+    'home': '/'
+  };
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (href && (href.startsWith('/') || href.startsWith('http') || href.startsWith('#'))) return;
+    var t = (a.textContent || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    var k = Object.keys(routeMap).find(function(x) { return t === x || t.indexOf(x) === 0; });
+    if (k) {
+      e.preventDefault();
+      window.location.href = routeMap[k];
+    }
+  }, true);
+})();
+</script></body>
+</html>

@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#05080f" />
+<title>Incharge Ops — KTM-WDC</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Inter','Geist','sans-serif'], mono: ['JetBrains Mono','Geist Mono','monospace'] },
+  colors: { ink: { 950:'#05080f', 900:'#0b1222', 800:'#141d33', 700:'#1f2a44' } }
+}}};
+</script>
+<style>
+  body { -webkit-tap-highlight-color: transparent; }
+  dialog { padding:0; border:0; background:transparent; max-width:100vw; max-height:100dvh; width:100%; margin:0; }
+  dialog::backdrop { background: rgba(0,0,0,.75); }
+  dialog[open] .sheet { animation: up .22s ease-out; }
+  @keyframes up { from { transform: translateY(24px); opacity:0 } to { transform:none; opacity:1 } }
+  .scanline { animation: scan 2s ease-in-out infinite; }
+  @keyframes scan { 0%,100% { top: 8% } 50% { top: 88% } }
+  .preset[aria-pressed="true"] { border-color:#fbbf24; background:#1f2a44; box-shadow: 0 0 0 2px #fbbf24 inset; }
+  .seg[aria-pressed="true"] { background:#fbbf24; color:#05080f; }
+  :focus-visible { outline: 3px solid #fbbf24; outline-offset: 2px; }
+  .hold-fill { transition: width .05s linear; }
+</style>
+</head>
+<body class="bg-ink-950 text-white font-sans antialiased">
+
+<div class="max-w-md mx-auto min-h-dvh flex flex-col pb-24">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 bg-ink-950/95 backdrop-blur border-b border-white/10 px-4 pt-3 pb-3">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <span class="w-9 h-9 rounded-lg bg-amber-400 text-ink-950 grid place-items-center"><i data-lucide="warehouse" class="w-5 h-5"></i></span>
+        <div class="leading-tight">
+          <div class="flex items-center gap-1.5 font-extrabold text-[15px]">KTM-WDC <span class="text-[10px] font-bold bg-red-600 px-1.5 py-0.5 rounded">NEPAL</span></div>
+          <div class="text-[11px] text-slate-400 font-medium">Incharge Field Console</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="flex items-center gap-1.5 text-[11px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-400/40 px-2 py-1 rounded-full">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>ON SHIFT
+        </span>
+        <span class="w-9 h-9 rounded-full bg-white text-ink-950 grid place-items-center text-xs font-extrabold" aria-label="Bikash Tamang">BT</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="px-4 pt-4 flex flex-col gap-5">
+
+    <!-- Assigned facility badge -->
+    <section aria-label="Assigned facility" class="rounded-2xl bg-amber-400 text-ink-950 p-4">
+      <div class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider">
+        <i data-lucide="badge-check" class="w-4 h-4"></i> Assigned Facility
+      </div>
+      <h1 class="mt-1.5 text-xl font-extrabold leading-snug text-balance">Koteshwor Overhead Dry Basement</h1>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <span class="font-mono font-bold text-sm bg-ink-950 text-amber-300 px-2 py-0.5 rounded">10,000 sq ft</span>
+        <span class="text-xs font-semibold">KW-2081-0098 · Koteshwor, Kathmandu</span>
+      </div>
+    </section>
+
+    <!-- Shift stats -->
+    <section aria-label="Shift status" class="grid grid-cols-3 gap-2">
+      <div class="rounded-xl bg-ink-800 border border-white/10 p-3">
+        <div class="text-[11px] text-slate-300 font-semibold">Occupied</div>
+        <div class="font-mono text-lg font-bold mt-0.5">7<span class="text-slate-400 text-sm">/10</span></div>
+        <div class="text-[10px] text-slate-400">blocks</div>
+      </div>
+      <div class="rounded-xl bg-ink-800 border border-white/10 p-3">
+        <div class="text-[11px] text-slate-300 font-semibold">Gate Today</div>
+        <div class="font-mono text-lg font-bold mt-0.5" id="statGate">14</div>
+        <div class="text-[10px] text-slate-400">stamps</div>
+      </div>
+      <div class="rounded-xl bg-ink-800 border border-white/10 p-3">
+        <div class="text-[11px] text-slate-300 font-semibold">Open Issues</div>
+        <div class="font-mono text-lg font-bold mt-0.5 text-red-400" id="statIssues">1</div>
+        <div class="text-[10px] text-slate-400">incidents</div>
+      </div>
+    </section>
+
+    <!-- Quick actions -->
+    <section aria-labelledby="qa-title" class="flex flex-col gap-3">
+      <h2 id="qa-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Quick Actions</h2>
+
+      <button data-open="darSheet" class="text-left w-full rounded-2xl bg-ink-800 border-2 border-white/15 hover:border-sky-400 active:scale-[.99] transition p-4 flex items-start gap-4">
+        <span class="w-14 h-14 shrink-0 rounded-xl bg-sky-400 text-ink-950 grid place-items-center"><i data-lucide="clipboard-check" class="w-7 h-7"></i></span>
+        <span class="flex-1 min-w-0">
+          <span class="flex items-center justify-between gap-2">
+            <span class="text-lg font-extrabold">Daily Activity Report</span>
+            <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 shrink-0"></i>
+          </span>
+          <span class="block text-sm text-slate-300 mt-1 leading-relaxed">Submit inspection summaries and shift notes directly to Admin.</span>
+          <span id="darStatus" class="inline-flex mt-2 text-[11px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/40 px-2 py-0.5 rounded">Evening shift report due 18:00</span>
+        </span>
+      </button>
+
+      <button data-open="incSheet" class="text-left w-full rounded-2xl bg-ink-800 border-2 border-white/15 hover:border-orange-400 active:scale-[.99] transition p-4 flex items-start gap-4">
+        <span class="w-14 h-14 shrink-0 rounded-xl bg-orange-500 text-ink-950 grid place-items-center"><i data-lucide="triangle-alert" class="w-7 h-7"></i></span>
+        <span class="flex-1 min-w-0">
+          <span class="flex items-center justify-between gap-2">
+            <span class="text-lg font-extrabold">Log Incident / Damage</span>
+            <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 shrink-0"></i>
+          </span>
+          <span class="block text-sm text-slate-300 mt-1 leading-relaxed">Rodent damage, rain seepage, broken seals, or police escalation.</span>
+          <span class="flex flex-wrap gap-1.5 mt-2" aria-hidden="true">
+            <span class="w-7 h-7 rounded-md bg-ink-700 grid place-items-center"><i data-lucide="rat" class="w-4 h-4"></i></span>
+            <span class="w-7 h-7 rounded-md bg-ink-700 grid place-items-center"><i data-lucide="cloud-rain" class="w-4 h-4"></i></span>
+            <span class="w-7 h-7 rounded-md bg-ink-700 grid place-items-center"><i data-lucide="package-open" class="w-4 h-4"></i></span>
+            <span class="w-7 h-7 rounded-md bg-red-600 grid place-items-center"><i data-lucide="siren" class="w-4 h-4"></i></span>
+          </span>
+        </span>
+      </button>
+
+      <button data-open="gateSheet" class="text-left w-full rounded-2xl bg-ink-800 border-2 border-white/15 hover:border-emerald-400 active:scale-[.99] transition p-4 flex items-start gap-4">
+        <span class="w-14 h-14 shrink-0 rounded-xl bg-emerald-400 text-ink-950 grid place-items-center"><i data-lucide="scan-qr-code" class="w-7 h-7"></i></span>
+        <span class="flex-1 min-w-0">
+          <span class="flex items-center justify-between gap-2">
+            <span class="text-lg font-extrabold">Digital Gate Pass</span>
+            <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 shrink-0"></i>
+          </span>
+          <span class="block text-sm text-slate-300 mt-1 leading-relaxed">Scan QR to stamp Carton, Pallet, or Shipping Container inward / outward.</span>
+          <span class="flex gap-1.5 mt-2 text-[11px] font-bold">
+            <span class="px-2 py-0.5 rounded bg-emerald-400/15 text-emerald-300 border border-emerald-400/40">IN 9</span>
+            <span class="px-2 py-0.5 rounded bg-sky-400/15 text-sky-300 border border-sky-400/40">OUT 5</span>
+          </span>
+        </span>
+      </button>
+    </section>
+
+    <!-- Activity feed -->
+    <section aria-labelledby="feed-title" class="flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <h2 id="feed-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Shift Log</h2>
+        <span class="text-[11px] text-slate-400 font-mono" id="clock"></span>
+      </div>
+      <ol id="feed" class="flex flex-col rounded-2xl bg-ink-900 border border-white/10 divide-y divide-white/10"></ol>
+    </section>
+  </main>
+</div>
+
+<!-- Bottom nav -->
+<nav aria-label="Primary" class="fixed bottom-0 inset-x-0 z-20 bg-ink-900 border-t border-white/10">
+  <div class="max-w-md mx-auto grid grid-cols-4 text-[11px] font-semibold">
+    <a href="#" aria-current="page" class="flex flex-col items-center gap-1 py-3 text-amber-300"><i data-lucide="layout-grid" class="w-5 h-5"></i>Ops</a>
+    <button data-open="gateSheet" class="flex flex-col items-center gap-1 py-3 text-slate-300"><i data-lucide="scan-line" class="w-5 h-5"></i>Scan</button>
+    <a href="#feed-title" class="flex flex-col items-center gap-1 py-3 text-slate-300"><i data-lucide="history" class="w-5 h-5"></i>Log</a>
+    <button data-open="incSheet" data-sos class="flex flex-col items-center gap-1 py-3 text-red-400"><i data-lucide="siren" class="w-5 h-5"></i>SOS</button>
+  </div>
+</nav>
+
+<!-- ============ Daily Activity Report ============ -->
+<dialog id="darSheet" aria-labelledby="darTitle">
+  <div class="min-h-dvh flex items-end sm:items-center justify-center sm:p-4">
+    <form id="darForm" class="sheet w-full max-w-md bg-ink-900 text-white rounded-t-3xl sm:rounded-3xl border border-white/15 max-h-[92dvh] flex flex-col">
+      <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10">
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-wider text-sky-300">To: KWDC Admin</div>
+          <h2 id="darTitle" class="text-xl font-extrabold">Daily Activity Report</h2>
+        </div>
+        <button type="button" data-close class="w-11 h-11 rounded-full bg-ink-700 grid place-items-center" aria-label="Close"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="overflow-y-auto px-5 py-4 flex flex-col gap-5">
+        <fieldset>
+          <legend class="text-sm font-bold mb-2">Shift</legend>
+          <div class="grid grid-cols-3 gap-2" role="group">
+            <button type="button" class="seg darShift h-11 rounded-lg bg-ink-700 font-bold text-sm" aria-pressed="false">Morning</button>
+            <button type="button" class="seg darShift h-11 rounded-lg bg-ink-700 font-bold text-sm" aria-pressed="false">Day</button>
+            <button type="button" class="seg darShift h-11 rounded-lg bg-ink-700 font-bold text-sm" aria-pressed="true">Evening</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend class="text-sm font-bold mb-2">Inspection Checklist</legend>
+          <div class="flex flex-col gap-2" id="checklist"></div>
+        </fieldset>
+
+        <div class="grid grid-cols-2 gap-3">
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-bold">Humidity (%)</span>
+            <input name="humidity" inputmode="numeric" value="58" class="h-12 rounded-lg bg-ink-950 border-2 border-white/20 px-3 font-mono text-lg font-bold focus:border-amber-400 outline-none" />
+          </label>
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-bold">Temp (°C)</span>
+            <input name="temp" inputmode="numeric" value="19" class="h-12 rounded-lg bg-ink-950 border-2 border-white/20 px-3 font-mono text-lg font-bold focus:border-amber-400 outline-none" />
+          </label>
+        </div>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-bold">Shift Notes</span>
+          <textarea name="notes" rows="4" required placeholder="e.g. Block B4 tenant collected 12 cartons. Shutter lock lubricated. No anomalies." class="rounded-lg bg-ink-950 border-2 border-white/20 p-3 text-[15px] leading-relaxed placeholder:text-slate-500 focus:border-amber-400 outline-none"></textarea>
+        </label>
+      </div>
+
+      <div class="px-5 py-4 border-t border-white/10">
+        <button class="w-full h-14 rounded-xl bg-sky-400 text-ink-950 font-extrabold text-base flex items-center justify-center gap-2"><i data-lucide="send" class="w-5 h-5"></i>Submit Report to Admin</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- ============ Incident ============ -->
+<dialog id="incSheet" aria-labelledby="incTitle">
+  <div class="min-h-dvh flex items-end sm:items-center justify-center sm:p-4">
+    <form id="incForm" class="sheet w-full max-w-md bg-ink-900 text-white rounded-t-3xl sm:rounded-3xl border border-white/15 max-h-[92dvh] flex flex-col">
+      <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10">
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-wider text-orange-300">Koteshwor Basement</div>
+          <h2 id="incTitle" class="text-xl font-extrabold">Log Incident / Damage</h2>
+        </div>
+        <button type="button" data-close class="w-11 h-11 rounded-full bg-ink-700 grid place-items-center" aria-label="Close"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="overflow-y-auto px-5 py-4 flex flex-col gap-5">
+        <!-- Emergency -->
+        <div class="rounded-2xl bg-red-600 p-4">
+          <div class="flex items-center gap-3">
+            <span class="w-12 h-12 rounded-xl bg-white text-red-600 grid place-items-center shrink-0"><i data-lucide="siren" class="w-7 h-7"></i></span>
+            <div>
+              <div class="font-extrabold text-lg leading-tight">Nepal Police Emergency</div>
+              <div class="text-sm text-red-100">Break-in, theft, fire or threat to life</div>
+            </div>
+          </div>
+          <button type="button" id="sosBtn" class="relative overflow-hidden mt-3 w-full h-14 rounded-xl bg-white text-red-700 font-extrabold text-base">
+            <span class="hold-fill absolute inset-y-0 left-0 bg-red-200" id="sosFill" style="width:0%"></span>
+            <span class="relative flex items-center justify-center gap-2"><i data-lucide="phone-call" class="w-5 h-5"></i><span id="sosLabel">1-Click Escalate · Dial 100</span></span>
+          </button>
+          <p class="mt-2 text-[11px] text-red-100 text-center">Alerts Admin + SuperAdmin with GPS, then dials Nepal Police 100.</p>
+        </div>
+
+        <fieldset>
+          <legend class="text-sm font-bold mb-2">Select incident type</legend>
+          <div class="grid grid-cols-1 gap-2" id="presets">
+            <button type="button" class="preset text-left rounded-xl bg-ink-800 border-2 border-white/15 p-3 flex items-center gap-3" aria-pressed="false" data-type="Rodent Damage">
+              <span class="w-11 h-11 rounded-lg bg-amber-400 text-ink-950 grid place-items-center shrink-0"><i data-lucide="rat" class="w-6 h-6"></i></span>
+              <span><span class="block font-bold">Minor Rat / Rodent Damage</span><span class="block text-xs text-slate-300">Chewed packaging or droppings</span></span>
+            </button>
+            <button type="button" class="preset text-left rounded-xl bg-ink-800 border-2 border-white/15 p-3 flex items-center gap-3" aria-pressed="false" data-type="Monsoon Seepage">
+              <span class="w-11 h-11 rounded-lg bg-sky-400 text-ink-950 grid place-items-center shrink-0"><i data-lucide="cloud-rain" class="w-6 h-6"></i></span>
+              <span><span class="block font-bold">Monsoon Rain Seepage / Water Leak</span><span class="block text-xs text-slate-300">Wall damp, ceiling drip, floor pooling</span></span>
+            </button>
+            <button type="button" class="preset text-left rounded-xl bg-ink-800 border-2 border-white/15 p-3 flex items-center gap-3" aria-pressed="false" data-type="Seal Tampering">
+              <span class="w-11 h-11 rounded-lg bg-orange-500 text-ink-950 grid place-items-center shrink-0"><i data-lucide="package-open" class="w-6 h-6"></i></span>
+              <span><span class="block font-bold">Broken Box Seal / Container Tampering</span><span class="block text-xs text-slate-300">Torn tape, cut strap, missing tag</span></span>
+            </button>
+          </div>
+        </fieldset>
+
+        <div class="grid grid-cols-2 gap-3">
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-bold">Block</span>
+            <select name="block" class="h-12 rounded-lg bg-ink-950 border-2 border-white/20 px-3 font-bold focus:border-amber-400 outline-none">
+              <option>B1</option><option>B2</option><option>B3</option><option selected>B4</option><option>B5</option>
+              <option>B6</option><option>B7</option><option>B8</option><option>B9</option><option>B10</option><option>Corridor</option>
+            </select>
+          </label>
+          <fieldset class="flex flex-col gap-1.5">
+            <legend class="text-sm font-bold mb-1.5">Severity</legend>
+            <div class="grid grid-cols-3 gap-1">
+              <button type="button" class="seg sev h-12 rounded-lg bg-ink-700 font-bold text-xs" aria-pressed="true">Low</button>
+              <button type="button" class="seg sev h-12 rounded-lg bg-ink-700 font-bold text-xs" aria-pressed="false">Med</button>
+              <button type="button" class="seg sev h-12 rounded-lg bg-ink-700 font-bold text-xs" aria-pressed="false">High</button>
+            </div>
+          </fieldset>
+        </div>
+
+        <label class="flex items-center gap-3 rounded-xl border-2 border-dashed border-white/25 p-3 cursor-pointer">
+          <span class="w-11 h-11 rounded-lg bg-ink-700 grid place-items-center shrink-0"><i data-lucide="camera" class="w-5 h-5"></i></span>
+          <span class="flex-1"><span class="block font-bold text-sm">Attach photo evidence</span><span id="photoName" class="block text-xs text-slate-400">Opens rear camera</span></span>
+          <input type="file" accept="image/*" capture="environment" class="sr-only" id="photo" />
+        </label>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-bold">Note to Admin</span>
+          <textarea name="note" rows="3" placeholder="What did you see? Which tenant goods are affected?" class="rounded-lg bg-ink-950 border-2 border-white/20 p-3 text-[15px] placeholder:text-slate-500 focus:border-amber-400 outline-none"></textarea>
+        </label>
+      </div>
+
+      <div class="px-5 py-4 border-t border-white/10">
+        <button id="incSubmit" disabled class="w-full h-14 rounded-xl bg-orange-500 text-ink-950 font-extrabold text-base flex items-center justify-center gap-2 disabled:bg-ink-700 disabled:text-slate-400"><i data-lucide="file-warning" class="w-5 h-5"></i><span id="incSubmitLabel">Select an incident type</span></button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- ============ Gate Pass ============ -->
+<dialog id="gateSheet" aria-labelledby="gateTitle">
+  <div class="min-h-dvh flex items-end sm:items-center justify-center sm:p-4">
+    <div class="sheet w-full max-w-md bg-ink-900 text-white rounded-t-3xl sm:rounded-3xl border border-white/15 max-h-[94dvh] flex flex-col">
+      <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10">
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-300">Main Gate · Koteshwor</div>
+          <h2 id="gateTitle" class="text-xl font-extrabold">Digital Gate Pass</h2>
+        </div>
+        <button type="button" data-close class="w-11 h-11 rounded-full bg-ink-700 grid place-items-center" aria-label="Close"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="overflow-y-auto px-5 py-4 flex flex-col gap-4">
+        <div class="grid grid-cols-2 gap-2" role="group" aria-label="Direction">
+          <button type="button" class="dir h-14 rounded-xl border-2 font-extrabold flex items-center justify-center gap-2" data-dir="INWARD" aria-pressed="true"><i data-lucide="log-in" class="w-5 h-5"></i>INWARD</button>
+          <button type="button" class="dir h-14 rounded-xl border-2 font-extrabold flex items-center justify-center gap-2" data-dir="OUTWARD" aria-pressed="false"><i data-lucide="log-out" class="w-5 h-5"></i>OUTWARD</button>
+        </div>
+
+        <!-- Scanner -->
+        <div class="relative aspect-square rounded-2xl overflow-hidden bg-black border-2 border-white/15">
+          <video id="video" class="absolute inset-0 w-full h-full object-cover hidden" playsinline muted></video>
+          <div id="camIdle" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-6">
+            <i data-lucide="camera" class="w-10 h-10 text-slate-400"></i>
+            <p class="text-sm text-slate-300" id="camMsg">Point the camera at the QR tag on the carton, pallet or container.</p>
+            <button type="button" id="camStart" class="h-12 px-5 rounded-xl bg-white text-ink-950 font-extrabold flex items-center gap-2"><i data-lucide="aperture" class="w-5 h-5"></i>Open Camera</button>
+          </div>
+          <div class="pointer-events-none absolute inset-[12%]" aria-hidden="true">
+            <span class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg"></span>
+            <span class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg"></span>
+            <span class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg"></span>
+            <span class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-lg"></span>
+            <span id="scanline" class="hidden scanline absolute inset-x-2 h-0.5 bg-emerald-400 shadow-[0_0_12px_#34d399]"></span>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <input id="manualCode" placeholder="Or type tag ID e.g. PLT-0448" class="flex-1 min-w-0 h-12 rounded-lg bg-ink-950 border-2 border-white/20 px-3 font-mono font-bold uppercase placeholder:normal-case placeholder:font-sans placeholder:font-normal placeholder:text-slate-500 focus:border-amber-400 outline-none" aria-label="Tag ID" />
+          <button type="button" id="manualGo" class="h-12 px-4 rounded-lg bg-ink-700 font-bold">Lookup</button>
+        </div>
+        <button type="button" id="demoScan" class="text-xs font-semibold text-slate-400 underline underline-offset-4 self-center">Simulate a scan (demo)</button>
+
+        <!-- Result -->
+        <div id="scanResult" class="hidden rounded-2xl bg-ink-800 border-2 border-emerald-400 p-4">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-300">Tag Verified</span>
+            <span class="font-mono text-xs text-slate-300" id="resTime"></span>
+          </div>
+          <div class="mt-2 flex items-center gap-3">
+            <span class="w-12 h-12 rounded-xl bg-emerald-400 text-ink-950 grid place-items-center shrink-0" id="resIcon"><i data-lucide="package" class="w-6 h-6"></i></span>
+            <div class="min-w-0">
+              <div class="font-mono font-bold text-lg" id="resCode">—</div>
+              <div class="text-sm text-slate-300 truncate" id="resMeta">—</div>
+            </div>
+          </div>
+          <fieldset class="mt-3">
+            <legend class="text-xs font-bold text-slate-300 mb-1.5">Unit type</legend>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" class="seg unit h-11 rounded-lg bg-ink-700 font-bold text-xs" data-unit="Carton" aria-pressed="false">Carton</button>
+              <button type="button" class="seg unit h-11 rounded-lg bg-ink-700 font-bold text-xs" data-unit="Pallet" aria-pressed="false">Pallet</button>
+              <button type="button" class="seg unit h-11 rounded-lg bg-ink-700 font-bold text-xs" data-unit="Container" aria-pressed="false">Ship. Container</button>
+            </div>
+          </fieldset>
+          <div class="mt-3 flex items-center justify-between rounded-lg bg-ink-950 border border-white/15 p-1">
+            <button type="button" id="qMinus" class="w-12 h-11 rounded-md bg-ink-700 grid place-items-center" aria-label="Decrease quantity"><i data-lucide="minus" class="w-5 h-5"></i></button>
+            <div class="text-center"><div class="font-mono text-2xl font-bold" id="qty">1</div><div class="text-[10px] text-slate-400 -mt-1">QUANTITY</div></div>
+            <button type="button" id="qPlus" class="w-12 h-11 rounded-md bg-ink-700 grid place-items-center" aria-label="Increase quantity"><i data-lucide="plus" class="w-5 h-5"></i></button>
+          </div>
+          <button type="button" id="stampBtn" class="mt-3 w-full h-14 rounded-xl bg-emerald-400 text-ink-950 font-extrabold flex items-center justify-center gap-2"><i data-lucide="stamp" class="w-5 h-5"></i><span id="stampLabel">Stamp INWARD</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Confirmation overlay -->
+<div id="toast" role="status" aria-live="polite" class="fixed z-50 left-1/2 -translate-x-1/2 top-4 w-[calc(100%-2rem)] max-w-sm hidden">
+  <div class="rounded-2xl bg-white text-ink-950 p-4 flex items-start gap-3 shadow-2xl">
+    <span id="toastIcon" class="w-10 h-10 rounded-full bg-emerald-500 text-white grid place-items-center shrink-0"><i data-lucide="check" class="w-5 h-5"></i></span>
+    <div class="min-w-0"><div class="font-extrabold" id="toastTitle"></div><div class="text-sm text-slate-600" id="toastBody"></div></div>
+  </div>
+</div>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const icons = () => lucide.createIcons();
+const now = () => new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+// clock
+const tick = () => $('#clock').textContent = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) + ' NPT';
+tick(); setInterval(tick, 1000);
+
+// feed
+const feed = [
+  { t:'17:42', icon:'log-in', c:'bg-emerald-400', title:'INWARD · 6 × Pallet', sub:'PLT-0441 · Himalayan Traders · Block B3' },
+  { t:'16:10', icon:'cloud-rain', c:'bg-sky-400', title:'Incident · Monsoon Seepage', sub:'Corridor, north wall · Low · Open' },
+  { t:'14:05', icon:'log-out', c:'bg-sky-300', title:'OUTWARD · 12 × Carton', sub:'CTN-2210 · Everest Pharma · Block B4' },
+  { t:'09:00', icon:'clipboard-check', c:'bg-white', title:'Morning DAR submitted', sub:'Acknowledged by Admin · 09:14' },
+];
+function renderFeed() {
+  $('#feed').innerHTML = feed.map(f => `
+    <li class="flex items-center gap-3 p-3.5">
+      <span class="w-9 h-9 rounded-lg ${f.c} text-ink-950 grid place-items-center shrink-0"><i data-lucide="${f.icon}" class="w-4 h-4"></i></span>
+      <div class="flex-1 min-w-0"><div class="font-bold text-sm truncate">${f.title}</div><div class="text-xs text-slate-400 truncate">${f.sub}</div></div>
+      <span class="font-mono text-xs text-slate-400">${f.t}</span>
+    </li>`).join('');
+  icons();
+}
+function log(entry) { feed.unshift({ t: now(), ...entry }); renderFeed(); }
+
+function toast(title, body, tone='ok') {
+  $('#toastTitle').textContent = title; $('#toastBody').textContent = body;
+  const ic = $('#toastIcon');
+  ic.className = `w-10 h-10 rounded-full grid place-items-center shrink-0 text-white ${tone==='sos' ? 'bg-red-600' : 'bg-emerald-500'}`;
+  ic.innerHTML = `<i data-lucide="${tone==='sos' ? 'siren' : 'check'}" class="w-5 h-5"></i>`;
+  icons();
+  const el = $('#toast'); el.classList.remove('hidden');
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.add('hidden'), 3200);
+}
+
+// sheets
+$$('[data-open]').forEach(b => b.addEventListener('click', () => $('#' + b.dataset.open).showModal()));
+$$('dialog').forEach(d => {
+  d.addEventListener('click', e => { if (e.target === d || e.target === d.firstElementChild) d.close(); });
+  $$('[data-close]', d).forEach(b => b.addEventListener('click', () => d.close()));
+});
+$('#gateSheet').addEventListener('close', stopCam);
+
+function segGroup(sel, onPick) {
+  $$(sel).forEach(b => b.addEventListener('click', () => {
+    $$(sel).forEach(x => x.setAttribute('aria-pressed', x === b));
+    onPick && onPick(b);
+  }));
+}
+
+// ---- DAR
+const checks = ['All shutter locks & seals intact','Fire extinguishers charged (2/2)','Rodent bait stations checked','No water seepage on walls/floor','Access corridor clear (10% rule)','CCTV recording verified'];
+$('#checklist').innerHTML = checks.map((c,i) => `
+  <label class="flex items-center gap-3 rounded-xl bg-ink-800 border-2 border-white/10 p-3 has-[:checked]:border-emerald-400 cursor-pointer">
+    <input type="checkbox" ${i<3?'checked':''} class="w-6 h-6 accent-emerald-400 shrink-0" />
+    <span class="text-[15px] font-semibold">${c}</span>
+  </label>`).join('');
+segGroup('.darShift');
+$('#darForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const done = $$('#checklist input:checked').length;
+  const shift = $('.darShift[aria-pressed="true"]').textContent;
+  $('#darSheet').close();
+  log({ icon:'clipboard-check', c:'bg-white', title:`${shift} DAR submitted`, sub:`${done}/${checks.length} checks · ${e.target.humidity.value}% RH · ${e.target.temp.value}°C` });
+  $('#darStatus').textContent = `${shift} report sent at ${now()}`;
+  $('#darStatus').className = 'inline-flex mt-2 text-[11px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-400/40 px-2 py-0.5 rounded';
+  toast('Report sent to Admin', `${shift} shift · ${done} of ${checks.length} checks passed`);
+  e.target.notes.value = '';
+});
+
+// ---- Incident
+let incType = null;
+segGroup('.preset', b => {
+  incType = b.dataset.type;
+  $('#incSubmit').disabled = false;
+  $('#incSubmitLabel').textContent = `Log ${incType}`;
+});
+segGroup('.sev');
+$('#photo').addEventListener('change', e => { const f = e.target.files[0]; if (f) $('#photoName').textContent = f.name; });
+$('#incForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!incType) return;
+  const sev = $('.sev[aria-pressed="true"]').textContent;
+  const iconMap = { 'Rodent Damage':'rat', 'Monsoon Seepage':'cloud-rain', 'Seal Tampering':'package-open' };
+  $('#incSheet').close();
+  log({ icon: iconMap[incType], c:'bg-orange-500', title:`Incident · ${incType}`, sub:`Block ${e.target.block.value} · ${sev} · Sent to Admin` });
+  $('#statIssues').textContent = +$('#statIssues').textContent + 1;
+  toast('Incident logged', `${incType} · Block ${e.target.block.value} · Admin notified`);
+  incType = null; $$('.preset').forEach(x => x.setAttribute('aria-pressed', false));
+  $('#incSubmit').disabled = true; $('#incSubmitLabel').textContent = 'Select an incident type';
+  e.target.note.value = ''; $('#photoName').textContent = 'Opens rear camera';
+});
+
+// SOS: single tap arms, second tap within 4s confirms (guards pocket taps)
+let sosArmed = false, sosTimer;
+$('#sosBtn').addEventListener('click', () => {
+  if (!sosArmed) {
+    sosArmed = true;
+    $('#sosLabel').textContent = 'Tap again to confirm';
+    $('#sosFill').style.width = '100%';
+    $('#sosFill').style.transition = 'width 4s linear';
+    requestAnimationFrame(() => $('#sosFill').style.width = '0%');
+    sosTimer = setTimeout(resetSos, 4000);
+    return;
+  }
+  clearTimeout(sosTimer); resetSos();
+  $('#incSheet').close();
+  log({ icon:'siren', c:'bg-red-500', title:'POLICE ESCALATION · 100', sub:'GPS 27.6788, 85.3496 · Admin + SuperAdmin alerted' });
+  $('#statIssues').textContent = +$('#statIssues').textContent + 1;
+  toast('Emergency escalated', 'Nepal Police (100) dialing · SuperAdmin alerted with GPS', 'sos');
+  setTimeout(() => { try { window.open('tel:100', '_top'); } catch {} }, 600);
+});
+function resetSos() { sosArmed = false; $('#sosLabel').textContent = '1-Click Escalate · Dial 100'; $('#sosFill').style.transition='none'; $('#sosFill').style.width='0%'; }
+$$('[data-sos]').forEach(b => b.addEventListener('click', () => $('#incSheet .overflow-y-auto').scrollTop = 0));
+
+// ---- Gate pass
+let dir = 'INWARD', unit = null, qty = 1, stream = null, detector = null, scanCode = null;
+function paintDir() {
+  $$('.dir').forEach(b => {
+    const on = b.dataset.dir === dir;
+    b.setAttribute('aria-pressed', on);
+    b.className = `dir h-14 rounded-xl border-2 font-extrabold flex items-center justify-center gap-2 ${on ? (dir==='INWARD' ? 'bg-emerald-400 text-ink-950 border-emerald-400' : 'bg-sky-400 text-ink-950 border-sky-400') : 'bg-ink-800 text-slate-300 border-white/15'}`;
+  });
+  $('#stampLabel').textContent = `Stamp ${dir}`;
+  $('#stampBtn').className = `mt-3 w-full h-14 rounded-xl ${dir==='INWARD'?'bg-emerald-400':'bg-sky-400'} text-ink-950 font-extrabold flex items-center justify-center gap-2`;
+}
+$$('.dir').forEach(b => b.addEventListener('click', () => { dir = b.dataset.dir; paintDir(); }));
+paintDir();
+
+const tags = {
+  'CTN': { unit:'Carton', icon:'package', meta:'Everest Pharma · Block B4' },
+  'PLT': { unit:'Pallet', icon:'layers', meta:'Himalayan Traders · Block B3' },
+  'CNT': { unit:'Container', icon:'container', meta:'Birgunj ICD Freight · Yard' },
+};
+function showResult(code) {
+  code = code.trim().toUpperCase(); if (!code) return;
+  scanCode = code;
+  const info = tags[code.slice(0,3)] || { unit:'Carton', icon:'package', meta:'Unregistered tenant · verify manually' };
+  $('#resCode').textContent = code; $('#resMeta').textContent = info.meta;
+  $('#resIcon').innerHTML = `<i data-lucide="${info.icon}" class="w-6 h-6"></i>`;
+  $('#resTime').textContent = now();
+  unit = info.unit; $$('.unit').forEach(b => b.setAttribute('aria-pressed', b.dataset.unit === unit));
+  qty = 1; $('#qty').textContent = qty;
+  $('#scanResult').classList.remove('hidden'); icons();
+  $('#scanResult').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+segGroup('.unit', b => unit = b.dataset.unit);
+$('#qMinus').addEventListener('click', () => { qty = Math.max(1, qty-1); $('#qty').textContent = qty; });
+$('#qPlus').addEventListener('click', () => { qty = Math.min(999, qty+1); $('#qty').textContent = qty; });
+$('#manualGo').addEventListener('click', () => showResult($('#manualCode').value));
+$('#manualCode').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); showResult(e.target.value); } });
+$('#demoScan').addEventListener('click', () => {
+  const pool = ['PLT-0448','CTN-2231','CNT-BRG-0917'];
+  showResult(pool[Math.floor(Math.random()*pool.length)]);
+});
+$('#stampBtn').addEventListener('click', () => {
+  if (!scanCode) return;
+  const label = unit === 'Container' ? 'Shipping Container' : unit;
+  log({ icon: dir==='INWARD'?'log-in':'log-out', c: dir==='INWARD'?'bg-emerald-400':'bg-sky-300', title:`${dir} · ${qty} × ${label}`, sub:`${scanCode} · ${$('#resMeta').textContent}` });
+  $('#statGate').textContent = +$('#statGate').textContent + 1;
+  toast(`Gate pass stamped ${dir}`, `${qty} × ${label} · ${scanCode} · ${now()}`);
+  $('#scanResult').classList.add('hidden'); $('#manualCode').value = ''; scanCode = null;
+});
+
+$('#camStart').addEventListener('click', async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const v = $('#video'); v.srcObject = stream; await v.play();
+    v.classList.remove('hidden'); $('#camIdle').classList.add('hidden'); $('#scanline').classList.remove('hidden');
+    if ('BarcodeDetector' in window) {
+      detector = new BarcodeDetector({ formats:['qr_code'] });
+      const loop = async () => {
+        if (!stream) return;
+        try { const r = await detector.detect(v); if (r[0]) { showResult(r[0].rawValue); stopCam(); return; } } catch {}
+        requestAnimationFrame(loop);
+      };
+      loop();
+    }
+  } catch {
+    $('#camMsg').textContent = 'Camera unavailable here. Type the tag ID below or use the demo scan.';
+  }
+});
+function stopCam() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  $('#video').classList.add('hidden'); $('#camIdle').classList.remove('hidden'); $('#scanline').classList.add('hidden');
+}
+
+renderFeed();
+icons();
+</script>
+<script>
+(function(){
+  var routeMap = {
+    'storage marketplace': '/marketplace',
+    'find storage': '/marketplace',
+    'space owner': '/owner',
+    'list empty space': '/owner',
+    'fleet partner': '/fleet',
+    'incharge': '/incharge',
+    'reserve these blocks': '/marketplace',
+    'superadmin': '/admin',
+    'ird tax invoice': '/invoice',
+    'home': '/'
+  };
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (href && (href.startsWith('/') || href.startsWith('http') || href.startsWith('#'))) return;
+    var t = (a.textContent || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    var k = Object.keys(routeMap).find(function(x) { return t === x || t.indexOf(x) === 0; });
+    if (k) {
+      e.preventDefault();
+      window.location.href = routeMap[k];
+    }
+  }, true);
+})();
+</script></body>
+</html>
