@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KTM-WDC Portal — Kathmandu Warehousing & Distribution Center</title>
+<style>
+  :root { --navy:#020617; --line:#1e293b; --muted:#94a3b8; --amber:#f59e0b; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--navy); font-family:Geist, system-ui, sans-serif; }
+  body { display:flex; flex-direction:column; }
+  .bar { display:flex; align-items:center; gap:12px; height:44px; padding:0 12px; border-bottom:1px solid var(--line); background:var(--navy); flex-shrink:0; }
+  .brand { display:flex; align-items:center; gap:8px; color:#fff; font-weight:600; font-size:13px; white-space:nowrap; }
+  .dot { width:8px; height:8px; border-radius:999px; background:var(--amber); }
+  .brand span { color:var(--muted); font-weight:400; }
+  nav { display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; flex:1; }
+  nav::-webkit-scrollbar { display:none; }
+  nav button { appearance:none; border:0; background:transparent; color:var(--muted); font:inherit; font-size:13px; padding:6px 10px; border-radius:6px; cursor:pointer; white-space:nowrap; }
+  nav button:hover { color:#fff; background:#0f172a; }
+  nav button[aria-selected="true"] { color:#0f172a; background:var(--amber); font-weight:600; }
+  nav button:focus-visible { outline:2px solid var(--amber); outline-offset:2px; }
+  iframe { flex:1; width:100%; border:0; background:#fff; display:block; }
+  @media (max-width:640px) { .brand span { display:none; } }
+</style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand"><i class="dot" aria-hidden="true"></i>KTM-WDC <span>Portal</span></div>
+    <nav role="tablist" aria-label="Portal sections" id="tabs">
+      <button role="tab" data-page="home">Home</button>
+      <button role="tab" data-page="marketplace">Storage Marketplace</button>
+      <button role="tab" data-page="owner">Space Owner</button>
+      <button role="tab" data-page="fleet">Fleet Partner</button>
+      <button role="tab" data-page="incharge">Incharge</button>
+      <button role="tab" data-page="invoice">IRD Tax Invoice</button>
+      <a href="/admin" target="_blank" style="color:#f59e0b; text-decoration:none; font-size:13px; font-weight:600; padding:6px 10px; border-radius:6px; margin-left:auto; white-space:nowrap;">🛡️ SuperAdmin Console</a>
+    </nav>
+  </header>
+  <iframe id="view" title="KTM-WDC page"></iframe>
+
+  <script src="/static/v0/pages.js"></script>
+  <script>
+    const view = document.getElementById('view');
+    const tabs = [...document.querySelectorAll('#tabs button')];
+    let current = null;
+
+    function go(page) {
+      if (!window.KTM_PAGES[page] || page === current) return;
+      current = page;
+      tabs.forEach(t => {
+        const on = t.dataset.page === page;
+        t.setAttribute('aria-selected', on);
+        t.tabIndex = on ? 0 : -1;
+        if (on) t.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      });
+      view.title = tabs.find(t => t.dataset.page === page).textContent + ' — KTM-WDC';
+      view.srcdoc = window.KTM_PAGES[page];
+    }
+
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => go(t.dataset.page));
+      t.addEventListener('keydown', e => {
+        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!d) return;
+        const next = tabs[(i + d + tabs.length) % tabs.length];
+        next.focus(); go(next.dataset.page);
+      });
+    });
+
+    window.addEventListener('message', e => {
+      if (e.source === view.contentWindow && e.data && e.data.ktmGo) go(e.data.ktmGo);
+    });
+
+    go('home');
+  </script>
+</body>
+</html>

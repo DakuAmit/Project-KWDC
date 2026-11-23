@@ -87,6 +87,14 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 def index_page(request: Request):
+    return templates.TemplateResponse(request=request, name="v0_portal.html", context={"app_name": settings.APP_NAME})
+
+@app.get("/portal", response_class=HTMLResponse)
+def portal_page(request: Request):
+    return templates.TemplateResponse(request=request, name="v0_portal.html", context={"app_name": settings.APP_NAME})
+
+@app.get("/classic", response_class=HTMLResponse)
+def classic_index_page(request: Request):
     return templates.TemplateResponse(request=request, name="index.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/owner", response_class=HTMLResponse)
