@@ -19,7 +19,7 @@ from backend.models import (
 )
 from backend.schemas import WarehouseCreate, MaintenanceHoldRequest, BookingRequestCreate
 from backend.auth_utils import require_user, get_current_user
-from backend.services.unit_converter import to_sqft, from_sqft_to_all, calculate_10_percent_block
+from backend.services.unit_converter import to_sqft, from_sqft_to_all, get_warehouse_usable_capacity
 from backend.services.vat_service import generate_ird_tax_invoice
 from backend.config import settings
 
@@ -257,9 +257,12 @@ def get_public_catalog(
         })
     return results
 
-@router.post("/calculate-10-percent-block")
-def calculate_block(requested_sqft: float, total_warehouse_sqft: float):
-    return calculate_10_percent_block(requested_sqft, total_warehouse_sqft)
+@router.get("/{warehouse_id}/capacity-breakdown")
+def get_capacity_breakdown(warehouse_id: int, db: Session = Depends(get_db)):
+    warehouse = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found.")
+    return get_warehouse_usable_capacity(warehouse.total_sqft)
 
 @router.post("/book")
 def book_warehouse_space(
@@ -268,10 +271,10 @@ def book_warehouse_space(
     db: Session = Depends(get_db)
 ):
     """
-    Client books partitioned storage:
-    - Enforces 10% Floor Space Partitioning Rule
-    - Generates IRD Schedule 13 Tax Invoice with 13% statutory VAT
-    - Status set to PENDING_REVIEW for Admin approval
+    Client books commercial storage:
+    - Billed directly on requested square footage.
+    - Generates IRD Schedule 13 Tax Invoice with 13% statutory VAT.
+    - Status set to PENDING_REVIEW for Admin approval.
     """
     warehouse = db.query(Warehouse).filter(
         Warehouse.id == payload.warehouse_id,
@@ -285,11 +288,10 @@ def book_warehouse_space(
     if payload.requested_sqft > warehouse.available_sqft:
         raise HTTPException(status_code=400, detail=f"Requested space exceeds available capacity of {warehouse.available_sqft:,.2f} sq ft.")
 
-    # 1. 10% Floor Block Partition Math
-    block_info = calculate_10_percent_block(payload.requested_sqft, warehouse.total_sqft)
-    allocated_sqft = block_info["billed_sqft"]
+    # Direct Billed Allocation
+    allocated_sqft = payload.requested_sqft
 
-    # 2. Base Rent + KWDC Margin (10%) + 13% IRD VAT
+    # Base Rent + KWDC Margin (10%) + 13% IRD VAT
     monthly_base_rent = round(allocated_sqft * warehouse.monthly_rate_per_sqft, 2)
     kwdc_margin_amount = round(monthly_base_rent * 0.10, 2)
     taxable_amount = monthly_base_rent + kwdc_margin_amount
@@ -311,7 +313,7 @@ def book_warehouse_space(
     db.commit()
     db.refresh(booking)
 
-    # 3. Create IRD Schedule 13 Invoice
+    # Create IRD Schedule 13 Invoice
     inv_number = f"KWDC-2083-{booking.id:04d}"
     inv_data = generate_ird_tax_invoice(
         invoice_number=inv_number,
@@ -342,7 +344,6 @@ def book_warehouse_space(
         "booking_id": booking.id,
         "requested_sqft": payload.requested_sqft,
         "allocated_billed_sqft": allocated_sqft,
-        "blocks_allocated": block_info["blocks_allocated"],
         "monthly_base_rent_npr": monthly_base_rent,
         "kwdc_margin_npr": kwdc_margin_amount,
         "vat_13_percent_npr": vat_13_percent,

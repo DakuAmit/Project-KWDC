@@ -66,34 +66,17 @@
                     <h5 id="bookWarehouseTitle" class="fw-bold mb-1">Facility Title</h5>
                     <p id="bookWarehouseLandmark" class="text-muted small mb-3">Landmark</p>
 
-                    <!-- 10% Partition Slider -->
+                    <!-- Space Selection -->
                     <div class="bg-light p-3 rounded mb-3 border">
                         <label class="form-label fw-bold d-flex justify-content-between">
-                            <span>Requested Floor Space:</span>
+                            <span>Required Storage Space:</span>
                             <span id="sliderReqDisplay" class="text-primary fs-5">5,000 sq ft</span>
                         </label>
                         <input type="range" class="form-range" id="bookSqftSlider" min="500" max="10000" step="100" value="5000" oninput="recalcBookingMath()">
-                        
-                        <div class="row text-center mt-3 g-2">
-                            <div class="col-4">
-                                <span class="text-muted small">10% Block Unit:</span>
-                                <div class="fw-bold" id="bookBlockSize">1,000 sq ft</div>
-                            </div>
-                            <div class="col-4 border-start border-end">
-                                <span class="text-muted small">Allocated Blocks:</span>
-                                <div class="fw-bold text-warning" id="bookBlockCount">5 Blocks</div>
-                            </div>
-                            <div class="col-4">
-                                <span class="text-muted small">Enforced Billed Space:</span>
-                                <div class="fw-bold text-primary" id="bookBilledSqft">5,000 sq ft</div>
-                            </div>
+                        <div class="d-flex justify-content-between small text-muted mt-2">
+                            <span>Contracted Floor Space: <strong id="bookBilledSqft" class="text-dark">5,000 sq ft</strong></span>
+                            <span>Billed Tariff: <strong id="bookRateDisplay" class="text-primary">NPR 35/sq ft</strong></span>
                         </div>
-                    </div>
-
-                    <!-- 2D Floor Visualizer -->
-                    <div class="mb-3">
-                        <span class="small fw-bold text-muted"><i class="bi bi-layout-text-window me-1"></i> Visualized Floor Partition (10 Blocks):</span>
-                        <div class="block-grid mt-1" id="bookFloorGrid"></div>
                     </div>
 
                     <!-- Client Tax ID & Breakdown -->
@@ -254,31 +237,14 @@
 
     function recalcBookingMath() {
         const req = parseFloat(document.getElementById('bookSqftSlider').value);
-        const total = parseFloat(document.getElementById('bookTotalCapacity').value);
         const rate = parseFloat(document.getElementById('bookRatePerSqft').value);
 
         document.getElementById('sliderReqDisplay').innerText = req.toLocaleString() + ' sq ft';
-
-        const blockSize = Math.round(total * 0.10);
-        const blocksNeeded = Math.min(10, Math.ceil(req / blockSize));
-        const billedSqft = blocksNeeded * blockSize;
-
-        document.getElementById('bookBlockSize').innerText = blockSize.toLocaleString() + ' sq ft';
-        document.getElementById('bookBlockCount').innerText = blocksNeeded + ' Blocks';
-        document.getElementById('bookBilledSqft').innerText = billedSqft.toLocaleString() + ' sq ft';
-
-        // Render 2D grid
-        const grid = document.getElementById('bookFloorGrid');
-        grid.innerHTML = '';
-        for (let i = 1; i <= 10; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'block-cell ' + (i <= blocksNeeded ? 'allocated' : '');
-            cell.innerText = 'B-' + i;
-            grid.appendChild(cell);
-        }
+        document.getElementById('bookBilledSqft').innerText = req.toLocaleString() + ' sq ft';
+        document.getElementById('bookRateDisplay').innerText = 'NPR ' + rate + '/sq ft';
 
         // Financials: Base + 10% KWDC margin + 13% IRD VAT
-        const baseRent = billedSqft * rate;
+        const baseRent = req * rate;
         const margin = baseRent * 0.10;
         const taxable = baseRent + margin;
         const vat = taxable * 0.13;

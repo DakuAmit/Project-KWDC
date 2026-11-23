@@ -68,46 +68,59 @@
     </div>
 </section>
 
-<!-- Interactive 10% Floor Block Demo Calculator -->
+<!-- Verified Logistics Network Showcase -->
 <section class="py-5 bg-light border-top border-bottom">
     <div class="container">
         <div class="row align-items-center g-4">
             <div class="col-lg-6">
-                <span class="badge bg-primary px-3 py-1 rounded-pill mb-2">Live Algorithm Demo</span>
-                <h3 class="fw-bold">Interactive 10% Floor Space Partitioning</h3>
+                <span class="badge bg-primary px-3 py-1 rounded-pill mb-2">Nepal Logistics Network</span>
+                <h3 class="fw-bold">Decentralized Storage & Smart Freight Telemetry</h3>
                 <p class="text-muted">
-                    See how our discrete 10% ceiling algorithm allocates structured floor blocks for a standard 10,000 sq ft basement or godown in Nepal.
+                    KTM-WDC connects audited physical spaces directly with businesses, distributors, and agro-traders across Nepal with complete fiscal and legal auditing.
                 </p>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Client Requested Space: <span id="reqDisplay" class="text-primary fs-5">3,200 sq ft</span></label>
-                    <input type="range" class="form-range" id="sqftSlider" min="500" max="10000" step="100" value="3200" oninput="updateBlockDemo()">
-                </div>
-                <div class="p-3 bg-white rounded border">
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <span class="text-muted small">Total Capacity</span>
-                            <div class="fw-bold fs-6">10,000 sq ft</div>
+                <div class="row g-3 mt-1">
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-white rounded border">
+                            <i class="bi bi-truck text-warning fs-4 mb-2 d-block"></i>
+                            <h6 class="fw-bold mb-1">Fleet Telemetry</h6>
+                            <p class="small text-muted mb-0">From 2-wheeler delivery bikes to 40ft container haulers with live GPS.</p>
                         </div>
-                        <div class="col-4 border-start border-end">
-                            <span class="text-muted small">10% Block Size</span>
-                            <div class="fw-bold fs-6 text-warning">1,000 sq ft</div>
-                        </div>
-                        <div class="col-4">
-                            <span class="text-muted small">Billed Allocation</span>
-                            <div class="fw-bold fs-6 text-primary" id="billedDisplay">4,000 sq ft (4 Blocks)</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-white rounded border">
+                            <i class="bi bi-shield-check text-success fs-4 mb-2 d-block"></i>
+                            <h6 class="fw-bold mb-1">On-Site Physical Audit</h6>
+                            <p class="small text-muted mb-0">Every facility verified for truck access, shutter locks, and power.</p>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="card p-3 border-0 shadow-sm">
-                    <h6 class="fw-bold mb-2 text-center text-muted"><i class="bi bi-layout-text-window me-1"></i> Warehouse 2D Floor Plan Grid (10 Blocks)</h6>
-                    <div class="block-grid" id="floorGrid">
-                        <!-- 10 blocks dynamically rendered -->
+                <div class="card p-4 border-0 shadow-sm bg-white">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-calculator-fill text-primary me-2"></i>Quick Storage Tariff Estimator</h5>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Required Space (sq ft): <span id="reqDisplay" class="text-primary fs-5">5,000 sq ft</span></label>
+                        <input type="range" class="form-range" id="sqftSlider" min="500" max="25000" step="500" value="5000" oninput="updateEstimate()">
                     </div>
-                    <div class="d-flex justify-content-between text-muted small mt-2 px-2">
-                        <span><i class="bi bi-box-fill text-primary me-1"></i> Allocated Blocks</span>
-                        <span><i class="bi bi-door-open-fill text-success me-1"></i> 20ft Truck Loading Bay</span>
+                    <div class="p-3 bg-light rounded border">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Average Base Tariff:</span>
+                            <strong id="baseDisplay">NPR 175,000 / mo</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Nepal IRD VAT (13%):</span>
+                            <span id="vatDisplay" class="text-success fw-bold">NPR 25,025</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between fw-bold text-dark fs-6">
+                            <span>Estimated Monthly Total:</span>
+                            <span id="totalDisplay" class="text-primary">NPR 217,525</span>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="/marketplace" class="btn btn-warning w-100 fw-bold">
+                            <i class="bi bi-search me-1"></i> Browse Available Facilities
+                        </a>
                     </div>
                 </div>
             </div>
@@ -134,32 +147,26 @@
 
 {% block scripts %}
 <script>
-    // 10% Block Partition Demo
-    function updateBlockDemo() {
+    // Quick Tariff Estimator
+    function updateEstimate() {
         const req = parseInt(document.getElementById('sqftSlider').value);
         document.getElementById('reqDisplay').innerText = req.toLocaleString() + ' sq ft';
         
-        const total = 10000;
-        const blockSize = 1000;
-        const blocksNeeded = Math.min(10, Math.ceil(req / blockSize));
-        const billed = blocksNeeded * blockSize;
+        const rate = 35; // Rs. 35/sq ft
+        const base = req * rate;
+        const margin = base * 0.10;
+        const taxable = base + margin;
+        const vat = taxable * 0.13;
+        const total = taxable + vat;
 
-        document.getElementById('billedDisplay').innerText = billed.toLocaleString() + ' sq ft (' + blocksNeeded + ' Blocks)';
-
-        const grid = document.getElementById('floorGrid');
-        grid.innerHTML = '';
-        for (let i = 1; i <= 10; i++) {
-            const isAllocated = i <= blocksNeeded;
-            const cell = document.createElement('div');
-            cell.className = 'block-cell ' + (isAllocated ? 'allocated' : '');
-            cell.innerText = 'B-' + i;
-            grid.appendChild(cell);
-        }
+        document.getElementById('baseDisplay').innerText = 'NPR ' + base.toLocaleString() + ' / mo';
+        document.getElementById('vatDisplay').innerText = 'NPR ' + Math.round(vat).toLocaleString();
+        document.getElementById('totalDisplay').innerText = 'NPR ' + Math.round(total).toLocaleString() + ' / mo';
     }
 
     // Leaflet Map Initialization
     document.addEventListener('DOMContentLoaded', () => {
-        updateBlockDemo();
+        updateEstimate();
 
         // Nepal Centered Coordinates
         const map = L.map('nepalMap').setView([27.700769, 85.300140], 12);

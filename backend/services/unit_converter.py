@@ -24,10 +24,7 @@ SQFT_CONVERSIONS = {
 }
 
 def to_sqft(value: float, unit: str, ceiling_height_ft: float = 10.0) -> float:
-    """
-    Converts any input unit to standard Square Feet (sqft).
-    If unit is cubic feet (cuft), it divides by the clear ceiling height.
-    """
+    """Converts any input unit to standard Square Feet (sqft)."""
     unit_lower = unit.lower().strip()
     if unit_lower == "cuft":
         height = max(ceiling_height_ft, 1.0)
@@ -37,9 +34,7 @@ def to_sqft(value: float, unit: str, ceiling_height_ft: float = 10.0) -> float:
     return round(value * factor, 2)
 
 def from_sqft_to_all(sqft: float, ceiling_height_ft: float = 10.0) -> Dict[str, Any]:
-    """
-    Returns the given sqft represented in all Nepali traditional and international units.
-    """
+    """Returns the given sqft represented in all Nepali traditional and international units."""
     height = max(ceiling_height_ft, 1.0)
     
     # Traditional Hill calculation (Ropani-Aana-Paisa-Daam)
@@ -65,27 +60,16 @@ def from_sqft_to_all(sqft: float, ceiling_height_ft: float = 10.0) -> Dict[str, 
         "traditional_terai_str": f"{int(sqft // 72900)} Bigha, {round((sqft % 72900) / 3645, 1)} Kattha"
     }
 
-def calculate_10_percent_block(requested_sqft: float, total_warehouse_sqft: float) -> Dict[str, float]:
+def get_warehouse_usable_capacity(gross_sqft: float) -> Dict[str, float]:
     """
-    Enforces Rule 2: The 10% Floor Space Partitioning Rule
-    Formula: Billed Space = Ceil(Requested Space / (Total Capacity * 0.10)) * (Total Capacity * 0.10)
+    Standard Warehouse Layout Logic:
+    For e.g. 10,000 sq ft facility:
+    - Gross billed area = 10,000 sq ft (what client contracts and pays for)
+    - Net usable storage area = 9,000 sq ft (90% dedicated to cargo placement)
+    - Walking / partition corridor allowance = 1,000 sq ft (10% dedicated to access corridors)
     """
-    import math
-    
-    block_size = max(total_warehouse_sqft * 0.10, 1.0)
-    blocks_needed = math.ceil(requested_sqft / block_size)
-    billed_sqft = min(blocks_needed * block_size, total_warehouse_sqft)
-    
-    # If requested is more than total, cap at total
-    if requested_sqft >= total_warehouse_sqft:
-        billed_sqft = total_warehouse_sqft
-        blocks_needed = 10
-        
     return {
-        "requested_sqft": round(requested_sqft, 2),
-        "total_warehouse_sqft": round(total_warehouse_sqft, 2),
-        "block_size_sqft": round(block_size, 2),
-        "blocks_allocated": int(blocks_needed),
-        "billed_sqft": round(billed_sqft, 2),
-        "space_utilization_pct": round((billed_sqft / total_warehouse_sqft) * 100, 1)
+        "gross_billed_sqft": round(gross_sqft, 2),
+        "net_usable_sqft": round(gross_sqft * 0.90, 2),
+        "corridor_allowance_sqft": round(gross_sqft * 0.10, 2)
     }
