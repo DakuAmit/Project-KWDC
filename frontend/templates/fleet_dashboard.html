@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Fleet Partner Cockpit | KTM-WDC{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-truck text-primary me-2"></i>Fleet Partner Cockpit</h2>
+            <p class="text-muted mb-0">Manage multiple vehicles (2-Wheelers to Container Haulers), assign drivers & broadcast live telemetry.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary fw-bold" data-bs-toggle="modal" data-bs-target="#driverModal">
+                <i class="bi bi-person-plus me-1"></i> Add Driver
+            </button>
+            <button class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#vehicleModal">
+                <i class="bi bi-truck-front me-1"></i> Register Vehicle
+            </button>
+        </div>
+    </div>
+
+    <!-- Live Telemetry Simulation Bar -->
+    <div class="card p-3 mb-4 border-0 shadow-sm bg-dark text-white">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h6 class="fw-bold mb-0 text-warning"><i class="bi bi-broadcast me-2"></i>Driver GPS Live Telemetry Stream</h6>
+                <small class="text-muted">Broadcast coordinates to client tracking map over WebSocket / ASGI.</small>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span id="telemetryStatus" class="badge bg-secondary">Idle (Stream Paused)</span>
+                <button id="telemetryToggleBtn" class="btn btn-sm btn-success fw-bold" onclick="toggleTelemetryStream()">
+                    <i class="bi bi-play-circle me-1"></i> Start Live Broadcast
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fleet Overview Row -->
+    <div class="row g-4">
+        <!-- Vehicles Column -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm p-4 h-100">
+                <h5 class="fw-bold mb-3"><i class="bi bi-truck-flatbed me-2 text-primary"></i>Registered Fleet Vehicles</h5>
+                <div id="fleetVehiclesList" class="row g-3">
+                    <div class="col-12 text-center py-4 text-muted">Loading fleet vehicles...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drivers Column -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm p-4 h-100">
+                <h5 class="fw-bold mb-3"><i class="bi bi-people-fill me-2 text-info"></i>Driver Roster</h5>
+                <div id="fleetDriversList" class="list-group list-group-flush">
+                    <div class="text-center py-4 text-muted">Loading driver roster...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Register Vehicle -->
+<div class="modal fade" id="vehicleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-truck me-2"></i>Register Fleet Vehicle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="vehicleForm" onsubmit="handleVehicleSubmit(event)">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Vehicle Category</label>
+                        <select id="vCategory" class="form-select" required>
+                            <option value="two_wheeler">2-Wheeler (Motorcycle / Delivery Bike, < 35kg)</option>
+                            <option value="mini_truck">0.75-Ton Mini Truck (Tata Ace / Batta)</option>
+                            <option value="medium_pickup">1.5 - 3 Ton Pickup (Mahindra Bolero)</option>
+                            <option value="six_wheeler">6-Wheeler Commercial (Eicher / Tata 1109, 10 Ton)</option>
+                            <option value="container_trailer">40-Foot Container Carrier / Flatbed Trailer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Vehicle Model / Name</label>
+                        <input type="text" id="vModel" class="form-control" required placeholder="e.g. Tata Ace Gold HT">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">License Plate</label>
+                            <input type="text" id="vPlate" class="form-control" required placeholder="Ba 2 Kha 4491">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Bluebook Number</label>
+                            <input type="text" id="vBluebook" class="form-control" required placeholder="BB-KTM-2081-9982">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Max Payload Capacity (kg)</label>
+                        <input type="number" id="vPayload" class="form-control" required placeholder="750">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Register Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Driver -->
+<div class="modal fade" id="driverModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Add Driver to Roster</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="driverForm" onsubmit="handleDriverSubmit(event)">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Driver Full Name</label>
+                        <input type="text" id="dName" class="form-control" required placeholder="Bikram Bahadur Gurung">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Mobile Number (Nepal)</label>
+                        <input type="text" id="dPhone" class="form-control" required placeholder="+977-9801122334">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Driving License Number</label>
+                            <input type="text" id="dLicense" class="form-control" required placeholder="01-06-00445588">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Citizenship Number</label>
+                            <input type="text" id="dCitizen" class="form-control" required placeholder="27-01-72-01928">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info fw-bold">Add Driver</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let telemetryInterval = null;
+    let isBroadcasting = false;
+    let ws = null;
+
+    async function loadFleet() {
+        const token = localStorage.getItem('kwdc_token');
+        if (!token) {
+            alert('Fleet Partner login required.');
+            new bootstrap.Modal(document.getElementById('loginModal')).show();
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/fleet/my-fleet', {
+                headers: {'Authorization': 'Bearer ' + token}
+            });
+            if (res.ok) {
+                const data = await res.json();
+                
+                // Vehicles
+                const vArea = document.getElementById('fleetVehiclesList');
+                if (data.vehicles.length === 0) {
+                    vArea.innerHTML = '<div class="col-12 text-center py-4 text-muted">No vehicles registered yet. Click "Register Vehicle" above.</div>';
+                } else {
+                    vArea.innerHTML = data.vehicles.map(v => `
+                        <div class="col-md-6">
+                            <div class="card card-kwdc p-3 border-0 bg-light">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="fw-bold mb-0">${v.model_name}</h6>
+                                    <span class="badge bg-success">Verified</span>
+                                </div>
+                                <span class="badge bg-secondary mb-2">${v.category}</span>
+                                <div class="small text-muted">
+                                    <div>Plate: <strong>${v.license_plate}</strong></div>
+                                    <div>Bluebook: ${v.bluebook_number}</div>
+                                    <div>Capacity: <strong>${v.payload_capacity_kg.toLocaleString()} kg</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                // Drivers
+                const dArea = document.getElementById('fleetDriversList');
+                if (data.drivers.length === 0) {
+                    dArea.innerHTML = '<div class="text-center py-4 text-muted">No drivers rostered yet.</div>';
+                } else {
+                    dArea.innerHTML = data.drivers.map(d => `
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0 fw-bold">${d.full_name}</h6>
+                                    <small class="text-muted"><i class="bi bi-telephone me-1"></i>${d.phone_number}</small>
+                                </div>
+                                <span class="badge bg-light text-dark border">Lic: ${d.license_number}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function handleVehicleSubmit(e) {
+        e.preventDefault();
+        const token = localStorage.getItem('kwdc_token');
+        const payload = {
+            category: document.getElementById('vCategory').value,
+            model_name: document.getElementById('vModel').value,
+            license_plate: document.getElementById('vPlate').value,
+            bluebook_number: document.getElementById('vBluebook').value,
+            payload_capacity_kg: parseFloat(document.getElementById('vPayload').value)
+        };
+
+        const res = await fetch('/api/fleet/vehicles', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            alert('Vehicle registered with verified Bluebook!');
+            bootstrap.Modal.getInstance(document.getElementById('vehicleModal')).hide();
+            loadFleet();
+        } else {
+            alert('Failed to register vehicle');
+        }
+    }
+
+    async function handleDriverSubmit(e) {
+        e.preventDefault();
+        const token = localStorage.getItem('kwdc_token');
+        const payload = {
+            full_name: document.getElementById('dName').value,
+            phone_number: document.getElementById('dPhone').value,
+            license_number: document.getElementById('dLicense').value,
+            citizenship_no: document.getElementById('dCitizen').value
+        };
+
+        const res = await fetch('/api/fleet/drivers', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            alert('Driver added to roster!');
+            bootstrap.Modal.getInstance(document.getElementById('driverModal')).hide();
+            loadFleet();
+        } else {
+            alert('Failed to add driver');
+        }
+    }
+
+    // Telemetry Simulation
+    function toggleTelemetryStream() {
+        const btn = document.getElementById('telemetryToggleBtn');
+        const badge = document.getElementById('telemetryStatus');
+
+        if (!isBroadcasting) {
+            isBroadcasting = true;
+            btn.className = 'btn btn-sm btn-danger fw-bold';
+            btn.innerHTML = '<i class="bi bi-stop-circle me-1"></i> Stop Broadcast';
+            badge.className = 'badge bg-success';
+            badge.innerText = '● LIVE GPS STREAMING (100ms)';
+
+            let baseLat = 27.6754, baseLng = 85.3458;
+            telemetryInterval = setInterval(() => {
+                baseLat += (Math.random() - 0.48) * 0.0005;
+                baseLng += (Math.random() - 0.48) * 0.0005;
+                fetch('/api/fleet/telemetry/ping?vehicle_id=1&latitude=' + baseLat + '&longitude=' + baseLng, {
+                    method: 'POST',
+                    headers: {'Authorization': 'Bearer ' + localStorage.getItem('kwdc_token')}
+                }).catch(() => {});
+            }, 1000);
+        } else {
+            isBroadcasting = false;
+            clearInterval(telemetryInterval);
+            btn.className = 'btn btn-sm btn-success fw-bold';
+            btn.innerHTML = '<i class="bi bi-play-circle me-1"></i> Start Live Broadcast';
+            badge.className = 'badge bg-secondary';
+            badge.innerText = 'Idle (Stream Paused)';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadFleet);
+</script>
+{% endblock %}

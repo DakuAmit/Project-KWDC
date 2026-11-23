@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}KTM-WDC | Decentralized Storage & Fleet Telemetry Nepal{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-banner">
+    <div class="container text-center">
+        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-3">
+            <i class="bi bi-shield-check me-1"></i> Nepal Inland Revenue Department (IRD) 13% VAT Compliant
+        </span>
+        <h1 class="display-5 fw-bold mb-3">Kathmandu Warehousing & Distribution Center</h1>
+        <p class="lead mb-4 mx-auto" style="max-width: 820px; color: #cbd5e1;">
+            The open marketplace for decentralized community storage and smart freight telemetry across Nepal.
+            Monetize idle basements, shutters, and godowns with <strong>Rs. 0 holding liability</strong>, or book flexible partitioned storage in discrete <strong>10% floor blocks</strong>.
+        </p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="/marketplace" class="btn btn-warning btn-lg fw-bold px-4">
+                <i class="bi bi-search me-1"></i> Find Storage
+            </a>
+            <a href="/owner" class="btn btn-outline-light btn-lg fw-bold px-4">
+                <i class="bi bi-plus-circle me-1"></i> List Empty Space
+            </a>
+            <a href="/fleet" class="btn btn-outline-info btn-lg fw-bold px-4">
+                <i class="bi bi-truck me-1"></i> Fleet Partner
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Core Innovations Section -->
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Engineered for Ground Realities in Nepal</h2>
+            <p class="text-muted">Standardizing physical logistics, eliminating landlord-tenant mistrust, and auditing every transaction.</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card card-kwdc h-100 p-4 border-start border-primary border-4">
+                    <div class="fs-1 text-primary mb-3"><i class="bi bi-piggy-bank-fill"></i></div>
+                    <h5 class="fw-bold">Rs. 0 KWDC Holding Liability</h5>
+                    <p class="text-muted small">
+                        Property owners are guaranteed disbursements commencing on the exact calendar day an approved commercial lease is assigned. Zero platform burn while spaces are idle.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-kwdc h-100 p-4 border-start border-warning border-4">
+                    <div class="fs-1 text-warning mb-3"><i class="bi bi-grid-fill"></i></div>
+                    <h5 class="fw-bold">The 10% Floor Block Rule</h5>
+                    <p class="text-muted small">
+                        Prevents irregular floor slicing. Storage allocations are strictly billed in discrete 10% floor blocks: 
+                        <code>Ceil(Req / (Tot * 0.10)) * (Tot * 0.10)</code>, preserving physical access aisles.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-kwdc h-100 p-4 border-start border-success border-4">
+                    <div class="fs-1 text-success mb-3"><i class="bi bi-file-earmark-text-fill"></i></div>
+                    <h5 class="fw-bold">Nepal IRD 13% VAT FinTech</h5>
+                    <p class="text-muted small">
+                        Every storage reservation and freight booking automatically issues an official IRD Schedule 13 compliant tax invoice complete with cryptographic verification QR codes.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Interactive 10% Floor Block Demo Calculator -->
+<section class="py-5 bg-light border-top border-bottom">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-6">
+                <span class="badge bg-primary px-3 py-1 rounded-pill mb-2">Live Algorithm Demo</span>
+                <h3 class="fw-bold">Interactive 10% Floor Space Partitioning</h3>
+                <p class="text-muted">
+                    See how our discrete 10% ceiling algorithm allocates structured floor blocks for a standard 10,000 sq ft basement or godown in Nepal.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Client Requested Space: <span id="reqDisplay" class="text-primary fs-5">3,200 sq ft</span></label>
+                    <input type="range" class="form-range" id="sqftSlider" min="500" max="10000" step="100" value="3200" oninput="updateBlockDemo()">
+                </div>
+                <div class="p-3 bg-white rounded border">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <span class="text-muted small">Total Capacity</span>
+                            <div class="fw-bold fs-6">10,000 sq ft</div>
+                        </div>
+                        <div class="col-4 border-start border-end">
+                            <span class="text-muted small">10% Block Size</span>
+                            <div class="fw-bold fs-6 text-warning">1,000 sq ft</div>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small">Billed Allocation</span>
+                            <div class="fw-bold fs-6 text-primary" id="billedDisplay">4,000 sq ft (4 Blocks)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card p-3 border-0 shadow-sm">
+                    <h6 class="fw-bold mb-2 text-center text-muted"><i class="bi bi-layout-text-window me-1"></i> Warehouse 2D Floor Plan Grid (10 Blocks)</h6>
+                    <div class="block-grid" id="floorGrid">
+                        <!-- 10 blocks dynamically rendered -->
+                    </div>
+                    <div class="d-flex justify-content-between text-muted small mt-2 px-2">
+                        <span><i class="bi bi-box-fill text-primary me-1"></i> Allocated Blocks</span>
+                        <span><i class="bi bi-door-open-fill text-success me-1"></i> 20ft Truck Loading Bay</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Geographic Storage Node Map -->
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Active Storage Nodes Across Nepal</h3>
+                <p class="text-muted mb-0">Audited basements, commercial shutters, and transit godowns on live map.</p>
+            </div>
+            <a href="/marketplace" class="btn btn-outline-primary btn-sm fw-bold">
+                View Full Catalog <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div id="nepalMap" style="height: 440px; border-radius: 12px; border: 1px solid #cbd5e1;"></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 10% Block Partition Demo
+    function updateBlockDemo() {
+        const req = parseInt(document.getElementById('sqftSlider').value);
+        document.getElementById('reqDisplay').innerText = req.toLocaleString() + ' sq ft';
+        
+        const total = 10000;
+        const blockSize = 1000;
+        const blocksNeeded = Math.min(10, Math.ceil(req / blockSize));
+        const billed = blocksNeeded * blockSize;
+
+        document.getElementById('billedDisplay').innerText = billed.toLocaleString() + ' sq ft (' + blocksNeeded + ' Blocks)';
+
+        const grid = document.getElementById('floorGrid');
+        grid.innerHTML = '';
+        for (let i = 1; i <= 10; i++) {
+            const isAllocated = i <= blocksNeeded;
+            const cell = document.createElement('div');
+            cell.className = 'block-cell ' + (isAllocated ? 'allocated' : '');
+            cell.innerText = 'B-' + i;
+            grid.appendChild(cell);
+        }
+    }
+
+    // Leaflet Map Initialization
+    document.addEventListener('DOMContentLoaded', () => {
+        updateBlockDemo();
+
+        // Nepal Centered Coordinates
+        const map = L.map('nepalMap').setView([27.700769, 85.300140], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Fetch catalog warehouses from API
+        fetch('/api/warehouses/catalog')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    data.forEach(w => {
+                        const marker = L.marker([w.latitude, w.longitude]).addTo(map);
+                        marker.bindPopup(`
+                            <div style="min-width: 180px;">
+                                <strong>${w.title}</strong><br>
+                                <span class="badge bg-primary">${w.space_type}</span><br>
+                                <small class="text-muted">${w.neighborhood_landmark}</small><br>
+                                <strong>Available:</strong> ${w.available_sqft.toLocaleString()} sq ft<br>
+                                <strong>Tariff:</strong> NPR ${w.monthly_rate_per_sqft}/sq ft<br>
+                                <a href="/marketplace" class="btn btn-sm btn-warning w-100 mt-2 fw-bold">Book 10% Block</a>
+                            </div>
+                        `);
+                    });
+                } else {
+                    // Default Kathmandu Marker
+                    L.marker([27.6754, 85.3458]).addTo(map)
+                        .bindPopup('<strong>KTM-WDC Central Node</strong><br>Kathmandu Ring Road')
+                        .openPopup();
+                }
+            })
+            .catch(() => {
+                L.marker([27.6754, 85.3458]).addTo(map).bindPopup('Koteshwor Node');
+            });
+    });
+</script>
+{% endblock %}

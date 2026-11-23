@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}SuperAdmin Master Operations | KTM-WDC{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold mb-1 text-dark"><i class="bi bi-shield-lock-fill text-warning me-2"></i>SuperAdmin Executive Console</h2>
+            <p class="text-muted mb-0">Master governance: Audit properties, dispatch contracts, activate commercial leases & enforce fiscal compliance.</p>
+        </div>
+        <span class="badge bg-danger px-3 py-2 fs-6">Sovereign Guarantor Mode</span>
+    </div>
+
+    <!-- Governance Tabs -->
+    <ul class="nav nav-pills mb-4 gap-2" id="adminTabs">
+        <li class="nav-item">
+            <button class="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#tabPending">
+                <i class="bi bi-clock-history me-1"></i> Pending Property Audits (<span id="countPending">0</span>)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tabBookings">
+                <i class="bi bi-calendar-check me-1"></i> Commercial Client Bookings
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tabInchargeLogs">
+                <i class="bi bi-journal-text me-1"></i> Warehouse Incharge Reports
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Tab 1: Pending Properties -->
+        <div class="tab-pane fade show active" id="tabPending">
+            <div class="card border-0 shadow-sm p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-building-check text-primary me-2"></i>Properties Awaiting Verification & Contract Dispatch</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Property Title</th>
+                                <th>Owner Details</th>
+                                <th>Type</th>
+                                <th>Capacity</th>
+                                <th>Tariff</th>
+                                <th>Location & Road</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">Loading pending submissions...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Client Bookings & Activation -->
+        <div class="tab-pane fade" id="tabBookings">
+            <div class="card border-0 shadow-sm p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-cart-check text-success me-2"></i>Storage Reservations & Lease Activation Queue</h5>
+                <p class="text-muted small">
+                    Activating a commercial lease commences the monthly KWDC disbursement to the property owner. Prior to this calendar date, holding liability is Rs. 0.
+                </p>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Booking ID</th>
+                                <th>Client Name</th>
+                                <th>Facility</th>
+                                <th>Allocated (10% Block)</th>
+                                <th>Gross Total (13% VAT)</th>
+                                <th>Invoice Status</th>
+                                <th>Lease State</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingsTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">Loading bookings...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Incharge Reports -->
+        <div class="tab-pane fade" id="tabInchargeLogs">
+            <div class="card border-0 shadow-sm p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-clipboard2-pulse text-info me-2"></i>Daily Facility Inspections & Handover Reports</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Facility</th>
+                                <th>Incharge</th>
+                                <th>Report Type</th>
+                                <th>Summary & Details</th>
+                                <th>Admin Feedback</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inchargeLogsTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">Loading incharge logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadAdminData() {
+        const token = localStorage.getItem('kwdc_token');
+        if (!token) {
+            alert('SuperAdmin authentication required. Please sign in as admin@kwdc.com.np / Admin@123');
+            new bootstrap.Modal(document.getElementById('loginModal')).show();
+            return;
+        }
+
+        const headers = {'Authorization': 'Bearer ' + token};
+
+        // 1. Pending Warehouses
+        try {
+            const resPending = await fetch('/api/admin/pending-warehouses', {headers});
+            if (resPending.ok) {
+                const pending = await resPending.json();
+                document.getElementById('countPending').innerText = pending.length;
+                const tbody = document.getElementById('pendingTableBody');
+                if (pending.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No properties currently pending audit. All facilities up to date.</td></tr>';
+                } else {
+                    tbody.innerHTML = pending.map(w => `
+                        <tr>
+                            <td>
+                                <strong>${w.title}</strong><br>
+                                <small class="text-muted">Listed: ${w.created_at}</small>
+                            </td>
+                            <td>
+                                ${w.owner_name}<br>
+                                <small class="text-muted">${w.owner_phone} • ${w.owner_email}</small>
+                            </td>
+                            <td><span class="badge bg-secondary">${w.space_type}</span></td>
+                            <td><strong>${w.total_sqft.toLocaleString()} sq ft</strong></td>
+                            <td><strong class="text-primary">NPR ${w.monthly_rate_per_sqft}/sq ft</strong></td>
+                            <td>
+                                <small>${w.neighborhood_landmark}</small><br>
+                                <span class="badge bg-light text-dark border">${w.road_access_ft} ft road</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-success fw-bold" onclick="approveProperty(${w.id})">
+                                    <i class="bi bi-check-circle me-1"></i> Verify & Dispatch Contract
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+
+        // 2. Bookings
+        try {
+            const resBookings = await fetch('/api/admin/bookings', {headers});
+            if (resBookings.ok) {
+                const bookings = await resBookings.json();
+                const tbody = document.getElementById('bookingsTableBody');
+                if (bookings.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No client booking requests recorded yet.</td></tr>';
+                } else {
+                    tbody.innerHTML = bookings.map(b => `
+                        <tr>
+                            <td><strong>#${b.id}</strong></td>
+                            <td>
+                                ${b.client_name}<br>
+                                <small class="text-muted">${b.client_email}</small>
+                            </td>
+                            <td>${b.warehouse_title}</td>
+                            <td><strong>${b.allocated_billed_sqft.toLocaleString()} sq ft</strong></td>
+                            <td><strong class="text-primary">NPR ${b.total_monthly_bill.toLocaleString()}</strong></td>
+                            <td>
+                                <span class="badge ${b.invoice_paid ? 'bg-success' : 'bg-warning text-dark'}">
+                                    ${b.invoice_number} (${b.invoice_paid ? 'PAID' : 'UNPAID'})
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${b.status === 'active_leased' ? 'bg-primary' : 'bg-secondary'}">
+                                    ${b.status}
+                                </span>
+                            </td>
+                            <td>
+                                ${b.status !== 'active_leased' ? `
+                                    <button class="btn btn-sm btn-primary fw-bold" onclick="activateLease(${b.id})">
+                                        <i class="bi bi-play-circle me-1"></i> Activate Lease
+                                    </button>
+                                ` : '<span class="text-success small fw-bold">✓ Payout Active</span>'}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+
+        // 3. Incharge Logs
+        try {
+            const resLogs = await fetch('/api/admin/incharge-logs', {headers});
+            if (resLogs.ok) {
+                const logs = await resLogs.json();
+                const tbody = document.getElementById('inchargeLogsTableBody');
+                if (logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No incharge inspection reports submitted yet.</td></tr>';
+                } else {
+                    tbody.innerHTML = logs.map(l => `
+                        <tr>
+                            <td><small>${l.created_at}</small></td>
+                            <td><strong>${l.warehouse_title}</strong></td>
+                            <td>${l.incharge_name}</td>
+                            <td><span class="badge bg-info text-dark">${l.log_type}</span></td>
+                            <td>
+                                <strong>${l.summary}</strong><br>
+                                <small class="text-muted">${l.detailed_notes}</small>
+                            </td>
+                            <td>
+                                ${l.admin_reviewed ? `
+                                    <span class="badge bg-success">Reviewed</span><br>
+                                    <small class="text-muted">${l.admin_feedback || ''}</small>
+                                ` : `
+                                    <button class="btn btn-sm btn-outline-primary" onclick="promptFeedback(${l.id})">
+                                        Submit Feedback
+                                    </button>
+                                `}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function approveProperty(id) {
+        if (!confirm('Approve property and dispatch Master Commercial Lease Agreement to owner email?')) return;
+        const token = localStorage.getItem('kwdc_token');
+        try {
+            const res = await fetch(`/api/admin/warehouses/${id}/approve`, {
+                method: 'POST',
+                headers: {'Authorization': 'Bearer ' + token}
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`SUCCESS: ${data.message}\nContract Number: ${data.contract_number}\nProperty features are now locked under KWDC governance.`);
+                loadAdminData();
+            } else {
+                alert('Approval failed: ' + (data.detail || 'Error'));
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+
+    async function activateLease(id) {
+        if (!confirm('Activate this commercial lease? Monthly owner rental disbursements begin today.')) return;
+        const token = localStorage.getItem('kwdc_token');
+        try {
+            const res = await fetch(`/api/admin/bookings/${id}/activate`, {
+                method: 'POST',
+                headers: {'Authorization': 'Bearer ' + token}
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`Lease Activated!\n${data.message}`);
+                loadAdminData();
+            } else {
+                alert('Activation failed: ' + (data.detail || 'Error'));
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+
+    async function promptFeedback(id) {
+        const feedback = prompt('Enter your administrative feedback for this incharge report:');
+        if (!feedback) return;
+        const token = localStorage.getItem('kwdc_token');
+        try {
+            const res = await fetch(`/api/admin/incharge-logs/${id}/feedback?feedback=${encodeURIComponent(feedback)}`, {
+                method: 'POST',
+                headers: {'Authorization': 'Bearer ' + token}
+            });
+            if (res.ok) {
+                alert('Feedback submitted.');
+                loadAdminData();
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAdminData);
+</script>
+{% endblock %}

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}KTM-WDC | Kathmandu Warehousing & Distribution Center{% endblock %}</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --kwdc-primary: #1e3a8a;
+            --kwdc-accent: #f59e0b;
+            --kwdc-dark: #0f172a;
+            --kwdc-surface: #f8fafc;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--kwdc-surface);
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar-brand-badge {
+            font-size: 0.72rem;
+            background: #dc2626;
+            color: white;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+        .hero-banner {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            color: white;
+            padding: 4rem 1rem 3rem 1rem;
+        }
+        .card-kwdc {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card-kwdc:hover {
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
+        .block-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .block-cell {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            border: 2px dashed #cbd5e1;
+            background: white;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+        .block-cell.allocated {
+            background: #2563eb;
+            color: white;
+            border-color: #1d4ed8;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+        }
+        .badge-vat {
+            background-color: #10b981;
+            color: white;
+            font-weight: 600;
+        }
+        footer {
+            margin-top: auto;
+            background: #0f172a;
+            color: #94a3b8;
+            padding: 2rem 0 1rem 0;
+            font-size: 0.9rem;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Main Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top border-bottom border-secondary">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand d-flex align-items-center fw-bold" href="/">
+                <i class="bi bi-buildings-fill text-warning fs-4 me-2"></i>
+                <span>KTM-WDC</span>
+                <span class="navbar-brand-badge">NEPAL</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#kwdcNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="kwdcNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/marketplace"><i class="bi bi-grid-3x3-gap me-1"></i> Storage Marketplace</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/owner"><i class="bi bi-person-badge me-1"></i> Space Owner</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/incharge"><i class="bi bi-clipboard2-check me-1"></i> Warehouse Incharge</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/fleet"><i class="bi bi-truck me-1"></i> Fleet Partner</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="/admin"><i class="bi bi-shield-lock-fill me-1"></i> SuperAdmin</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <div id="authStatusArea">
+                        <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Sign In / Register
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Page Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Universal Login / Register Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="loginModalLabel"><i class="bi bi-key-fill text-warning me-2"></i>KTM-WDC Account Access</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <ul class="nav nav-pills nav-justified mb-3" id="pills-tab" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="tab-login" data-bs-toggle="pill" data-bs-target="#pane-login">Sign In</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tab-register" data-bs-toggle="pill" data-bs-target="#pane-register">Register New</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <!-- Sign In Tab -->
+                        <div class="tab-pane fade show active" id="pane-login">
+                            <form id="loginForm" onsubmit="handleLogin(event)">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Email Address</label>
+                                    <input type="email" id="loginEmail" class="form-control" required placeholder="ram@gmail.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Password</label>
+                                    <input type="password" id="loginPassword" class="form-control" required placeholder="••••••••">
+                                </div>
+                                <div class="d-grid mt-4">
+                                    <button type="submit" class="btn btn-primary fw-bold">
+                                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                                    </button>
+                                </div>
+                                <div class="mt-3 p-2 bg-light rounded small text-muted">
+                                    <strong>Default Master Admin:</strong><br>
+                                    <code>admin@kwdc.com.np</code> / <code>Admin@123</code>
+                                </div>
+                            </form>
+                        </div>
+                        <!-- Register / Partner Collab Tab -->
+                        <div class="tab-pane fade" id="pane-register">
+                            <div class="text-center mb-3">
+                                <span class="badge bg-primary px-3 py-1 rounded-pill">Collab With Us • Partner Program</span>
+                                <h6 class="fw-bold mt-2 mb-1">Create Your KTM-WDC Account</h6>
+                                <p class="text-muted small">Hassle-free registration. Verification OTP sent directly to your email.</p>
+                            </div>
+                            <form id="registerForm" onsubmit="handleRegister(event)">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">How would you like to partner / collab with us?</label>
+                                    <select id="regRole" class="form-select form-select-sm" required>
+                                        <option value="property_owner">🏠 Property Owner (List basements/shutters - Monetize empty space)</option>
+                                        <option value="fleet_partner">🚚 Fleet Partner (Register trucks, pickups, 2-wheelers & drivers)</option>
+                                        <option value="commercial_client">🏢 Commercial Client (Book partitioned storage & freight dispatches)</option>
+                                        <option value="warehouse_incharge">📋 Warehouse Incharge (Facility inspection & gate operations)</option>
+                                    </select>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Full Name / Company Name</label>
+                                        <input type="text" id="regName" class="form-control form-control-sm" required placeholder="e.g. Ram Shrestha / ABC Traders">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Primary Operating Location</label>
+                                        <input type="text" id="regLocation" class="form-control form-control-sm" required placeholder="e.g. Kathmandu Valley, Birgunj, Pokhara">
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Email Address</label>
+                                        <input type="email" id="regEmail" class="form-control form-control-sm" required placeholder="ram@gmail.com">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Contact Phone (Nepal)</label>
+                                        <input type="text" id="regPhone" class="form-control form-control-sm" required placeholder="+977-9851000000">
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Password</label>
+                                        <input type="password" id="regPassword" class="form-control form-control-sm" required minlength="6" placeholder="Min 6 characters">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Confirm Password</label>
+                                        <input type="password" id="regConfirmPassword" class="form-control form-control-sm" required minlength="6" placeholder="Re-enter password">
+                                    </div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success fw-bold">
+                                        <i class="bi bi-person-check me-1"></i> Partner With Us (Send OTP)
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- OTP Verification Step (Hidden initially) -->
+                            <div id="otpVerificationArea" style="display: none;" class="mt-3 p-3 bg-light rounded border text-center">
+                                <h6 class="fw-bold text-primary mb-1">Enter 6-Digit Email OTP</h6>
+                                <p class="text-muted small mb-2">A verification code was dispatched to <strong id="otpTargetEmail"></strong> via Brevo.</p>
+                                <div class="d-flex justify-content-center mb-3">
+                                    <input type="text" id="otpCodeInput" class="form-control text-center fw-bold fs-4" style="letter-spacing: 8px; max-width: 200px;" maxlength="6" placeholder="••••••">
+                                </div>
+                                <button class="btn btn-primary btn-sm fw-bold px-4" onclick="handleVerifyOtp()">
+                                    Verify & Activate Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container text-center">
+            <p class="mb-1 fw-bold text-white">Kathmandu Warehousing & Distribution Center (KTM-WDC) Pvt. Ltd.</p>
+            <p class="small mb-1">
+                Decentralized Community Storage • Smart Freight Telemetry • 13% IRD VAT Audited (PAN: 600987654)
+            </p>
+            <p class="small text-muted mb-0">
+                Operating across Kathmandu Valley, Pokhara, Birgunj, Narayangadh, Butwal & all municipalities of Nepal.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Check local auth state
+        function updateAuthHeader() {
+            const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
+            const area = document.getElementById('authStatusArea');
+            if (user) {
+                area.innerHTML = `
+                    <div class="dropdown">
+                        <button class="btn btn-warning btn-sm dropdown-toggle fw-bold" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i> ${user.full_name} (${user.user_role})
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><span class="dropdown-item-text small text-muted">Role: <strong>${user.user_role}</strong></span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/owner"><i class="bi bi-box-seam me-2"></i>My Properties</a></li>
+                            <li><a class="dropdown-item" href="/fleet"><i class="bi bi-truck me-2"></i>My Fleet</a></li>
+                            <li><a class="dropdown-item" href="/incharge"><i class="bi bi-clipboard2-check me-2"></i>Incharge Portal</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button class="dropdown-item text-danger" onclick="handleLogout()"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</button></li>
+                        </ul>
+                    </div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#loginModal">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In / Register
+                    </button>
+                `;
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email, password})
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('kwdc_token', data.access_token);
+                    localStorage.setItem('kwdc_user', JSON.stringify(data));
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+                    if (modal) modal.hide();
+                    updateAuthHeader();
+                    window.location.reload();
+                } else {
+                    alert('Login failed: ' + (data.detail || 'Invalid credentials'));
+                }
+            } catch (err) {
+                alert('Connection error: ' + err.message);
+            }
+        }
+
+        let pendingRegistrationEmail = '';
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const role = document.getElementById('regRole').value;
+            const full_name = document.getElementById('regName').value;
+            const operating_location = document.getElementById('regLocation').value;
+            const email = document.getElementById('regEmail').value;
+            const phone_number = document.getElementById('regPhone').value;
+            const password = document.getElementById('regPassword').value;
+            const confirm_password = document.getElementById('regConfirmPassword').value;
+
+            if (password !== confirm_password) {
+                alert('Password and Confirm Password do not match.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({role, full_name, email, phone_number, operating_location, password, confirm_password})
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    pendingRegistrationEmail = email;
+                    document.getElementById('otpTargetEmail').innerText = email;
+                    document.getElementById('registerForm').style.display = 'none';
+                    document.getElementById('otpVerificationArea').style.display = 'block';
+                    alert(data.message);
+                } else {
+                    alert('Registration failed: ' + (data.detail || 'Error'));
+                }
+            } catch (err) {
+                alert('Connection error: ' + err.message);
+            }
+        }
+
+        async function handleVerifyOtp() {
+            const otp_code = document.getElementById('otpCodeInput').value.trim();
+            if (otp_code.length !== 6) {
+                alert('Please enter the complete 6-digit OTP code.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/verify-otp', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: pendingRegistrationEmail, otp_code})
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('kwdc_token', data.access_token);
+                    localStorage.setItem('kwdc_user', JSON.stringify(data));
+                    alert('Account successfully verified! Welcome to the KTM-WDC network.');
+                    window.location.reload();
+                } else {
+                    alert('Verification failed: ' + (data.detail || 'Invalid code'));
+                }
+            } catch (err) {
+                alert('Connection error: ' + err.message);
+            }
+        }
+
+        async function handleLogout() {
+            await fetch('/api/auth/logout', {method: 'POST'});
+            localStorage.removeItem('kwdc_token');
+            localStorage.removeItem('kwdc_user');
+            window.location.href = '/';
+        }
+
+        document.addEventListener('DOMContentLoaded', updateAuthHeader);
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
