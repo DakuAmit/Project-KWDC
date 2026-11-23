@@ -75,7 +75,7 @@
       </a>
 
       <nav aria-label="Primary" class="hidden lg:flex items-center gap-2 text-sm">
-        <a href="/marketplace" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="search" class="h-4 w-4"></i> Find Storage</a>
+        <a href="#available-storage" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="building-2" class="h-4 w-4"></i> Available Storage</a>
         <a href="#floorplan" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="layout-grid" class="h-4 w-4"></i> Corridor Accounting</a>
         <a href="#map-section" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i> Logistics Network</a>
       </nav>
@@ -96,7 +96,7 @@
   </div>
   <nav id="mobileNav" aria-label="Mobile" class="hidden lg:hidden border-t border-white/10 bg-navy">
     <div class="mx-auto max-w-7xl px-4 py-3 flex flex-col text-sm gap-1">
-      <a href="/marketplace" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Find Storage</a>
+      <a href="#available-storage" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Available Storage</a>
       <a href="#floorplan" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Corridor Accounting</a>
       <a href="#map-section" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Logistics Network</a>
       <div id="mobileAuthArea" class="pt-2 border-t border-white/10 flex flex-col gap-2 mt-2">
@@ -127,8 +127,8 @@
         The open marketplace for decentralized community storage and smart freight telemetry across Nepal.
       </p>
       <div class="mt-9 flex flex-col sm:flex-row gap-3">
-        <a href="#floorplan" class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber px-6 py-3.5 font-semibold text-navy hover:bg-amber-400 shadow-lg shadow-amber-500/20">
-          <i data-lucide="search" class="h-5 w-5"></i> Find Storage
+        <a href="#available-storage" class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber px-6 py-3.5 font-semibold text-navy hover:bg-amber-400 shadow-lg shadow-amber-500/20">
+          <i data-lucide="building-2" class="h-5 w-5"></i> Browse Available Storage
         </a>
         <a href="#floorplan" class="inline-flex items-center justify-center gap-2 rounded-lg border border-white/30 px-6 py-3.5 font-semibold text-white hover:bg-white/10">
           <i data-lucide="plus-square" class="h-5 w-5"></i> List Empty Space
@@ -166,6 +166,233 @@
 </section>
 
 <!-- Value proposition -->
+
+<!-- Available Storage Listings with Direct Booking -->
+<section id="available-storage" class="mx-auto max-w-7xl px-4 sm:px-6 py-16 sm:py-20">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+    <div class="max-w-2xl">
+      <p class="text-sm font-semibold uppercase tracking-widest text-amber-600 flex items-center gap-1.5">
+        <i data-lucide="badge-check" class="h-4 w-4"></i> Audited Community Warehouses
+      </p>
+      <h2 class="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-navy">
+        Verified Storage Spaces in Nepal
+      </h2>
+      <p class="mt-2 text-slate-600 text-pretty leading-relaxed">
+        Reserve partitioned commercial floor space in discrete 10% blocks. Every space is verified for vehicle access, power reliability, and 13% IRD VAT audit compliance.
+      </p>
+    </div>
+    <div class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm shrink-0">
+      <span class="h-2 w-2 rounded-full bg-emerald-500"></span> 6 Spaces Live &bull; Instant Allocation
+    </div>
+  </div>
+
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Card 1: Teku Bazaar -->
+    <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+      <div>
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
+            <i data-lucide="arrow-down-to-line" class="w-5 h-5"></i>
+          </span>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">8/10 blocks free</span>
+        </div>
+        <h3 class="font-bold text-lg text-navy leading-snug">Dry Basement, Teku Bazaar</h3>
+        <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
+          <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 shrink-0 text-slate-400"></i>
+          Behind Teku Hospital, near Bishnumati bridge, Kathmandu
+        </p>
+        <p class="text-xs text-slate-700 font-medium flex items-center gap-1.5 mt-1">
+          <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-400"></i> 12 ft pickup lane access
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="zap" class="w-3 h-3 text-amber-600"></i> 3-Phase</span>
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="cctv" class="w-3 h-3 text-slate-500"></i> CCTV</span>
+        </div>
+      </div>
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">1,369 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">137 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 22/sq ft</p></div>
+        </div>
+        <button type="button" onclick="bookStorageSpace('KW-2081-0142', 'Dry Basement, Teku Bazaar', 1369, 22)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i> Book Space
+        </button>
+      </div>
+    </article>
+
+    <!-- Card 2: Balkhu Ring Road -->
+    <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+      <div>
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
+            <i data-lucide="store" class="w-5 h-5"></i>
+          </span>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">6/10 blocks free</span>
+        </div>
+        <h3 class="font-bold text-lg text-navy leading-snug">Twin Shutters, Balkhu Ring Road</h3>
+        <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
+          <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 shrink-0 text-slate-400"></i>
+          Opposite Balkhu Fruit &amp; Veg Wholesale Market, Lalitpur
+        </p>
+        <p class="text-xs text-slate-700 font-medium flex items-center gap-1.5 mt-1">
+          <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-400"></i> 20 ft truck road
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="forklift" class="w-3 h-3 text-slate-700"></i> Forklift Ramp</span>
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="cctv" class="w-3 h-3 text-slate-500"></i> CCTV</span>
+        </div>
+      </div>
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">2,200 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">220 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 18/sq ft</p></div>
+        </div>
+        <button type="button" onclick="bookStorageSpace('KW-2081-0177', 'Twin Shutters, Balkhu Ring Road', 2200, 18)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i> Book Space
+        </button>
+      </div>
+    </article>
+
+    <!-- Card 3: Kalimati Cold Chain -->
+    <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+      <div>
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
+            <i data-lucide="snowflake" class="w-5 h-5"></i>
+          </span>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">3/10 blocks free</span>
+        </div>
+        <h3 class="font-bold text-lg text-navy leading-snug">Cold Chain Godown, Kalimati</h3>
+        <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
+          <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 shrink-0 text-slate-400"></i>
+          500m from Kalimati Wholesale Market, Kathmandu
+        </p>
+        <p class="text-xs text-slate-700 font-medium flex items-center gap-1.5 mt-1">
+          <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-400"></i> 24 ft truck road
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-sky-50 text-sky-700 rounded-md px-2 py-0.5"><i data-lucide="snowflake" class="w-3 h-3 text-sky-500"></i> Cold Storage</span>
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="zap" class="w-3 h-3 text-amber-600"></i> 3-Phase</span>
+        </div>
+      </div>
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">4,800 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">480 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 34/sq ft</p></div>
+        </div>
+        <button type="button" onclick="bookStorageSpace('KW-2081-0203', 'Cold Chain Godown, Kalimati', 4800, 34)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i> Book Space
+        </button>
+      </div>
+    </article>
+
+    <!-- Card 4: Birgunj ICD -->
+    <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+      <div>
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
+            <i data-lucide="warehouse" class="w-5 h-5"></i>
+          </span>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">5/10 blocks free</span>
+        </div>
+        <h3 class="font-bold text-lg text-navy leading-snug">Bonded Godown, Birgunj ICD</h3>
+        <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
+          <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 shrink-0 text-slate-400"></i>
+          Adjacent to Sirsiya Dry Port Gate 2, Birgunj
+        </p>
+        <p class="text-xs text-slate-700 font-medium flex items-center gap-1.5 mt-1">
+          <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-400"></i> 40 ft container road
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="forklift" class="w-3 h-3 text-slate-700"></i> Forklift Ramp</span>
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="zap" class="w-3 h-3 text-amber-600"></i> 3-Phase</span>
+        </div>
+      </div>
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">10,950 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">1,095 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 12/sq ft</p></div>
+        </div>
+        <button type="button" onclick="bookStorageSpace('KW-2081-0219', 'Bonded Godown, Birgunj ICD', 10950, 12)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i> Book Space
+        </button>
+      </div>
+    </article>
+
+    <!-- Card 5: Satdobato Shutter -->
+    <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+      <div>
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
+            <i data-lucide="store" class="w-5 h-5"></i>
+          </span>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">10/10 blocks free</span>
+        </div>
+        <h3 class="font-bold text-lg text-navy leading-snug">Corner Shutter, Satdobato</h3>
+        <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
+          <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 shrink-0 text-slate-400"></i>
+          Satdobato chowk, beside ANFA complex, Lalitpur
+        </p>
+        <p class="text-xs text-slate-700 font-medium flex items-center gap-1.5 mt-1">
+          <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-400"></i> 16 ft mini-truck road
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="cctv" class="w-3 h-3 text-slate-500"></i> CCTV</span>
+        </div>
+      </div>
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">684 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">68 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 26/sq ft</p></div>
+        </div>
+        <button type="button" onclick="bookStorageSpace('KW-2081-0231', 'Corner Shutter, Satdobato', 684, 26)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i> Book Space
+        </button>
+      </div>
+    </article>
+
+    <!-- Card 6: Maharajgunj Pharma -->
+    <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+      <div>
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
+            <i data-lucide="arrow-down-to-line" class="w-5 h-5"></i>
+          </span>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">2/10 blocks free</span>
+        </div>
+        <h3 class="font-bold text-lg text-navy leading-snug">Pharma Basement, Maharajgunj</h3>
+        <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
+          <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 shrink-0 text-slate-400"></i>
+          Near T.U. Teaching Hospital back gate, Kathmandu
+        </p>
+        <p class="text-xs text-slate-700 font-medium flex items-center gap-1.5 mt-1">
+          <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-400"></i> 14 ft pickup road
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-sky-50 text-sky-700 rounded-md px-2 py-0.5"><i data-lucide="snowflake" class="w-3 h-3 text-sky-500"></i> Cold Storage</span>
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="zap" class="w-3 h-3 text-amber-600"></i> 3-Phase</span>
+          <span class="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 rounded-md px-2 py-0.5 text-slate-700"><i data-lucide="cctv" class="w-3 h-3 text-slate-500"></i> CCTV</span>
+        </div>
+      </div>
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">1,711 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">171 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 38/sq ft</p></div>
+        </div>
+        <button type="button" onclick="bookStorageSpace('KW-2081-0248', 'Pharma Basement, Maharajgunj', 1711, 38)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i> Book Space
+        </button>
+      </div>
+    </article>
+  </div>
+</section>
+
 <section id="marketplace" class="mx-auto max-w-7xl px-4 sm:px-6 py-20 sm:py-24">
   <div class="max-w-2xl">
     <p class="text-sm font-semibold uppercase tracking-widest text-brand">Why KTM-WDC</p>
@@ -326,6 +553,9 @@
     </ol>
   </div>
 
+
+
+  <div id="bookingBannerContainer" class="hidden px-6 pt-4"></div>
 
   <!-- Sign In Form -->
   <form id="stepSignIn" class="hidden px-6 py-6 flex flex-col gap-4" novalidate>
@@ -666,6 +896,12 @@
           dlg.close();
           updateV0AuthHeader();
           // Auto-redirect to authorized dashboard
+          const pendingBk = JSON.parse(sessionStorage.getItem('pending_booking') || 'null');
+          if (pendingBk && data.user_role === 'commercial_client') {
+            sessionStorage.removeItem('pending_booking');
+            window.location.href = '/marketplace';
+            return;
+          }
           if (data.user_role === 'superadmin') window.location.href = '/admin';
           else if (data.user_role === 'property_owner') window.location.href = '/owner';
           else if (data.user_role === 'fleet_partner') window.location.href = '/fleet';
@@ -909,6 +1145,61 @@
     localStorage.removeItem('kwdc_token');
     localStorage.removeItem('kwdc_user');
     window.location.href = '/';
+  };
+
+  
+  // Direct Storage Booking from Landing Page
+  window.bookStorageSpace = function(id, title, sqft, rate) {
+    sessionStorage.setItem('pending_booking', JSON.stringify({id, title, sqft, rate}));
+    const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
+    
+    if (user && user.user_role === 'commercial_client') {
+      window.location.href = '/marketplace';
+    } else {
+      window.openClientAuthModal(title, sqft, rate);
+    }
+  };
+
+  window.openClientAuthModal = function(title, sqft, rate) {
+    mobileNav.classList.add('hidden');
+    document.getElementById('signupTitle').textContent = 'Book Space: Client Access';
+    
+    const banner = document.getElementById('bookingBannerContainer');
+    if (banner) {
+      banner.innerHTML = `
+        <div class="rounded-xl border border-amber/40 bg-amber/10 p-4 text-navy">
+          <div class="flex items-start gap-3">
+            <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center shrink-0 mt-0.5">
+              <i data-lucide="bookmark-check" class="w-4 h-4"></i>
+            </span>
+            <div>
+              <p class="font-bold text-sm text-navy">Reserving: ${title}</p>
+              <p class="text-xs text-slate-600 mt-0.5">
+                Total ${sqft.toLocaleString()} sq ft &bull; Rs. ${rate}/sq ft &bull; 13% IRD VAT Audited
+              </p>
+              <p class="text-[11px] text-amber-900 font-medium mt-1">
+                Please sign in or register your commercial account to finalize block reservation.
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+      banner.classList.remove('hidden');
+    }
+
+    // Pre-select Commercial Client role
+    role.value = 'client';
+    document.getElementById('roleHint').textContent = ROLE_HINTS['client'];
+    
+    // Show Sign In by default with quick register toggle
+    if (sSignIn) sSignIn.classList.remove('hidden');
+    s1.classList.add('hidden');
+    s2.classList.add('hidden');
+    done.classList.add('hidden');
+    
+    dlg.showModal();
+    lucide.createIcons();
+    document.getElementById('loginEmail').focus();
   };
 
   document.addEventListener('DOMContentLoaded', updateV0AuthHeader);
