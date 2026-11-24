@@ -3,17 +3,26 @@ Kathmandu Warehousing & Distribution Center (KTM-WDC)
 FastAPI Main Application Entry Point
 """
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from backend.config import settings
+from backend.database import init_db_if_needed, get_db_info
 from backend.routers import auth, warehouses, admin, incharge, fleet, insurance
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Safe startup initialization without circular imports
+    init_db_if_needed()
+    yield
 
 app = FastAPI(
     title=settings.APP_NAME,
     description="Decentralized Commercial Warehousing, Fleet Telemetry & IRD FinTech Exchange for Nepal",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Mount Routers
@@ -121,10 +130,13 @@ def admin_page(request: Request):
 
 @app.get("/health")
 def health_check():
+    db_info = get_db_info()
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
-        "database": "Supabase PostgreSQL 17 (Connected & Live)",
+        "database": db_info["label"],
+        "database_engine": db_info["engine"],
+        "is_sqlite_fallback": db_info["is_sqlite"],
         "holding_liability": "Rs. 0 (Enforced)",
         "nepal_vat_rate": "13% Statutory IRD Schedule 13"
     }

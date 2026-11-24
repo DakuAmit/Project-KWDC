@@ -190,6 +190,11 @@
           <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
             <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
           </button>
+          <!-- Live DB Health Badge -->
+          <span id="dbBadge" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <i data-lucide="database" class="w-3 h-3 text-blue-600"></i>
+            <span id="dbLabel">Connecting DB...</span>
+          </span>
           <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Sovereign Guarantor Mode
           </span>
@@ -932,11 +937,31 @@
     let provisionedCredentialsRaw = '';
 
     function getAuthHeaders() {
-      const token = localStorage.getItem('kwdc_token');
+      const token = localStorage.getItem('kwdc_admin_token') || localStorage.getItem('kwdc_token');
       return {
         'Content-Type': 'application/json',
         'Authorization': token ? `Bearer ${token}` : ''
       };
+    }
+
+    async function checkSystemStatus() {
+      try {
+        const res = await fetch('/api/admin/system-status', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        const dbLabel = document.getElementById('dbLabel');
+        const dbBadge = document.getElementById('dbBadge');
+        if (dbLabel) {
+          dbLabel.textContent = data.is_sqlite_fallback ? 'SQLite Offline Fallback' : 'Supabase PostgreSQL (Live)';
+        }
+        if (dbBadge) {
+          dbBadge.className = data.is_sqlite_fallback 
+            ? 'hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200'
+            : 'hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+        }
+      } catch (e) {
+        console.warn('System status check notice:', e);
+      }
     }
 
     function escapeHtml(str) {
@@ -1625,8 +1650,21 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
               <p class="text-[11px] text-slate-500">${u.operating_location || 'Kathmandu'}</p>
             </td>
             <td class="px-5 py-3 text-slate-700">
-              <p>${u.email}</p>
-              <p class="text-[11px] text-slate-500 font-mono">${u.phone_number}</p>
+              <p class="font-medium text-slate-800">${u.email}</p>
+              <div class="flex items-center gap-1.5 mt-1">
+                <span class="text-[11px] text-slate-500 font-mono">${u.phone_number}</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${u.is_verified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-300 animate-pulse'}">
+                  ${u.is_verified ? '✓ Verified' : '⚠ OTP Pending'}
+                </span>
+                ${!u.is_verified ? `
+                  <button type="button" onclick="adminVerifyEmail(${u.id}, '${escapeHtml(u.email).replace(/'/g, "\\'")}')" title="Manually verify email" class="text-[10px] font-bold text-sky-600 hover:text-sky-800 hover:underline">
+                    Activate
+                  </button>
+                  <button type="button" onclick="adminResendOtp(${u.id}, '${escapeHtml(u.email).replace(/'/g, "\\'")}')" title="Resend OTP code" class="text-[10px] font-bold text-amber-600 hover:text-amber-800 hover:underline">
+                    Resend
+                  </button>
+                ` : ''}
+              </div>
             </td>
             <td class="px-5 py-3">
               <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${
@@ -1673,6 +1711,44 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
         lucide.createIcons();
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+    }
+
+    async function adminVerifyEmail(userId, email) {
+      if (!confirm(`Manually verify email and activate account for ${email}?`)) return;
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/verify-email`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(data.message || 'Email successfully verified.');
+          loadUsers();
+        } else {
+          alert(data.detail || 'Failed to verify email');
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+    }
+
+    async function adminResendOtp(userId, email) {
+      if (!confirm(`Dispatch a fresh 6-digit OTP code to ${email}?`)) return;
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/resend-otp`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`OTP dispatched to ${email}! Generated code: ${data.otp_code}`);
+          loadUsers();
+        } else {
+          alert(data.detail || 'Failed to resend OTP');
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
       }
     }
 
@@ -2152,14 +2228,15 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
     }
 
     function handleLogout() {
+      localStorage.removeItem('kwdc_admin_token');
       localStorage.removeItem('kwdc_token');
       localStorage.removeItem('kwdc_user');
       window.location.href = '/';
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      let user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
-      if (!user || user.user_role !== 'superadmin') {
+      let adminToken = localStorage.getItem('kwdc_admin_token');
+      if (!adminToken) {
         try {
           const res = await fetch('/api/auth/login', {
             method: 'POST',
@@ -2168,13 +2245,18 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
           });
           if (res.ok) {
             const data = await res.json();
-            localStorage.setItem('kwdc_token', data.access_token);
-            localStorage.setItem('kwdc_user', JSON.stringify(data));
+            localStorage.setItem('kwdc_admin_token', data.access_token);
+            const curUser = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
+            if (!curUser || curUser.user_role === 'superadmin') {
+              localStorage.setItem('kwdc_token', data.access_token);
+              localStorage.setItem('kwdc_user', JSON.stringify(data));
+            }
           }
         } catch (e) {
           console.log('Admin auto-auth notice:', e);
         }
       }
+      checkSystemStatus();
       refreshData();
       lucide.createIcons();
     });

@@ -2172,13 +2172,36 @@
       window.location.href = '/login';
     }
 
+    async function demoClientLogin() {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: 'client_audit@kwdc.com.np', password: 'Client@123'})
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('kwdc_token', data.access_token);
+          localStorage.setItem('kwdc_user', JSON.stringify(data));
+          window.location.reload();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
-      if (user) {
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
+      if (user && token) {
         document.getElementById('clientName').textContent = user.full_name || 'Commercial Client';
         document.getElementById('clientEmail').textContent = user.email || 'client@kwdc.com.np';
         document.getElementById('clientAvatar').textContent = (user.full_name || 'CC').substring(0, 2).toUpperCase();
+      } else {
+        document.getElementById('clientName').textContent = 'Commercial Client (Guest)';
+        document.getElementById('clientEmail').textContent = 'Click to sign in';
+        document.getElementById('clientAvatar').textContent = '?';
       }
 
       const savedLang = localStorage.getItem('kwdc_lang') || 'en';

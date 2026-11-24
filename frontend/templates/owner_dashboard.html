@@ -91,7 +91,7 @@
       <!-- Drawer Footer: User Profile & Sign Out -->
       <div class="p-4 border-t border-white/10 bg-black/20">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3 overflow-hidden">
+          <div class="flex items-center gap-3 overflow-hidden cursor-pointer hover:opacity-90 transition" onclick="if(!localStorage.getItem('kwdc_token')) openOwnerAuthModal()" title="Click to Sign In or View Profile">
             <div class="w-9 h-9 rounded-full bg-slate-700 text-white font-bold grid place-items-center text-sm shrink-0" id="ownerAvatar">
               PO
             </div>
@@ -132,6 +132,18 @@
           </button>
         </div>
       </header>
+
+      <!-- Unauthenticated Guest Banner -->
+      <div id="guestBanner" class="hidden bg-amber-500/10 border-b border-amber-500/20 px-4 sm:px-6 py-2.5 text-xs text-amber-900 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
+          <span>You are browsing in guest mode. Sign in or register to submit storage spaces, complete KYC, and receive 90% monthly rental disbursements.</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="demoOwnerLogin()" class="px-2.5 py-1 bg-amber-100 text-amber-900 font-bold rounded-lg hover:bg-amber-200 transition text-[11px]">Demo Login</button>
+          <button onclick="openOwnerAuthModal()" class="px-3 py-1 bg-navy text-white font-bold rounded-lg hover:bg-slate-800 transition text-[11px]">Sign In / Register</button>
+        </div>
+      </div>
 
       <!-- Toast Container -->
       <div id="toastContainer" class="fixed top-20 right-6 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
@@ -417,6 +429,107 @@
       </main>
     </div>
   </div>
+
+  <!-- Modal: Property Owner Authentication & Registration -->
+  <dialog id="ownerAuthModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
+          <i data-lucide="key-round" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Property Owner Access</h3>
+          <p class="text-xs text-slate-400">Sign in or register your empty storage facility</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('ownerAuthModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="p-6 text-sm">
+      <!-- Tabs: Sign In / Register -->
+      <div class="flex border-b border-slate-200 mb-5">
+        <button type="button" id="tabBtnSignIn" onclick="switchAuthTab('signin')" class="flex-1 pb-3 text-xs font-bold text-navy border-b-2 border-navy">
+          Sign In
+        </button>
+        <button type="button" id="tabBtnRegister" onclick="switchAuthTab('register')" class="flex-1 pb-3 text-xs font-bold text-slate-500 hover:text-navy border-b-2 border-transparent">
+          Register New Space Owner
+        </button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="ownerSignInForm" onsubmit="handleOwnerSignIn(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Email Address *</label>
+          <input type="email" id="ownerAuthEmail" required placeholder="owner@kwdc.com.np" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-navy focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Password *</label>
+          <input type="password" id="ownerAuthPassword" required placeholder="••••••••" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-navy focus:outline-none" />
+        </div>
+        <button type="submit" id="btnOwnerSignIn" class="w-full py-3 bg-navy text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-2">
+          <i data-lucide="log-in" class="w-4 h-4"></i> Sign In to Cockpit
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="ownerRegisterForm" onsubmit="handleOwnerRegister(event)" class="space-y-3.5 hidden">
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Full Name / Property Owner *</label>
+          <input type="text" id="ownerRegName" required placeholder="Chanda Pokharel" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-navy focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Primary Operating Location *</label>
+          <input type="text" id="ownerRegLocation" required placeholder="Kathmandu Valley" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-navy focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Email Address *</label>
+          <input type="email" id="ownerRegEmail" required placeholder="swara.pokharel@gmail.com" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-navy focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Nepal Mobile Number (10 Digits) *</label>
+          <input type="tel" id="ownerRegPhone" required placeholder="9841234567" pattern="^9[678]\d{8}$" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-navy focus:outline-none" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-navy mb-1">Password *</label>
+            <input type="password" id="ownerRegPassword" required minlength="6" placeholder="Min 6 chars" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-navy focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-navy mb-1">Confirm Password *</label>
+            <input type="password" id="ownerRegConfirm" required minlength="6" placeholder="Re-type password" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-navy focus:outline-none" />
+          </div>
+        </div>
+        <button type="submit" id="btnOwnerRegister" class="w-full py-3 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition flex items-center justify-center gap-2">
+          <i data-lucide="send" class="w-4 h-4"></i> Register &amp; Send OTP
+        </button>
+      </form>
+
+      <!-- OTP Verification Form (Sub-step of Register) -->
+      <form id="ownerOtpForm" onsubmit="handleOwnerVerifyOtp(event)" class="space-y-4 hidden">
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800">
+          <p class="font-bold">6-digit verification code sent to <span id="ownerOtpTargetEmail" class="font-mono text-navy"></span></p>
+          <p class="mt-1 text-[11px] text-slate-600">Check your inbox or spam. (Sandbox test code: <strong class="text-navy font-mono">123456</strong>)</p>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Enter 6-Digit Code *</label>
+          <input type="text" id="ownerOtpInput" required maxlength="6" placeholder="123456" class="w-full px-3.5 py-2.5 text-center tracking-widest font-mono text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-navy focus:outline-none" />
+        </div>
+        <button type="submit" id="btnOwnerVerifyOtp" class="w-full py-3 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition flex items-center justify-center gap-2">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> Verify &amp; Activate Space Owner
+        </button>
+      </form>
+
+      <!-- Instant Demo Login Button -->
+      <div class="mt-5 pt-4 border-t border-slate-200">
+        <p class="text-[11px] text-slate-500 text-center mb-2">Audit &amp; Testing Quick Access:</p>
+        <button type="button" onclick="demoOwnerLogin()" class="w-full py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold hover:bg-amber-100 transition flex items-center justify-center gap-1.5">
+          <i data-lucide="user-check" class="w-4 h-4 text-amber-600"></i> Fast Demo Login (Ram Bahadur Shrestha)
+        </button>
+      </div>
+    </div>
+  </dialog>
 
   <!-- Modal: List New Property -->
   <dialog id="listSpaceModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-2xl border border-slate-200 backdrop:bg-slate-950/60">
@@ -931,6 +1044,13 @@
 
     async function submitOwnerKyc(e) {
       e.preventDefault();
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
+      if (!token) {
+        showToast("Authentication required: Please sign in or register before submitting KYC documents.", true);
+        openOwnerAuthModal();
+        return;
+      }
+
       const btn = document.getElementById('btnSubmitOwnerKyc');
       btn.disabled = true;
       btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Submitting...`;
@@ -975,7 +1095,7 @@
       const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
       if (!token) {
         showToast("Please sign in as a Property Owner to register storage spaces.", true);
-        setTimeout(() => { window.location.href = '/login'; }, 1200);
+        openOwnerAuthModal();
         return;
       }
       document.getElementById('listSpaceModal').showModal();
@@ -1550,20 +1670,226 @@
       }
     }
 
+    let pendingOwnerRegEmail = '';
+
+    function openOwnerAuthModal(tab = 'signin') {
+      switchAuthTab(tab);
+      document.getElementById('ownerAuthModal').showModal();
+      lucide.createIcons();
+    }
+
+    function switchAuthTab(tab) {
+      const isSignIn = (tab === 'signin');
+      document.getElementById('ownerSignInForm').classList.toggle('hidden', !isSignIn);
+      document.getElementById('ownerRegisterForm').classList.toggle('hidden', isSignIn);
+      document.getElementById('ownerOtpForm').classList.add('hidden');
+      
+      const tabSignIn = document.getElementById('tabBtnSignIn');
+      const tabReg = document.getElementById('tabBtnRegister');
+      if (tabSignIn && tabReg) {
+        tabSignIn.className = isSignIn ? 'flex-1 pb-3 text-xs font-bold text-navy border-b-2 border-navy' : 'flex-1 pb-3 text-xs font-bold text-slate-500 hover:text-navy border-b-2 border-transparent';
+        tabReg.className = !isSignIn ? 'flex-1 pb-3 text-xs font-bold text-navy border-b-2 border-navy' : 'flex-1 pb-3 text-xs font-bold text-slate-500 hover:text-navy border-b-2 border-transparent';
+      }
+    }
+
+    async function handleOwnerSignIn(e) {
+      e.preventDefault();
+      const email = document.getElementById('ownerAuthEmail').value.trim();
+      const password = document.getElementById('ownerAuthPassword').value;
+      const btn = document.getElementById('btnOwnerSignIn');
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Signing In...`;
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email, password})
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4"></i> Sign In to Cockpit`;
+        lucide.createIcons();
+
+        if (res.ok) {
+          localStorage.setItem('kwdc_token', data.access_token);
+          localStorage.setItem('kwdc_user', JSON.stringify(data));
+          document.getElementById('ownerAuthModal').close();
+          updateOwnerUiAuth(data);
+          showToast(`Welcome back, ${data.full_name}!`);
+          loadMyListings();
+          loadActiveLeases();
+          loadOwnerKyc();
+        } else {
+          showToast(data.detail || 'Sign in failed.', true);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4"></i> Sign In to Cockpit`;
+        lucide.createIcons();
+        showToast('Connection error: ' + err.message, true);
+      }
+    }
+
+    async function handleOwnerRegister(e) {
+      e.preventDefault();
+      const full_name = document.getElementById('ownerRegName').value.trim();
+      const operating_location = document.getElementById('ownerRegLocation').value.trim();
+      const email = document.getElementById('ownerRegEmail').value.trim().toLowerCase();
+      const phoneRaw = document.getElementById('ownerRegPhone').value.trim();
+      const password = document.getElementById('ownerRegPassword').value;
+      const confirm_password = document.getElementById('ownerRegConfirm').value;
+      const btn = document.getElementById('btnOwnerRegister');
+
+      if (password !== confirm_password) {
+        showToast('Password and Confirm Password do not match.', true);
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Sending OTP...`;
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            role: 'property_owner',
+            full_name,
+            operating_location,
+            email,
+            phone_number: '+977-' + phoneRaw,
+            password,
+            confirm_password
+          })
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Register &amp; Send OTP`;
+        lucide.createIcons();
+
+        if (res.ok) {
+          pendingOwnerRegEmail = email;
+          document.getElementById('ownerOtpTargetEmail').textContent = email;
+          document.getElementById('ownerRegisterForm').classList.add('hidden');
+          document.getElementById('ownerOtpForm').classList.remove('hidden');
+          document.getElementById('ownerOtpInput').value = '';
+          document.getElementById('ownerOtpInput').focus();
+          showToast(data.message || 'OTP verification code dispatched to email.');
+        } else {
+          showToast(data.detail || 'Registration failed.', true);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Register &amp; Send OTP`;
+        lucide.createIcons();
+        showToast('Connection error: ' + err.message, true);
+      }
+    }
+
+    async function handleOwnerVerifyOtp(e) {
+      e.preventDefault();
+      const otp_code = document.getElementById('ownerOtpInput').value.trim();
+      const btn = document.getElementById('btnOwnerVerifyOtp');
+
+      if (otp_code.length !== 6) {
+        showToast('Please enter the full 6-digit verification code.', true);
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Verifying...`;
+        const res = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            email: pendingOwnerRegEmail,
+            otp_code
+          })
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4"></i> Verify &amp; Activate Space Owner`;
+        lucide.createIcons();
+
+        if (res.ok) {
+          localStorage.setItem('kwdc_token', data.access_token);
+          localStorage.setItem('kwdc_user', JSON.stringify(data));
+          document.getElementById('ownerAuthModal').close();
+          updateOwnerUiAuth(data);
+          showToast(`Account successfully activated! Welcome ${data.full_name}.`);
+          loadMyListings();
+          loadActiveLeases();
+          loadOwnerKyc();
+        } else {
+          showToast(data.detail || 'Invalid verification code. Use test code 123456.', true);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4"></i> Verify &amp; Activate Space Owner`;
+        lucide.createIcons();
+        showToast('Connection error: ' + err.message, true);
+      }
+    }
+
+    async function demoOwnerLogin() {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: 'owner_audit@kwdc.com.np', password: 'Owner@123'})
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('kwdc_token', data.access_token);
+          localStorage.setItem('kwdc_user', JSON.stringify(data));
+          const modal = document.getElementById('ownerAuthModal');
+          if (modal && modal.open) modal.close();
+          updateOwnerUiAuth(data);
+          showToast(`Signed in as verified Property Owner (${data.full_name})!`);
+          loadMyListings();
+          loadActiveLeases();
+          loadOwnerKyc();
+        } else {
+          showToast('Demo login failed: ' + (data.detail || 'Error'), true);
+        }
+      } catch (err) {
+        showToast('Network error: ' + err.message, true);
+      }
+    }
+
+    function updateOwnerUiAuth(user) {
+      const banner = document.getElementById('guestBanner');
+      if (user && (user.user_role === 'property_owner' || user.role === 'property_owner')) {
+        document.getElementById('ownerName').textContent = user.full_name || 'Property Owner';
+        document.getElementById('ownerEmail').textContent = user.email || 'owner@kwdc.com.np';
+        document.getElementById('ownerAvatar').textContent = (user.full_name || 'PO').substring(0, 2).toUpperCase();
+        if (banner) banner.classList.add('hidden');
+      } else {
+        document.getElementById('ownerName').textContent = 'Guest (Not Signed In)';
+        document.getElementById('ownerEmail').textContent = 'Click to sign in / register';
+        document.getElementById('ownerAvatar').textContent = '?';
+        if (banner) banner.classList.remove('hidden');
+      }
+    }
+
     function handleLogout() {
       localStorage.removeItem('kwdc_token');
       localStorage.removeItem('kwdc_user');
       sessionStorage.clear();
-      window.location.href = '/login';
+      updateOwnerUiAuth(null);
+      showToast('Signed out successfully.');
+      loadMyListings();
     }
 
     // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
-      if (user) {
-        document.getElementById('ownerName').textContent = user.full_name || 'Property Owner';
-        document.getElementById('ownerEmail').textContent = user.email || 'owner@kwdc.com.np';
-        document.getElementById('ownerAvatar').textContent = (user.full_name || 'PO').substring(0, 2).toUpperCase();
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
+      if (user && token && (user.user_role === 'property_owner' || user.role === 'property_owner')) {
+        updateOwnerUiAuth(user);
+      } else {
+        updateOwnerUiAuth(null);
       }
 
       const savedLang = localStorage.getItem('kwdc_lang') || 'en';

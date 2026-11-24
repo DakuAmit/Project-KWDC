@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
+from backend.database import get_db, get_db_info
 from backend.models import (
     Warehouse, WarehouseRequest, User, UserRole,
     BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog,
@@ -28,7 +28,7 @@ from backend.models import (
 )
 from backend.auth_utils import require_user, require_roles, get_password_hash
 from backend.services.contract_service import generate_master_lease_contract
-from backend.services.email_service import send_contract_approval_email
+from backend.services.email_service import send_contract_approval_email, send_otp_email
 
 router = APIRouter(prefix="/api/admin", tags=["SuperAdmin Governance"])
 
@@ -663,9 +663,9 @@ def get_all_users(
             "role": u.role.value,
             "operating_location": u.operating_location,
             "is_active": u.is_active,
-            "is_verified": True if is_superadmin else u.is_verified,
+            "is_verified": True if is_superadmin else bool(u.is_verified),
             "kyc_status": kyc_val,
-            "created_at": u.created_at.strftime("%Y-%m-%d %H:%M")
+            "created_at": u.created_at.strftime("%Y-%m-%d %H:%M") if u.created_at else "Recent"
         })
     return results
 
@@ -771,6 +771,65 @@ def set_user_kyc_status(
 
     db.commit()
     return {"message": f"KYC status for '{u.full_name}' updated to {u.kyc_status.value}.", "kyc_status": u.kyc_status.value}
+
+@router.get("/system-status")
+def get_system_status(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Returns database backend status and high-level platform health metrics."""
+    db_info = get_db_info()
+    user_count = db.query(User).count()
+    unverified_count = db.query(User).filter(User.is_verified == False).count()
+    pending_kyc_count = db.query(User).filter(User.kyc_status == KycStatus.UNDER_REVIEW).count()
+    wh_count = db.query(Warehouse).count()
+    return {
+        "database": db_info["label"],
+        "database_engine": db_info["engine"],
+        "is_sqlite_fallback": db_info["is_sqlite"],
+        "user_count": user_count,
+        "unverified_email_count": unverified_count,
+        "pending_kyc_count": pending_kyc_count,
+        "warehouse_count": wh_count,
+        "active_admin": current_user.email
+    }
+
+@router.post("/users/{user_id}/verify-email")
+def admin_verify_user_email(
+    user_id: int,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Allows SuperAdmin to manually verify an account's email if OTP email delivery is delayed."""
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found.")
+    u.is_verified = True
+    u.otp_code = None
+    db.commit()
+    return {"message": f"Email verified and activated for '{u.full_name}' ({u.email}).", "is_verified": True}
+
+@router.post("/users/{user_id}/resend-otp")
+def admin_resend_user_otp(
+    user_id: int,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Regenerates OTP and re-dispatches to user's email, returning OTP code to SuperAdmin for emergency onboarding."""
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found.")
+    otp_code = f"{random.randint(100000, 999999)}"
+    now = datetime.now(timezone.utc)
+    u.otp_code = otp_code
+    u.otp_expires_at = now + timedelta(minutes=15)
+    db.commit()
+    email_sent = send_otp_email(to_email=u.email, to_name=u.full_name, otp_code=otp_code)
+    return {
+        "message": f"New OTP generated for {u.email}.",
+        "otp_code": otp_code,
+        "email_dispatched": email_sent
+    }
 
 @router.get("/invoices")
 def get_admin_invoices(
