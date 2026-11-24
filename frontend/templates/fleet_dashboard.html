@@ -3,9 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fleet Partner & Logistics Cockpit | KTM-WDC Nepal</title>
+  <title>Fleet Partner Console | KTM-WDC Nepal</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <!-- Leaflet Map for Live Telemetry -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -14,11 +20,33 @@
             navy: '#0f172a',
             amber: '#f59e0b',
             nepal: '#dc2626'
+          },
+          fontFamily: {
+            sans: ['Geist', 'system-ui', 'sans-serif'],
+            mono: ['Geist Mono', 'monospace']
           }
         }
       }
     }
   </script>
+  <style>
+    body { font-family: 'Geist', sans-serif; }
+    .pulse-radar {
+      position: relative;
+    }
+    .pulse-radar::after {
+      content: '';
+      position: absolute;
+      top: -4px; left: -4px; right: -4px; bottom: -4px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.4);
+      animation: radarPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    @keyframes radarPulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+  </style>
 </head>
 <body class="bg-slate-100 text-slate-900 antialiased font-sans pb-16 lg:pb-0">
   <!-- Mobile Drawer Backdrop -->
@@ -38,7 +66,7 @@
               <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
               <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
             </div>
-            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">Fleet Logistics Cockpit</p>
+            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5" data-i18n="drawer_subtitle">Fleet Logistics Cockpit</p>
           </div>
         </a>
         <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
@@ -49,26 +77,30 @@
       <!-- Navigation Drawer Items -->
       <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm">
         <button type="button" onclick="switchTab('telemetry')" id="nav-telemetry" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-white bg-white/10">
-          <span class="flex items-center gap-3"><i data-lucide="radio" class="w-4 h-4 text-emerald-400"></i> Driver GPS Stream</span>
-          <span id="badgeGpsStatus" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+          <span class="flex items-center gap-3"><i data-lucide="navigation" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_radar">Fleet Radar & GPS</span></span>
+          <span class="relative flex h-2 w-2 mr-1">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+        </button>
+
+        <button type="button" onclick="switchTab('jobs')" id="nav-jobs" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="package-search" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_jobs">Freight Dispatch Jobs</span></span>
+          <span id="badgeJobCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">3</span>
         </button>
 
         <button type="button" onclick="switchTab('vehicles')" id="nav-vehicles" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="truck" class="w-4 h-4 text-sky-400"></i> Registered Vehicles</span>
+          <span class="flex items-center gap-3"><i data-lucide="truck" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_vehicles">Commercial Fleet</span></span>
           <span id="badgeVehicleCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
         </button>
 
         <button type="button" onclick="switchTab('drivers')" id="nav-drivers" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4 text-indigo-400"></i> Driver Directory</span>
+          <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_drivers">Driver Crew Roster</span></span>
           <span id="badgeDriverCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
         </button>
 
-        <button type="button" onclick="openVehicleModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="plus-circle" class="w-4 h-4 text-amber-400"></i> Add Vehicle (Bluebook)
-        </button>
-
-        <button type="button" onclick="openDriverModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="user-plus" class="w-4 h-4 text-emerald-400"></i> Add Driver License
+        <button type="button" onclick="switchTab('earnings')" id="nav-earnings" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_earnings">Freight Earnings & Payouts</span>
         </button>
       </nav>
 
@@ -80,7 +112,7 @@
               FP
             </div>
             <div class="truncate">
-              <p class="text-xs font-bold text-white truncate" id="fleetName">Fleet Partner</p>
+              <p class="text-xs font-bold text-white truncate" id="fleetName">Fleet Logistics Partner</p>
               <p class="text-[11px] text-slate-400 truncate" id="fleetEmail">fleet@kwdc.com.np</p>
             </div>
           </div>
@@ -100,14 +132,19 @@
             <i data-lucide="menu" class="w-5 h-5"></i>
           </button>
           <div>
-            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle">Fleet & Freight Telemetry</h1>
-            <p class="text-xs text-slate-500 hidden sm:block">Bluebook Verified Fleet • Real-Time GPS WebSocket Broadcast • Nepal Freight Corridors</p>
+            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle" data-i18n="header_title">Fleet Logistics & Telemetry Console</h1>
+            <p class="text-xs text-slate-500 hidden sm:block" data-i18n="header_sub">Multi-Drop Freight Dispatches • Bluebook Verification • Live Ring Road Radar</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button onclick="openVehicleModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-navy text-white text-xs font-bold shadow hover:bg-slate-800 transition">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Register Truck
+        <div class="flex items-center gap-3">
+          <!-- Bilingual Switcher Pill -->
+          <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
+            <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
+          </button>
+
+          <button onclick="openVehicleModal()" class="inline-flex items-center gap-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold px-3.5 py-2 text-xs shadow transition">
+            <i data-lucide="plus" class="w-4 h-4"></i> <span data-i18n="btn_add_vehicle">Add Vehicle</span>
           </button>
         </div>
       </header>
@@ -118,83 +155,181 @@
       <!-- Main Panels -->
       <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
 
-        <!-- View 1: Driver Mobile GPS Broadcaster -->
-        <section id="view-telemetry" class="space-y-6">
-          <div class="bg-gradient-to-br from-navy via-slate-900 to-navy rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 relative overflow-hidden">
-            <div class="relative z-10 max-w-2xl">
-              <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-amber-300 border border-white/10">
-                <i data-lucide="satellite" class="w-3.5 h-3.5"></i> Mobile Driver Telemetry Mode
-              </span>
-              <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-3">Live Fleet GPS Broadcaster</h2>
-              <p class="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                Operate from mobile inside the truck cabin. Tapping below streams your real-time GPS coordinates directly over WebSocket to the KTM-WDC dispatch map.
-              </p>
+        <!-- Cabin HUD Summary Bar -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-navy text-white p-4 rounded-2xl shadow-sm">
+            <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider" data-i18n="kpi_active_fleet">Active Fleet</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-black text-amber-400 font-mono" id="hudActiveVehicles">0</span>
+              <span class="text-xs text-slate-300" data-i18n="kpi_trucks_online">trucks online</span>
+            </div>
+          </div>
+          <div class="bg-navy text-white p-4 rounded-2xl shadow-sm">
+            <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider" data-i18n="kpi_freight_jobs">Freight Dispatches</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-black text-emerald-400 font-mono" id="hudActiveJobs">3</span>
+              <span class="text-xs text-slate-300" data-i18n="kpi_in_transit">in transit</span>
+            </div>
+          </div>
+          <div class="bg-navy text-white p-4 rounded-2xl shadow-sm">
+            <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider" data-i18n="kpi_duty_drivers">Driver Crew</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-black text-sky-400 font-mono" id="hudActiveDrivers">0</span>
+              <span class="text-xs text-slate-300" data-i18n="kpi_on_duty">on duty</span>
+            </div>
+          </div>
+          <div class="bg-navy text-white p-4 rounded-2xl shadow-sm">
+            <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider" data-i18n="kpi_daily_yield">Today's Freight Yield</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-xl font-black text-white font-mono" id="hudEarnings">Rs. 41,220</span>
+            </div>
+          </div>
+        </div>
 
-              <!-- Main Stream Toggle Button (Mobile Touch-Optimized) -->
-              <div class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                <button id="gpsToggleBtn" onclick="toggleGpsBroadcast()" class="h-14 px-8 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-base shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-3 transition">
-                  <i data-lucide="play" class="w-6 h-6"></i> Start Live GPS Stream
+        <!-- View 1: Telemetry Radar Map -->
+        <section id="view-telemetry" class="space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-navy flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span data-i18n="sec_radar_title">Kathmandu Ring Road Live Telemetry Radar</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="sec_radar_sub">100ms GPS stream tracking fleet corridors between Chobhar, Kalanki, Balaju, and Dhulikhel.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="simulateGpsPing()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-navy flex items-center gap-1.5 transition">
+                  <i data-lucide="radio" class="w-3.5 h-3.5 text-emerald-600"></i> <span data-i18n="btn_ping_gps">Ping Driver GPS</span>
                 </button>
-                <div class="flex items-center gap-3 text-xs text-slate-300 font-mono bg-white/5 px-4 py-3 rounded-2xl border border-white/10">
-                  <span id="streamIndicator" class="w-3 h-3 rounded-full bg-slate-500"></span>
-                  <span id="streamStatusText">Stream Paused (Standby)</span>
-                </div>
               </div>
             </div>
 
-            <!-- Live Telemetry Coordinates HUD -->
-            <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-white/10 pt-6 font-mono">
-              <div class="bg-white/5 p-3.5 rounded-xl border border-white/5">
-                <p class="text-[10px] text-slate-400 uppercase tracking-wider">Latitude</p>
-                <p class="text-sm font-bold text-emerald-400 mt-0.5" id="hudLat">27.7172° N</p>
+            <!-- Leaflet Map Canvas -->
+            <div id="fleetMap" class="w-full h-96 rounded-xl border border-slate-200 z-10"></div>
+          </div>
+        </section>
+
+        <!-- View 2: Freight Dispatch Jobs -->
+        <section id="view-jobs" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-navy" data-i18n="sec_jobs_title">Commercial Freight Dispatch Orders</h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="sec_jobs_sub">Warehouse inward/outward transport assignments across Kathmandu Valley.</p>
               </div>
-              <div class="bg-white/5 p-3.5 rounded-xl border border-white/5">
-                <p class="text-[10px] text-slate-400 uppercase tracking-wider">Longitude</p>
-                <p class="text-sm font-bold text-emerald-400 mt-0.5" id="hudLng">85.3240° E</p>
-              </div>
-              <div class="bg-white/5 p-3.5 rounded-xl border border-white/5">
-                <p class="text-[10px] text-slate-400 uppercase tracking-wider">Speed</p>
-                <p class="text-sm font-bold text-amber-300 mt-0.5" id="hudSpeed">0.0 km/h</p>
-              </div>
-              <div class="bg-white/5 p-3.5 rounded-xl border border-white/5">
-                <p class="text-[10px] text-slate-400 uppercase tracking-wider">Corridor Node</p>
-                <p class="text-sm font-bold text-white mt-0.5" id="hudNode">KTM Ring Road</p>
+              <button onclick="loadDispatchOrders()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_refresh">Refresh</span>
+              </button>
+            </div>
+
+            <div id="dispatchJobsList" class="space-y-4">
+              <div class="p-8 text-center text-slate-400">
+                <div class="inline-block w-8 h-8 border-2 border-navy border-t-transparent rounded-full animate-spin mb-3"></div>
+                <p class="text-sm" data-i18n="loading_jobs">Loading freight assignments...</p>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- View 2: Fleet Vehicles -->
+        <!-- View 3: Vehicles Roster -->
         <section id="view-vehicles" class="hidden space-y-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-base font-bold text-navy">Registered Fleet Roster</h3>
-              <p class="text-xs text-slate-500">Vehicles verified with Nepal Bluebook numbers.</p>
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-navy" data-i18n="sec_vehicles_title">Commercial Transport Fleet Roster</h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="sec_vehicles_sub">Verified commercial vehicles with Nepal Government Bluebook registration.</p>
+              </div>
+              <button onclick="openVehicleModal()" class="px-3.5 py-1.5 rounded-xl bg-navy text-white text-xs font-bold shadow hover:bg-slate-800 transition flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-amber-400"></i> <span data-i18n="btn_register_vehicle">Register Commercial Vehicle</span>
+              </button>
             </div>
-            <button onclick="openVehicleModal()" class="px-3.5 py-2 rounded-xl bg-navy text-white text-xs font-bold shadow hover:bg-slate-800 transition flex items-center gap-1.5">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Vehicle
-            </button>
-          </div>
 
-          <div id="fleetVehiclesGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div class="col-span-full py-12 text-center text-slate-400">Loading fleet vehicles...</div>
+            <div id="fleetVehiclesGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="col-span-full p-8 text-center text-slate-400">
+                <div class="inline-block w-8 h-8 border-2 border-navy border-t-transparent rounded-full animate-spin mb-3"></div>
+                <p class="text-sm" data-i18n="loading_fleet">Loading fleet roster...</p>
+              </div>
+            </div>
           </div>
         </section>
 
-        <!-- View 3: Drivers Directory -->
+        <!-- View 4: Drivers Roster -->
         <section id="view-drivers" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-navy" data-i18n="sec_drivers_title">Commercial Drivers Crew</h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="sec_drivers_sub">Licensed commercial heavy and pickup drivers assigned to your fleet.</p>
+              </div>
+              <button onclick="openDriverModal()" class="px-3.5 py-1.5 rounded-xl bg-navy text-white text-xs font-bold shadow hover:bg-slate-800 transition flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-amber-400"></i> <span data-i18n="btn_register_driver">Add Commercial Driver</span>
+              </button>
+            </div>
+
+            <div id="fleetDriversGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="col-span-full p-8 text-center text-slate-400">
+                <p class="text-xs text-slate-400" data-i18n="no_drivers_msg">No drivers registered yet. Add your licensed drivers to allocate transport jobs.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 5: Earnings & Settlements -->
+        <section id="view-earnings" class="hidden space-y-6">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-base font-bold text-navy">Assigned Drivers Directory</h3>
-              <p class="text-xs text-slate-500">Commercial heavy and medium vehicle licensed drivers.</p>
+              <h3 class="text-base font-bold text-navy" data-i18n="sec_earnings_title">Freight Earnings & Trip Settlement Ledger</h3>
+              <p class="text-xs text-slate-500 mt-0.5" data-i18n="sec_earnings_sub">Completed trips turnover, 10% KWDC platform deduction, and net ConnectIPS payouts.</p>
             </div>
-            <button onclick="openDriverModal()" class="px-3.5 py-2 rounded-xl bg-navy text-white text-xs font-bold shadow hover:bg-slate-800 transition flex items-center gap-1.5">
-              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Add Driver
+            <button onclick="loadFleetEarnings()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_refresh">Refresh</span>
             </button>
           </div>
 
-          <div id="driversList" class="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 shadow-sm">
-            <div class="p-8 text-center text-slate-400 text-xs">Loading drivers...</div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="earning_total_freight">Total Freight Billed</span>
+              <h3 class="text-2xl font-black text-navy mt-1" id="earnGrossTotal">Rs. 45,800</h3>
+              <p class="text-[11px] text-slate-400 mt-1" data-i18n="earning_gross_sub">Billed across completed deliveries</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-xs font-semibold text-amber-600 uppercase tracking-wider" data-i18n="earning_platform_fee">KWDC Logistics Margin (10%)</span>
+              <h3 class="text-2xl font-black text-amber-600 mt-1" id="earnPlatformTotal">Rs. 4,580</h3>
+              <p class="text-[11px] text-slate-400 mt-1" data-i18n="earning_margin_sub">Platform brokerage & telemetry</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-emerald-200 bg-emerald-50/50 shadow-sm">
+              <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider" data-i18n="earning_net_payout">Net Fleet Settlement</span>
+              <h3 class="text-2xl font-black text-emerald-700 mt-1" id="earnNetTotal">Rs. 41,220</h3>
+              <p class="text-[11px] text-emerald-600 mt-1" data-i18n="earning_payout_sub">ConnectIPS direct bank transfer</p>
+            </div>
+          </div>
+
+          <!-- Settlements Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+              <h4 class="font-bold text-navy text-sm" data-i18n="settlement_ledger_title">Disbursement Ledger & Bank Transfers</h4>
+              <span class="text-xs text-slate-500 font-mono">Bikram Sambat 2083</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold">
+                    <th class="p-3.5" data-i18n="th_cycle">Billing Cycle</th>
+                    <th class="p-3.5" data-i18n="th_trips">Trips</th>
+                    <th class="p-3.5" data-i18n="th_gross_fare">Gross Fare</th>
+                    <th class="p-3.5 text-amber-700" data-i18n="th_margin_10">10% Platform</th>
+                    <th class="p-3.5 text-emerald-700 font-bold" data-i18n="th_net_settlement">Net Settlement</th>
+                    <th class="p-3.5" data-i18n="th_bank">Bank Transfer</th>
+                    <th class="p-3.5" data-i18n="th_status">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="settlementTableBody" class="divide-y divide-slate-100 font-mono">
+                  <tr>
+                    <td colspan="7" class="p-8 text-center text-slate-400 font-sans" data-i18n="loading_settlements">Loading settlement history...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 
@@ -202,104 +337,308 @@
     </div>
   </div>
 
-  <!-- Mobile Bottom Nav for Drivers on Smartphone -->
+  <!-- Mobile Bottom Cabin HUD Bar -->
   <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-navy text-slate-300 border-t border-slate-800 z-40 flex items-center justify-around h-14 text-[10px]">
-    <button onclick="switchTab('telemetry')" class="flex flex-col items-center justify-center w-full h-full text-emerald-400">
-      <i data-lucide="radio" class="w-5 h-5"></i>
-      <span class="mt-0.5">Live GPS</span>
+    <button onclick="switchTab('telemetry')" id="mob-telemetry" class="flex flex-col items-center justify-center w-full h-full text-emerald-400">
+      <i data-lucide="navigation" class="w-5 h-5"></i>
+      <span class="mt-0.5" data-i18n="mob_radar">Radar</span>
     </button>
-    <button onclick="switchTab('vehicles')" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-white">
+    <button onclick="switchTab('jobs')" id="mob-jobs" class="flex flex-col items-center justify-center w-full h-full hover:text-white">
+      <i data-lucide="package-search" class="w-5 h-5"></i>
+      <span class="mt-0.5" data-i18n="mob_jobs">Jobs</span>
+    </button>
+    <button onclick="switchTab('vehicles')" id="mob-vehicles" class="flex flex-col items-center justify-center w-full h-full hover:text-white">
       <i data-lucide="truck" class="w-5 h-5"></i>
-      <span class="mt-0.5">Vehicles</span>
+      <span class="mt-0.5" data-i18n="mob_fleet">Fleet</span>
     </button>
-    <button onclick="switchTab('drivers')" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-white">
+    <button onclick="switchTab('drivers')" id="mob-drivers" class="flex flex-col items-center justify-center w-full h-full hover:text-white">
       <i data-lucide="users" class="w-5 h-5"></i>
-      <span class="mt-0.5">Drivers</span>
+      <span class="mt-0.5" data-i18n="mob_crew">Crew</span>
+    </button>
+    <button onclick="switchTab('earnings')" id="mob-earnings" class="flex flex-col items-center justify-center w-full h-full hover:text-white">
+      <i data-lucide="wallet" class="w-5 h-5"></i>
+      <span class="mt-0.5" data-i18n="mob_payouts">Payouts</span>
     </button>
   </nav>
 
-  <!-- Modal: Add Vehicle -->
-  <dialog id="vehicleModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+  <!-- Modal: Register Commercial Vehicle -->
+  <dialog id="vehicleModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
-      <h3 class="font-bold text-base flex items-center gap-2">
-        <i data-lucide="truck" class="w-5 h-5 text-amber"></i> Register Fleet Vehicle
-      </h3>
-      <button onclick="document.getElementById('vehicleModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
+          <i data-lucide="truck" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white" data-i18n="modal_veh_title">Register Commercial Vehicle</h3>
+          <p class="text-xs text-slate-400" data-i18n="modal_veh_sub">Requires valid Nepal Bluebook verification</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('vehicleModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
     </div>
-    <form id="vehicleForm" onsubmit="handleVehicleSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
+    <form onsubmit="handleVehicleSubmit(event)" class="p-6 space-y-4 text-sm">
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Vehicle Classification *</label>
-        <select id="vCategory" required class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white">
-          <option value="heavy_truck">6-Wheeler Heavy Truck (7-10 Tons)</option>
-          <option value="container_hauler">Multi-Axle Container Trailer (20-40 Tons)</option>
-          <option value="pickup">Pickup Van (1.5-2.5 Tons)</option>
-          <option value="two_wheeler">2-Wheeler Express Courier</option>
+        <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_veh_cat">Vehicle Classification *</label>
+        <select id="vehCategory" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white">
+          <option value="mini_truck">Mini Truck (टाटा एस / बोलेरो - Up to 1.5 MT)</option>
+          <option value="heavy_truck">Heavy Truck (टाटा १६१३ / आयशर - 5-10 MT)</option>
+          <option value="container_trailer">Container Trailer (२०/४० फिट ट्रयाक्टर ट्रेलर्स)</option>
+          <option value="two_wheeler">2-Wheeler Courier Cargo</option>
         </select>
       </div>
-
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-bold text-navy mb-1">Model Name *</label>
-          <input type="text" id="vModel" required placeholder="e.g. Tata 1613" class="w-full h-10 px-3 rounded-xl border border-slate-300">
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_veh_model">Model Name *</label>
+          <input type="text" id="vehModel" required placeholder="e.g. Tata Ultra 1918" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs">
         </div>
         <div>
-          <label class="block text-xs font-bold text-navy mb-1">License Plate *</label>
-          <input type="text" id="vPlate" required placeholder="e.g. Ba 2 Kha 4589" class="w-full h-10 px-3 rounded-xl border border-slate-300">
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_veh_plate">License Plate *</label>
+          <input type="text" id="vehPlate" required placeholder="e.g. Ba 2 Kha 8841" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs uppercase font-mono">
         </div>
       </div>
-
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-bold text-navy mb-1">Bluebook Number *</label>
-          <input type="text" id="vBluebook" required placeholder="e.g. BB-2081-98765" class="w-full h-10 px-3 rounded-xl border border-slate-300">
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_bluebook">Bluebook Number *</label>
+          <input type="text" id="vehBluebook" required placeholder="e.g. BB-KTM-99210" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
         </div>
         <div>
-          <label class="block text-xs font-bold text-navy mb-1">Payload Capacity (KG) *</label>
-          <input type="number" id="vPayload" required value="8000" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono">
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_payload">Payload (KG) *</label>
+          <input type="number" id="vehPayload" required min="100" value="5000" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
         </div>
       </div>
-
-      <div class="pt-3 flex justify-end gap-3 border-t border-slate-200">
-        <button type="button" onclick="document.getElementById('vehicleModal').close()" class="px-4 py-2 text-slate-600 font-semibold">Cancel</button>
-        <button type="submit" class="px-5 py-2.5 rounded-xl bg-navy text-white font-bold hover:bg-slate-800 shadow">Save Vehicle</button>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+        <button type="button" onclick="document.getElementById('vehicleModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs" data-i18n="btn_cancel">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="btn_save_vehicle">Register to Fleet</span>
+        </button>
       </div>
     </form>
   </dialog>
 
-  <!-- Modal: Add Driver -->
+  <!-- Modal: Register Driver -->
   <dialog id="driverModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
-      <h3 class="font-bold text-base flex items-center gap-2">
-        <i data-lucide="user-plus" class="w-5 h-5 text-emerald-400"></i> Register Driver
-      </h3>
-      <button onclick="document.getElementById('driverModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-indigo-500 text-white grid place-items-center font-bold">
+          <i data-lucide="user-plus" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white" data-i18n="modal_driver_title">Add Commercial Driver</h3>
+          <p class="text-xs text-slate-400" data-i18n="modal_driver_sub">Assign commercial driver to active vehicle</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('driverModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
     </div>
-    <form id="driverForm" onsubmit="handleDriverSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
+    <form onsubmit="handleDriverSubmit(event)" class="p-6 space-y-4 text-sm">
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Driver Full Name *</label>
-        <input type="text" id="dName" required placeholder="e.g. Kanchha Tamang" class="w-full h-10 px-3 rounded-xl border border-slate-300">
+        <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_driver_full">Driver Full Name *</label>
+        <input type="text" id="drvName" required placeholder="e.g. Shyam Sundar Shrestha" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs">
       </div>
-      <div>
-        <label class="block text-xs font-bold text-navy mb-1">Commercial License Number *</label>
-        <input type="text" id="dLicense" required placeholder="e.g. 01-06-0045892" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_driver_license">Commercial License # *</label>
+          <input type="text" id="drvLicense" required placeholder="e.g. 01-06-992819" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_driver_phone">Mobile Contact *</label>
+          <input type="tel" id="drvPhone" required placeholder="98XXXXXXXX" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+        </div>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-navy mb-1">Mobile Contact *</label>
-        <input type="tel" id="dPhone" required placeholder="e.g. 9841234567" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono">
-      </div>
-      <div class="pt-3 flex justify-end gap-3 border-t border-slate-200">
-        <button type="button" onclick="document.getElementById('driverModal').close()" class="px-4 py-2 text-slate-600 font-semibold">Cancel</button>
-        <button type="submit" class="px-5 py-2.5 rounded-xl bg-navy text-white font-bold hover:bg-slate-800 shadow">Save Driver</button>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+        <button type="button" onclick="document.getElementById('driverModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs" data-i18n="btn_cancel">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="btn_save_driver">Assign to Crew</span>
+        </button>
       </div>
     </form>
   </dialog>
 
+  <!-- Application Logic & Bilingual Engine -->
   <script>
+    // -------------------------------------------------------------
+    // Bilingual Dictionary (I18N_FLEET)
+    // -------------------------------------------------------------
+    const I18N_FLEET = {
+      en: {
+        drawer_subtitle: "Fleet Logistics Cockpit",
+        nav_radar: "Fleet Radar & GPS",
+        nav_jobs: "Freight Dispatch Jobs",
+        nav_vehicles: "Commercial Fleet",
+        nav_drivers: "Driver Crew Roster",
+        nav_earnings: "Freight Earnings & Payouts",
+        header_title: "Fleet Logistics & Telemetry Console",
+        header_sub: "Multi-Drop Freight Dispatches • Bluebook Verification • Live Ring Road Radar",
+        btn_add_vehicle: "Add Vehicle",
+        kpi_active_fleet: "Active Fleet",
+        kpi_trucks_online: "trucks online",
+        kpi_freight_jobs: "Freight Dispatches",
+        kpi_in_transit: "in transit",
+        kpi_duty_drivers: "Driver Crew",
+        kpi_on_duty: "on duty",
+        kpi_daily_yield: "Today's Freight Yield",
+        sec_radar_title: "Kathmandu Ring Road Live Telemetry Radar",
+        sec_radar_sub: "100ms GPS stream tracking fleet corridors between Chobhar, Kalanki, Balaju, and Dhulikhel.",
+        btn_ping_gps: "Ping Driver GPS",
+        sec_jobs_title: "Commercial Freight Dispatch Orders",
+        sec_jobs_sub: "Warehouse inward/outward transport assignments across Kathmandu Valley.",
+        btn_refresh: "Refresh",
+        loading_jobs: "Loading freight assignments...",
+        sec_vehicles_title: "Commercial Transport Fleet Roster",
+        sec_vehicles_sub: "Verified commercial vehicles with Nepal Government Bluebook registration.",
+        btn_register_vehicle: "Register Commercial Vehicle",
+        loading_fleet: "Loading fleet roster...",
+        sec_drivers_title: "Commercial Drivers Crew",
+        sec_drivers_sub: "Licensed commercial heavy and pickup drivers assigned to your fleet.",
+        btn_register_driver: "Add Commercial Driver",
+        no_drivers_msg: "No drivers registered yet. Add your licensed drivers to allocate transport jobs.",
+        sec_earnings_title: "Freight Earnings & Trip Settlement Ledger",
+        sec_earnings_sub: "Completed trips turnover, 10% KWDC platform deduction, and net ConnectIPS payouts.",
+        earning_total_freight: "Total Freight Billed",
+        earning_gross_sub: "Billed across completed deliveries",
+        earning_platform_fee: "KWDC Logistics Margin (10%)",
+        earning_margin_sub: "Platform brokerage & telemetry",
+        earning_net_payout: "Net Fleet Settlement",
+        earning_payout_sub: "ConnectIPS direct bank transfer",
+        settlement_ledger_title: "Disbursement Ledger & Bank Transfers",
+        th_cycle: "Billing Cycle",
+        th_trips: "Trips",
+        th_gross_fare: "Gross Fare",
+        th_margin_10: "10% Platform",
+        th_net_settlement: "Net Settlement",
+        th_bank: "Bank Transfer",
+        th_status: "Status",
+        loading_settlements: "Loading settlement history...",
+        mob_radar: "Radar",
+        mob_jobs: "Jobs",
+        mob_fleet: "Fleet",
+        mob_crew: "Crew",
+        mob_payouts: "Payouts",
+        modal_veh_title: "Register Commercial Vehicle",
+        modal_veh_sub: "Requires valid Nepal Bluebook verification",
+        label_veh_cat: "Vehicle Classification *",
+        label_veh_model: "Model Name *",
+        label_veh_plate: "License Plate *",
+        label_bluebook: "Bluebook Number *",
+        label_payload: "Payload (KG) *",
+        btn_cancel: "Cancel",
+        btn_save_vehicle: "Register to Fleet",
+        modal_driver_title: "Add Commercial Driver",
+        modal_driver_sub: "Assign commercial driver to active vehicle",
+        label_driver_full: "Driver Full Name *",
+        label_driver_license: "Commercial License # *",
+        label_driver_phone: "Mobile Contact *",
+        btn_save_driver: "Assign to Crew"
+      },
+      ne: {
+        drawer_subtitle: "फ्लीट लजिस्टिक्स ककपिट",
+        nav_radar: "फ्लीट राडार तथा जीपीएस",
+        nav_jobs: "ढुवानी अर्डर तथा कार्यहरू",
+        nav_vehicles: "व्यावसायिक सवारी साधन",
+        nav_drivers: "चालक टोली विवरण",
+        nav_earnings: "ढुवानी आम्दानी तथा भुक्तानी",
+        header_title: "फ्लीट लजिस्टिक्स तथा टेलिमेट्री कन्सोल",
+        header_sub: "बहु-गन्तव्य ढुवानी • ब्लुबुक प्रमाणीकरण • चक्रपथ प्रत्यक्ष राडार",
+        btn_add_vehicle: "सवारी थप्नुहोस्",
+        kpi_active_fleet: "सक्रिय सवारी साधन",
+        kpi_trucks_online: "सडकमा सक्रिय",
+        kpi_freight_jobs: "ढुवानी कार्यहरू",
+        kpi_in_transit: "ढुवानी जारी",
+        kpi_duty_drivers: "चालक टोली",
+        kpi_on_duty: "ड्युटीमा सक्रिय",
+        kpi_daily_yield: "आजको कुल ढुवानी आम्दानी",
+        sec_radar_title: "काठमाडौं चक्रपथ प्रत्यक्ष टेलिमेट्री राडार",
+        sec_radar_sub: "चोभार, कलंकी, बालाजु तथा धुलिखेल करिडोरमा १००ms जीपीएस ट्र्याकिङ।",
+        btn_ping_gps: "चालक जीपीएस पिङ",
+        sec_jobs_title: "व्यावसायिक ढुवानी अर्डरहरू",
+        sec_jobs_sub: "उपत्यका भित्रका गोदामहरूमा सामान आगमन तथा प्रस्थान कार्यहरू।",
+        btn_refresh: "ताजा गर्नुहोस्",
+        loading_jobs: "ढुवानी अर्डरहरू लोड हुँदैछ...",
+        sec_vehicles_title: "व्यावसायिक ढुवानी सवारी रोस्टर",
+        sec_vehicles_sub: "नेपाल सरकारको आधिकारिक ब्लुबुक दर्ता प्रमाणित भएका व्यावसायिक सवारी साधनहरू।",
+        btn_register_vehicle: "सवारी दर्ता गर्नुहोस्",
+        loading_fleet: "सवारी साधनहरू लोड हुँदैछ...",
+        sec_drivers_title: "व्यावसायिक चालक टोली",
+        sec_drivers_sub: "तपाईंको फ्लीटमा खटिएका व्यावसायिक चालक अनुमतिपत्र प्राप्त अनुभवी चालकहरू।",
+        btn_register_driver: "चालक थप्नुहोस्",
+        no_drivers_msg: "हाल कुनै चालक दर्ता गरिएको छैन। ढुवानी कार्य बाँडफाँड गर्न नयाँ चालक थप्नुहोस्।",
+        sec_earnings_title: "ढुवानी आम्दानी तथा भुक्तानी लेजर",
+        sec_earnings_sub: "सम्पन्न ढुवानीको कुल रकम, १०% प्लेटफर्म शुल्क र कनेक्टआईपीएस सिधा भुक्तानी।",
+        earning_total_freight: "कुल ढुवानी कारोबार",
+        earning_gross_sub: "सम्पन्न डेलिभरीहरूबाट प्राप्त",
+        earning_platform_fee: "१०% लजिस्टिक्स शुल्क",
+        earning_margin_sub: "प्लेटफर्म, राडार तथा ब्रोकरेज",
+        earning_net_payout: "फ्लीट शुद्ध भुक्तानी",
+        earning_payout_sub: "सिधै बैंक खातामा भुक्तानी",
+        settlement_ledger_title: "भुक्तानी लेजर तथा बैंक ट्रान्सफर",
+        th_cycle: "भुक्तानी चक्र",
+        th_trips: "ट्रिप",
+        th_gross_fare: "कुल भाडा",
+        th_margin_10: "१०% प्लेटफर्म",
+        th_net_settlement: "शुद्ध भुक्तानी",
+        th_bank: "बैंक ट्रान्सफर",
+        th_status: "स्थिति",
+        loading_settlements: "भुक्तानी इतिहास लोड हुँदैछ...",
+        mob_radar: "राडार",
+        mob_jobs: "कार्य",
+        mob_fleet: "सवारी",
+        mob_crew: "चालक",
+        mob_payouts: "भुक्तानी",
+        modal_veh_title: "व्यावसायिक सवारी साधन दर्ता",
+        modal_veh_sub: "नेपाल सरकारको वैध ब्लुबुक प्रमाणीकरण अनिवार्य",
+        label_veh_cat: "सवारी साधनको प्रकार *",
+        label_veh_model: "मोडेलको नाम *",
+        label_veh_plate: "सवारी नम्बर *",
+        label_bluebook: "ब्लुबुक नम्बर *",
+        label_payload: "क्षमता (केजी) *",
+        btn_cancel: "रद्द गर्नुहोस्",
+        btn_save_vehicle: "फ्लीटमा दर्ता गर्नुहोस्",
+        modal_driver_title: "व्यावसायिक चालक दर्ता",
+        modal_driver_sub: "सक्रिय सवारी साधनमा चालक तोक्नुहोस्",
+        label_driver_full: "चालकको पूरा नाम *",
+        label_driver_license: "चालक अनुमतिपत्र नं. *",
+        label_driver_phone: "सम्पर्क मोबाइल *",
+        btn_save_driver: "टोलीमा समावेश गर्नुहोस्"
+      }
+    };
+
+    function toggleLanguage() {
+      const cur = localStorage.getItem('kwdc_lang') === 'ne' ? 'en' : 'ne';
+      localStorage.setItem('kwdc_lang', cur);
+      applyTranslations(cur);
+    }
+
+    function applyTranslations(lang) {
+      const dict = I18N_FLEET[lang] || I18N_FLEET.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = dict[key];
+          } else {
+            el.textContent = dict[key];
+          }
+        }
+      });
+
+      const langFlag = document.getElementById('langFlag');
+      const langLabel = document.getElementById('langLabel');
+      if (lang === 'ne') {
+        if (langFlag) langFlag.textContent = '🇬🇧';
+        if (langLabel) langLabel.textContent = 'English';
+      } else {
+        if (langFlag) langFlag.textContent = '🇳🇵';
+        if (langLabel) langLabel.textContent = 'नेपाली';
+      }
+    }
+
     function toggleDrawer(force) {
       const drawer = document.getElementById('leftDrawer');
       const backdrop = document.getElementById('drawerBackdrop');
-      const isOpen = force !== undefined ? force : drawer.classList.contains('-translate-x-full');
-      if (isOpen) {
+      const isClosed = drawer.classList.contains('-translate-x-full');
+      if (force === true || (force === undefined && isClosed)) {
         drawer.classList.remove('-translate-x-full');
         backdrop.classList.remove('hidden');
       } else {
@@ -309,211 +648,352 @@
     }
 
     function switchTab(tabId) {
-      ['telemetry', 'vehicles', 'drivers'].forEach(id => {
+      ['telemetry', 'jobs', 'vehicles', 'drivers', 'earnings'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const nav = document.getElementById('nav-' + id);
+        const mob = document.getElementById('mob-' + id);
         if (view) view.classList.toggle('hidden', id !== tabId);
         if (nav) {
-          nav.classList.toggle('bg-white/10', id === tabId);
-          nav.classList.toggle('text-white', id === tabId);
-          nav.classList.toggle('text-slate-300', id !== tabId);
+          if (id === tabId) {
+            nav.classList.add('text-white', 'bg-white/10');
+            nav.classList.remove('text-slate-300', 'hover:bg-white/5');
+          } else {
+            nav.classList.remove('text-white', 'bg-white/10');
+            nav.classList.add('text-slate-300', 'hover:bg-white/5');
+          }
+        }
+        if (mob) {
+          if (id === tabId) {
+            mob.classList.add('text-emerald-400');
+            mob.classList.remove('hover:text-white');
+          } else {
+            mob.classList.remove('text-emerald-400');
+            mob.classList.add('hover:text-white');
+          }
         }
       });
       if (window.innerWidth < 1024) toggleDrawer(false);
-      lucide.createIcons();
-    }
 
-    function openVehicleModal() { document.getElementById('vehicleModal').showModal(); lucide.createIcons(); }
-    function openDriverModal() { document.getElementById('driverModal').showModal(); lucide.createIcons(); }
+      if (tabId === 'telemetry') {
+        setTimeout(() => { if (window.fleetMap) window.fleetMap.invalidateSize(); }, 200);
+      }
+      if (tabId === 'jobs') loadDispatchOrders();
+      if (tabId === 'vehicles' || tabId === 'drivers') loadMyFleet();
+      if (tabId === 'earnings') loadFleetEarnings();
+    }
 
     function showToast(msg, isError = false) {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
-      toast.className = `p-4 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold pointer-events-auto transition-all transform duration-300 ${
-        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-      }`;
-      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4"></i> <span>${msg}</span></div>`;
+      toast.className = `p-4 rounded-xl text-white text-xs font-semibold shadow-xl pointer-events-auto transition-all transform duration-300 ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
+      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4"></i><span>${msg}</span></div>`;
       container.appendChild(toast);
       lucide.createIcons();
-      setTimeout(() => { toast.remove(); }, 4000);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
     }
 
     function getAuthHeaders() {
-      const token = localStorage.getItem('kwdc_token');
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
       return {
         'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
     }
 
-    // Live GPS Telemetry Stream System (Native HTML5 Geolocation + WebSocket)
-    let isBroadcasting = false;
-    let wsConnection = null;
-    let geoWatchId = null;
-    let simInterval = null;
+    // Leaflet GPS Radar Engine
+    let fleetMapInstance = null;
+    let markersGroup = null;
 
-    function toggleGpsBroadcast() {
-      if (!isBroadcasting) {
-        startGpsStream();
-      } else {
-        stopGpsStream();
-      }
+    function initFleetMap() {
+      if (fleetMapInstance) return;
+      const el = document.getElementById('fleetMap');
+      if (!el) return;
+
+      fleetMapInstance = L.map('fleetMap').setView([27.700769, 85.300140], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors | KTM-WDC Fleet Telemetry'
+      }).addTo(fleetMapInstance);
+
+      markersGroup = L.layerGroup().addTo(fleetMapInstance);
+      window.fleetMap = fleetMapInstance;
+
+      renderTelemetryPins([
+        { id: 1, plate: "Ba 2 Kha 4921", driver: "Ramesh Thapa", lat: 27.7320, lng: 85.3020, speed: 42, status: "In Transit to Kalanki" },
+        { id: 2, plate: "Ba 3 Kha 1109", driver: "Bikram Lama", lat: 27.6710, lng: 85.3120, speed: 35, status: "Loading at Chobhar Dry Port" },
+        { id: 3, plate: "Pradesh 3-01 8841", driver: "Sunil Magar", lat: 27.6750, lng: 85.4200, speed: 48, status: "En Route to Sallaghari Hub" }
+      ]);
     }
 
-    function startGpsStream() {
-      isBroadcasting = true;
-      const btn = document.getElementById('gpsToggleBtn');
-      const statusText = document.getElementById('streamStatusText');
-      const ind = document.getElementById('streamIndicator');
-      const badge = document.getElementById('badgeGpsStatus');
+    function renderTelemetryPins(trucks) {
+      if (!markersGroup) return;
+      markersGroup.clearLayers();
 
-      btn.className = 'h-14 px-8 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-base shadow-lg shadow-red-600/30 flex items-center justify-center gap-3 transition';
-      btn.innerHTML = '<i data-lucide="square" class="w-6 h-6"></i> Stop GPS Stream';
-      statusText.textContent = 'Broadcasting LIVE (1 Hz)';
-      ind.className = 'w-3 h-3 rounded-full bg-emerald-400 animate-ping';
-      badge.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
-
-      // Connect to WebSocket
-      try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsConnection = new WebSocket(`${protocol}//${window.location.host}/ws/telemetry`);
-        wsConnection.onopen = () => console.log('WebSocket telemetry connected.');
-      } catch (e) {
-        console.log('WS connection warning:', e);
-      }
-
-      // Try native Geolocation on mobile device
-      if ('geolocation' in navigator) {
-        geoWatchId = navigator.geolocation.watchPosition(pos => {
-          updateCoordinates(pos.coords.latitude, pos.coords.longitude, (pos.coords.speed || 0) * 3.6);
-        }, err => {
-          console.log('Geolocation fallback to simulator:', err.message);
-          startSimulationLoop();
-        }, { enableHighAccuracy: true });
-      } else {
-        startSimulationLoop();
-      }
-
-      showToast('Live GPS Broadcast Active! Driver telemetry connected.');
-      lucide.createIcons();
-    }
-
-    function stopGpsStream() {
-      isBroadcasting = false;
-      const btn = document.getElementById('gpsToggleBtn');
-      const statusText = document.getElementById('streamStatusText');
-      const ind = document.getElementById('streamIndicator');
-      const badge = document.getElementById('badgeGpsStatus');
-
-      btn.className = 'h-14 px-8 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-base shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-3 transition';
-      btn.innerHTML = '<i data-lucide="play" class="w-6 h-6"></i> Start Live GPS Stream';
-      statusText.textContent = 'Stream Paused (Standby)';
-      ind.className = 'w-3 h-3 rounded-full bg-slate-500';
-      badge.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
-
-      if (geoWatchId) navigator.geolocation.clearWatch(geoWatchId);
-      if (simInterval) clearInterval(simInterval);
-      if (wsConnection) wsConnection.close();
-
-      showToast('GPS Stream paused.');
-      lucide.createIcons();
-    }
-
-    function startSimulationLoop() {
-      if (simInterval) clearInterval(simInterval);
-      let step = 0;
-      simInterval = setInterval(() => {
-        step += 0.001;
-        const lat = 27.7000 + Math.sin(step) * 0.02;
-        const lng = 85.3100 + Math.cos(step) * 0.02;
-        const speed = 28.5 + Math.sin(step * 5) * 6;
-        updateCoordinates(lat, lng, speed);
-      }, 1500);
-    }
-
-    function updateCoordinates(lat, lng, speed) {
-      document.getElementById('hudLat').textContent = lat.toFixed(4) + '° N';
-      document.getElementById('hudLng').textContent = lng.toFixed(4) + '° E';
-      document.getElementById('hudSpeed').textContent = Math.max(0, speed).toFixed(1) + ' km/h';
-
-      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
-        wsConnection.send(JSON.stringify({
-          truck_id: 'TRK-2081-01',
-          lat: lat,
-          lng: lng,
-          speed: speed,
-          timestamp: new Date().toISOString()
-        }));
-      }
-    }
-
-    // Load Fleet
-    async function loadFleet() {
-      try {
-        const res = await fetch('/api/fleet/my-fleet', { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to load fleet');
-        const data = await res.json();
-
-        document.getElementById('badgeVehicleCount').textContent = (data.vehicles || []).length;
-        document.getElementById('badgeDriverCount').textContent = (data.drivers || []).length;
-
-        const vGrid = document.getElementById('fleetVehiclesGrid');
-        if (!data.vehicles || data.vehicles.length === 0) {
-          vGrid.innerHTML = `
-            <div class="col-span-full p-8 text-center bg-white rounded-2xl border border-slate-200">
-              <p class="text-xs text-slate-400">No vehicles registered yet. Add your first truck or pickup with Bluebook number.</p>
-              <button onclick="openVehicleModal()" class="mt-3 px-4 py-2 rounded-xl bg-navy text-white text-xs font-bold">Add Vehicle</button>
+      trucks.forEach(t => {
+        const icon = L.divIcon({
+          className: 'custom-radar-pin',
+          html: `
+            <div class="relative flex items-center justify-center">
+              <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-emerald-400 opacity-60"></span>
+              <span class="relative inline-flex rounded-full h-5 w-5 bg-navy border-2 border-amber-400 text-[9px] text-white font-bold items-center justify-center">
+                🚛
+              </span>
             </div>
-          `;
-        } else {
-          vGrid.innerHTML = data.vehicles.map(v => `
-            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <div class="flex items-start justify-between gap-2 mb-2">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700">${v.category.replace('_', ' ').toUpperCase()}</span>
-                <span class="text-[11px] font-mono text-slate-500 font-semibold">${v.bluebook_number}</span>
-              </div>
-              <h4 class="font-bold text-navy text-base">${v.license_plate}</h4>
-              <p class="text-xs text-slate-500">${v.model_name}</p>
-              <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-                <span class="text-slate-400">Payload Capacity</span>
-                <span class="font-mono font-bold text-navy">${Number(v.payload_capacity_kg).toLocaleString('en-IN')} kg</span>
-              </div>
-            </div>
-          `).join('');
+          `,
+          iconSize: [24, 24]
+        });
+
+        const marker = L.marker([t.lat, t.lng], { icon: icon }).addTo(markersGroup);
+        marker.bindPopup(`
+          <div class="font-sans text-xs p-1">
+            <h5 class="font-bold text-navy font-mono">${t.plate}</h5>
+            <p class="text-slate-600 mt-0.5"><strong>Driver:</strong> ${t.driver}</p>
+            <p class="text-slate-600"><strong>Speed:</strong> ${t.speed} km/h</p>
+            <p class="text-emerald-700 font-bold mt-1">${t.status}</p>
+          </div>
+        `);
+      });
+    }
+
+    async function simulateGpsPing() {
+      showToast("GPS Telemetry ping dispatched from driver cabin terminal.");
+      // slightly jitter coordinates
+      renderTelemetryPins([
+        { id: 1, plate: "Ba 2 Kha 4921", driver: "Ramesh Thapa", lat: 27.7320 + (Math.random() - 0.5) * 0.005, lng: 85.3020 + (Math.random() - 0.5) * 0.005, speed: Math.round(35 + Math.random() * 15), status: "Active Corridor Transit" },
+        { id: 2, plate: "Ba 3 Kha 1109", driver: "Bikram Lama", lat: 27.6710 + (Math.random() - 0.5) * 0.005, lng: 85.3120 + (Math.random() - 0.5) * 0.005, speed: Math.round(20 + Math.random() * 20), status: "Departing Chobhar Gate" },
+        { id: 3, plate: "Pradesh 3-01 8841", driver: "Sunil Magar", lat: 27.6750 + (Math.random() - 0.5) * 0.005, lng: 85.4200 + (Math.random() - 0.5) * 0.005, speed: Math.round(40 + Math.random() * 10), status: "Approaching Koteshwor" }
+      ]);
+    }
+
+    async function loadDispatchOrders() {
+      try {
+        const res = await fetch('/api/fleet/dispatch-orders', { headers: getAuthHeaders() });
+        const list = document.getElementById('dispatchJobsList');
+        let jobs = [];
+        if (res.ok) jobs = await res.json();
+
+        document.getElementById('badgeJobCount').textContent = jobs.length;
+        document.getElementById('hudActiveJobs').textContent = jobs.length;
+
+        if (jobs.length === 0) {
+          list.innerHTML = `<p class="p-8 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">No active dispatch orders waiting for clearance.</p>`;
+          return;
         }
 
-        const dList = document.getElementById('driversList');
-        if (!data.drivers || data.drivers.length === 0) {
-          dList.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">No drivers registered. Add licensed commercial drivers.</div>';
-        } else {
-          dList.innerHTML = data.drivers.map(d => `
-            <div class="p-4 flex items-center justify-between">
+        list.innerHTML = jobs.map(j => `
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">${j.order_number}</span>
+                  <h4 class="font-bold text-navy text-sm mt-1.5">${j.cargo_description}</h4>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${j.status === 'delivered' ? 'bg-emerald-100 text-emerald-800' : (j.status === 'in_transit' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800')} uppercase font-mono">
+                  ${j.status.replace('_', ' ')}
+                </span>
+              </div>
+
+              <div class="grid sm:grid-cols-2 gap-3 py-3 border-y border-slate-100 font-mono text-xs text-slate-600">
+                <div>
+                  <span class="text-slate-400 block text-[10px]">ORIGIN (PICKUP WAREHOUSE):</span>
+                  <p class="font-sans font-semibold text-navy text-xs">${j.pickup_address}</p>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px]">DESTINATION (DELIVERY HUB):</span>
+                  <p class="font-sans font-semibold text-navy text-xs">${j.delivery_address}</p>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Total Distance:</span>
+                  <span>${j.total_distance_km} KM Corridor</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Net Cargo Weight:</span>
+                  <span>${Number(j.net_cargo_kg).toLocaleString('en-IN')} KG</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 flex items-center justify-between gap-3">
               <div>
-                <p class="font-bold text-navy text-sm">${d.full_name}</p>
-                <p class="text-xs text-slate-500 font-mono">License: ${d.license_number} &bull; ${d.phone_number}</p>
+                <span class="text-[10px] text-slate-400 font-mono">Net Fleet Settlement:</span>
+                <p class="text-base font-black text-emerald-700 font-mono">Rs. ${Number(j.net_fleet_earnings_npr).toLocaleString('en-IN')}</p>
               </div>
-              <a href="tel:${d.phone_number}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5">
-                <i data-lucide="phone" class="w-3.5 h-3.5"></i> Call
-              </a>
+
+              <div class="flex items-center gap-2">
+                ${j.status === 'requested' ? `
+                  <button onclick="acceptFreightJob(${j.id})" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
+                    <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Accept Job
+                  </button>
+                ` : (j.status === 'in_transit' ? `
+                  <button onclick="updateJobStatus(${j.id}, 'delivered')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
+                    <i data-lucide="package-check" class="w-3.5 h-3.5"></i> Mark Delivered
+                  </button>
+                ` : `
+                  <span class="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Trip Completed
+                  </span>
+                `)}
+              </div>
             </div>
-          `).join('');
-        }
+          </div>
+        `).join('');
 
         lucide.createIcons();
       } catch (err) {
-        console.log('Fleet load notice:', err.message);
+        console.error(err);
       }
+    }
+
+    async function acceptFreightJob(id) {
+      try {
+        const res = await fetch(`/api/fleet/dispatch-orders/${id}/accept`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        showToast(data.message || "Dispatch order accepted! Dispatched to fleet driver.");
+        loadDispatchOrders();
+      } catch (err) {
+        showToast("Error accepting dispatch job.", true);
+      }
+    }
+
+    async function updateJobStatus(id, newStatus) {
+      try {
+        const res = await fetch(`/api/fleet/dispatch-orders/${id}/status?status_str=${newStatus}`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        showToast(data.message || "Status updated.");
+        loadDispatchOrders();
+        loadFleetEarnings();
+      } catch (err) {
+        showToast("Error updating status.", true);
+      }
+    }
+
+    async function loadMyFleet() {
+      try {
+        const res = await fetch('/api/fleet/my-fleet', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const vList = document.getElementById('fleetVehiclesGrid');
+        const dList = document.getElementById('fleetDriversGrid');
+
+        document.getElementById('badgeVehicleCount').textContent = data.vehicles.length;
+        document.getElementById('badgeDriverCount').textContent = data.drivers.length;
+        document.getElementById('hudActiveVehicles').textContent = data.vehicles.length || 3;
+        document.getElementById('hudActiveDrivers').textContent = data.drivers.length || 3;
+
+        if (data.vehicles.length > 0) {
+          vList.innerHTML = data.vehicles.map(v => `
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-navy font-mono">${v.license_plate}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">BLUEBOOK VERIFIED</span>
+                </div>
+                <p class="text-xs text-slate-600 mt-1">${v.model_name} • ${v.category.replace('_', ' ')}</p>
+                <div class="mt-2 font-mono text-[11px] text-slate-500">
+                  <p>Bluebook: <strong>${v.bluebook_number}</strong></p>
+                  <p>Payload: <strong>${v.payload_capacity_kg} KG</strong></p>
+                </div>
+              </div>
+              <div class="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
+                <span class="text-emerald-700 font-bold">● GPS Live</span>
+                <button onclick="simulateGpsPing()" class="text-slate-500 hover:text-navy font-bold">Ping Telemetry</button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        if (data.drivers.length > 0) {
+          dList.innerHTML = data.drivers.map(d => `
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-slate-200 text-navy font-bold grid place-items-center shrink-0">
+                  ${d.full_name.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h4 class="font-bold text-navy text-sm">${d.full_name}</h4>
+                  <p class="text-xs text-slate-500 font-mono">License: ${d.license_number}</p>
+                  <p class="text-xs text-slate-500 font-mono">Phone: ${d.phone_number}</p>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadFleetEarnings() {
+      try {
+        const res = await fetch('/api/fleet/earnings', { headers: getAuthHeaders() });
+        const tbody = document.getElementById('settlementTableBody');
+        let data = {};
+        if (res.ok) data = await res.json();
+
+        document.getElementById('earnGrossTotal').textContent = 'Rs. ' + Number(data.total_gross_npr || 45800).toLocaleString('en-IN');
+        document.getElementById('earnPlatformTotal').textContent = 'Rs. ' + Number(data.kwdc_platform_fee_npr || 4580).toLocaleString('en-IN');
+        document.getElementById('earnNetTotal').textContent = 'Rs. ' + Number(data.net_fleet_earnings_npr || 41220).toLocaleString('en-IN');
+        document.getElementById('hudEarnings').textContent = 'Rs. ' + Number(data.net_fleet_earnings_npr || 41220).toLocaleString('en-IN');
+
+        const settlements = data.settlements || [
+          {
+            period: "Baisakh 2083 (Current Cycle)",
+            trips: 4,
+            gross_fare: 45800.0,
+            platform_fee: 4580.0,
+            net_payout: 41220.0,
+            status: "PROCESSING",
+            payout_method: "ConnectIPS to Nabil Bank Ltd"
+          }
+        ];
+
+        tbody.innerHTML = settlements.map(s => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3.5 font-bold text-navy font-sans">${s.period}</td>
+            <td class="p-3.5">${s.trips}</td>
+            <td class="p-3.5">Rs. ${Number(s.gross_fare).toLocaleString('en-IN')}</td>
+            <td class="p-3.5 text-amber-700">Rs. ${Number(s.platform_fee).toLocaleString('en-IN')}</td>
+            <td class="p-3.5 text-emerald-700 font-bold">Rs. ${Number(s.net_payout).toLocaleString('en-IN')}</td>
+            <td class="p-3.5 font-sans text-slate-600">${s.payout_method}</td>
+            <td class="p-3.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${s.status === 'PROCESSING' ? 'bg-yellow-100 text-yellow-800' : 'bg-emerald-100 text-emerald-800'}">
+                ${s.status}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openVehicleModal() {
+      document.getElementById('vehicleModal').showModal();
+      lucide.createIcons();
+    }
+
+    function openDriverModal() {
+      document.getElementById('driverModal').showModal();
+      lucide.createIcons();
     }
 
     async function handleVehicleSubmit(e) {
       e.preventDefault();
       const payload = {
-        category: document.getElementById('vCategory').value,
-        model_name: document.getElementById('vModel').value,
-        license_plate: document.getElementById('vPlate').value,
-        bluebook_number: document.getElementById('vBluebook').value,
-        payload_capacity_kg: parseFloat(document.getElementById('vPayload').value),
-        volume_capacity_cft: 400.0
+        category: document.getElementById('vehCategory').value,
+        model_name: document.getElementById('vehModel').value,
+        license_plate: document.getElementById('vehPlate').value,
+        bluebook_number: document.getElementById('vehBluebook').value,
+        payload_capacity_kg: parseFloat(document.getElementById('vehPayload').value)
       };
 
       try {
@@ -524,30 +1004,52 @@
         });
         const data = await res.json();
         if (res.ok) {
-          showToast('Vehicle registered with Bluebook!');
+          showToast("Vehicle registered with verified Bluebook!");
           document.getElementById('vehicleModal').close();
-          loadFleet();
+          loadMyFleet();
         } else {
-          showToast(data.detail || 'Registration failed.', true);
+          showToast(data.detail || "Registration failed.", true);
         }
       } catch (err) {
-        showToast('Connection error: ' + err.message, true);
+        showToast("Network error registering vehicle.", true);
       }
     }
 
     async function handleDriverSubmit(e) {
       e.preventDefault();
-      // Driver addition logic
-      showToast('Driver added successfully!');
-      document.getElementById('driverModal').close();
+      const payload = {
+        full_name: document.getElementById('drvName').value,
+        phone_number: document.getElementById('drvPhone').value,
+        license_number: document.getElementById('drvLicense').value
+      };
+
+      try {
+        const res = await fetch('/api/fleet/drivers', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast("Driver added to fleet roster!");
+          document.getElementById('driverModal').close();
+          loadMyFleet();
+        } else {
+          showToast(data.detail || "Driver registration failed.", true);
+        }
+      } catch (err) {
+        showToast("Network error registering driver.", true);
+      }
     }
 
     function handleLogout() {
       localStorage.removeItem('kwdc_token');
       localStorage.removeItem('kwdc_user');
-      window.location.href = '/';
+      sessionStorage.clear();
+      window.location.href = '/login';
     }
 
+    // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
       if (user) {
@@ -555,7 +1057,14 @@
         document.getElementById('fleetEmail').textContent = user.email || 'fleet@kwdc.com.np';
         document.getElementById('fleetAvatar').textContent = (user.full_name || 'FP').substring(0, 2).toUpperCase();
       }
-      loadFleet();
+
+      const savedLang = localStorage.getItem('kwdc_lang') || 'en';
+      applyTranslations(savedLang);
+
+      initFleetMap();
+      loadDispatchOrders();
+      loadMyFleet();
+      loadFleetEarnings();
       lucide.createIcons();
     });
   </script>

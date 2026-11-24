@@ -414,3 +414,40 @@ def get_owner_active_leases(
             "status": l.status.value
         })
     return results
+
+@router.get("/my-payouts")
+def get_owner_payout_statements(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns monthly rental payout statements for the authenticated property owner.
+    90% Net disbursement after deducting 10% KWDC platform margin.
+    """
+    warehouses = db.query(Warehouse).filter(Warehouse.owner_id == current_user.id).all()
+    warehouse_ids = [w.id for w in warehouses]
+    if not warehouse_ids:
+        return []
+
+    leases = db.query(WarehouseRequest).filter(
+        WarehouseRequest.warehouse_id.in_(warehouse_ids)
+    ).order_by(WarehouseRequest.created_at.desc()).all()
+
+    results = []
+    for l in leases:
+        gross_rent = l.monthly_base_rent or 0.0
+        margin_fee = round(gross_rent * 0.10, 2)
+        net_owner_payout = round(gross_rent - margin_fee, 2)
+        is_paid = l.invoice and l.invoice.payment_status == PaymentStatus.PAID
+        results.append({
+            "lease_number": f"KWDC-LEASE-{l.id:04d}",
+            "warehouse_title": l.warehouse.title if l.warehouse else "Storage Facility",
+            "allocated_sqft": l.allocated_billed_sqft,
+            "monthly_gross_rent": gross_rent,
+            "platform_fee_10pct": margin_fee,
+            "net_payout_90pct": net_owner_payout,
+            "payout_status": "DISBURSED" if is_paid else "SCHEDULED_EOM",
+            "settlement_channel": "ConnectIPS / Direct Bank",
+            "created_at": l.created_at.strftime("%Y-%m-%d")
+        })
+    return results

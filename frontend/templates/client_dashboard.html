@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Commercial Client Hub | KTM-WDC Nepal</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <script>
     tailwind.config = {
@@ -14,11 +17,16 @@
             navy: '#0f172a',
             amber: '#f59e0b',
             nepal: '#dc2626'
+          },
+          fontFamily: {
+            sans: ['Geist', 'system-ui', 'sans-serif'],
+            mono: ['Geist Mono', 'monospace']
           }
         }
       }
     }
   </script>
+  <style> body { font-family: 'Geist', sans-serif; } </style>
 </head>
 <body class="bg-slate-100 text-slate-900 antialiased font-sans pb-16 lg:pb-0">
   <!-- Mobile Drawer Backdrop -->
@@ -38,7 +46,7 @@
               <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
               <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
             </div>
-            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">Commercial Client Hub</p>
+            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5" data-i18n="drawer_subtitle">Commercial Client Hub</p>
           </div>
         </a>
         <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
@@ -49,25 +57,25 @@
       <!-- Navigation Drawer Items -->
       <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm">
         <button type="button" onclick="switchTab('catalog')" id="nav-catalog" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-white bg-white/10">
-          <span class="flex items-center gap-3"><i data-lucide="search" class="w-4 h-4 text-amber-400"></i> Available Storage Catalog</span>
+          <span class="flex items-center gap-3"><i data-lucide="search" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_catalog">Available Storage Catalog</span></span>
           <span id="badgeCatalogCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
         </button>
 
         <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> My Active Leases</span>
+          <span class="flex items-center gap-3"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_bookings">My Active Leases</span></span>
           <span id="badgeActiveLeaseCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
         </button>
 
         <button type="button" onclick="switchTab('calculator')" id="nav-calculator" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="calculator" class="w-4 h-4 text-sky-400"></i> Area & Tariff Estimator
+          <i data-lucide="calculator" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_calculator">Area & Tariff Estimator</span>
         </button>
 
         <button type="button" onclick="switchTab('gatepass')" id="nav-gatepass" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="qr-code" class="w-4 h-4 text-indigo-400"></i> Digital Gate Passes
+          <i data-lucide="qr-code" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_gatepass">Digital Gate Passes</span>
         </button>
 
         <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> IRD Tax Invoices
+          <i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> <span data-i18n="nav_invoices">IRD Tax Invoices</span>
         </button>
       </nav>
 
@@ -99,15 +107,20 @@
             <i data-lucide="menu" class="w-5 h-5"></i>
           </button>
           <div>
-            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle">Commercial Storage Exchange</h1>
-            <p class="text-xs text-slate-500 hidden sm:block">Contract Exact Square Footage • 13% IRD VAT Audited • Digital Gate Clearances</p>
+            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle" data-i18n="header_title">Commercial Storage Marketplace</h1>
+            <p class="text-xs text-slate-500 hidden sm:block" data-i18n="header_sub">Rent Exact Continuous Square Feet • IRD Schedule 13 Invoicing • Zero Block Lock-in</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2 sm:gap-3">
-          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Instant Allocation
-          </span>
+        <div class="flex items-center gap-3">
+          <!-- Bilingual Switcher Pill -->
+          <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
+            <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
+          </button>
+
+          <button onclick="switchTab('calculator')" class="inline-flex items-center gap-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold px-3.5 py-2 text-xs shadow transition">
+            <i data-lucide="calculator" class="w-4 h-4 text-amber-400"></i> <span data-i18n="btn_quick_calc">Tariff Calculator</span>
+          </button>
         </div>
       </header>
 
@@ -117,92 +130,165 @@
       <!-- Main Panels -->
       <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
 
-        <!-- View 1: Available Storage Catalog -->
-        <section id="view-catalog" class="space-y-6">
-          <!-- Filter Controls Card -->
-          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h3 class="font-bold text-navy text-sm sm:text-base flex items-center gap-2">
-                <i data-lucide="filter" class="w-4 h-4 text-amber-600"></i> Search Verified Inventory
-              </h3>
-              <span class="text-xs text-slate-500">Continuous square footage allocation</span>
+        <!-- Continuous Area Guarantee Banner -->
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <span class="w-9 h-9 rounded-xl bg-emerald-600 text-white grid place-items-center shrink-0 mt-0.5">
+              <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            </span>
+            <div>
+              <h4 class="font-bold text-navy text-sm" data-i18n="banner_title">Zero Block Lock-in • Exact Continuous Square Feet Contracting</h4>
+              <p class="text-xs text-slate-600 mt-0.5 leading-relaxed" data-i18n="banner_sub">
+                No artificial 1,000 sq ft blocks or roundups. You contract the exact continuous area needed with transparent monthly tariffs, full loading bay access, and automated IRD VAT invoicing.
+              </p>
             </div>
+          </div>
+          <span class="px-3 py-1.5 rounded-full text-xs font-bold bg-white text-emerald-800 border border-emerald-200 shadow-sm shrink-0" data-i18n="banner_badge">
+            IRD VAT 13% Ready
+          </span>
+        </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- View 1: Catalog -->
+        <section id="view-catalog" class="space-y-6">
+          <!-- Filter Controls -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3 text-xs w-full sm:w-auto">
               <div>
-                <label class="block text-[11px] font-bold text-slate-600 mb-1">Space Classification</label>
-                <select id="filterType" onchange="loadCatalog()" class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs focus:ring-2 focus:ring-navy">
-                  <option value="">All Space Types</option>
-                  <option value="residential_basement">Residential Basement</option>
-                  <option value="commercial_shutter">Ground Shutter</option>
-                  <option value="covered_godown">Covered Godown</option>
-                  <option value="walled_land_plot">Walled Open Compound</option>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1" data-i18n="filter_district">District / Region</label>
+                <select id="filterDistrict" onchange="applyFilters()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 font-medium text-slate-700">
+                  <option value="ALL">All Kathmandu Valley (सबै उपत्यका)</option>
+                  <option value="Kathmandu">Kathmandu (काठमाडौं)</option>
+                  <option value="Lalitpur">Lalitpur (ललितपुर)</option>
+                  <option value="Bhaktapur">Bhaktapur (भक्तपुर)</option>
                 </select>
               </div>
 
               <div>
-                <label class="block text-[11px] font-bold text-slate-600 mb-1">Minimum Space Needed</label>
-                <div class="relative">
-                  <input type="number" id="filterMinSqft" placeholder="e.g. 1500" oninput="loadCatalog()" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-navy">
-                  <span class="absolute right-3 top-2.5 text-xs text-slate-400">sq ft</span>
-                </div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1" data-i18n="filter_space_type">Space Classification</label>
+                <select id="filterType" onchange="applyFilters()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 font-medium text-slate-700">
+                  <option value="ALL">All Categories (सबै प्रकार)</option>
+                  <option value="dry_storage">Dry Storage (सुख्खा भण्डारण)</option>
+                  <option value="cold_storage">Cold Storage (शीत भण्डार)</option>
+                  <option value="bonded_warehouse">Bonded Warehouse (भन्सार बन्डेड)</option>
+                  <option value="heavy_industrial">Heavy Industrial (भारी औद्योगिक)</option>
+                </select>
               </div>
 
-              <div class="flex items-center pt-5">
-                <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 w-full hover:bg-slate-50 cursor-pointer text-xs">
-                  <input type="checkbox" id="filterColdOnly" onchange="loadCatalog()" class="rounded text-navy focus:ring-navy">
-                  <span class="font-medium text-slate-700">Cold Chain / Chilled Storage</span>
-                </label>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1" data-i18n="filter_min_space">Minimum Space Needed</label>
+                <select id="filterMinSqft" onchange="applyFilters()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 font-medium text-slate-700 font-mono">
+                  <option value="0">Any Size (कुनै पनि)</option>
+                  <option value="1000">&gt; 1,000 sq ft</option>
+                  <option value="3000">&gt; 3,000 sq ft</option>
+                  <option value="5000">&gt; 5,000 sq ft</option>
+                  <option value="10000">&gt; 10,000 sq ft</option>
+                </select>
               </div>
             </div>
+
+            <button onclick="loadCatalog()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_refresh">Refresh Catalog</span>
+            </button>
           </div>
 
           <!-- Catalog Cards Grid -->
-          <div id="clientCatalogGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="col-span-full py-12 text-center text-slate-400">
+          <div id="catalogGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full py-16 text-center text-slate-400">
               <div class="inline-block w-8 h-8 border-2 border-navy border-t-transparent rounded-full animate-spin mb-3"></div>
-              <p class="text-sm">Loading verified storage spaces...</p>
+              <p class="text-sm" data-i18n="loading_catalog">Loading available audited warehouses...</p>
             </div>
           </div>
         </section>
 
-        <!-- View 2: My Active Leases -->
+        <!-- View 2: Active Bookings -->
         <section id="view-bookings" class="hidden space-y-4">
           <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h3 class="text-base font-bold text-navy">My Contracted Storage Facilities</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Real-time status of your reserved square footage, leased rates, and IRD invoices.</p>
-            <div id="clientBookingsList" class="mt-4 divide-y divide-slate-100 text-sm">
-              <p class="text-slate-400 text-center py-8 text-xs">Loading active reservations...</p>
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-navy" data-i18n="sec_active_contracts">Your Active Leases & Storage Space Contracts</h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="sec_active_contracts_sub">Contracted physical spaces, monthly billing schedules, and digital access passes.</p>
+              </div>
+              <button onclick="loadMyBookings()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_refresh">Refresh</span>
+              </button>
+            </div>
+            <div id="clientBookingsList" class="divide-y divide-slate-100 text-sm">
+              <p class="text-slate-400 py-8 text-center text-xs" data-i18n="no_active_leases">No storage contracts currently active. Explore the catalog to contract space.</p>
             </div>
           </div>
         </section>
 
-        <!-- View 3: Calculator -->
-        <section id="view-calculator" class="hidden space-y-4">
-          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm max-w-2xl mx-auto space-y-5">
-            <h3 class="text-base font-bold text-navy flex items-center gap-2">
-              <i data-lucide="calculator" class="w-5 h-5 text-amber"></i> Quick Tariff & Tax Estimator
-            </h3>
-            <p class="text-xs text-slate-600">Calculates exact commercial rent based on contracted square feet, 10% platform/facility margin, and 13% statutory Nepal IRD VAT.</p>
-            
-            <div>
-              <div class="flex justify-between text-xs font-bold mb-1">
-                <span>Contracted Area</span>
-                <span id="quickCalcSqft" class="text-emerald-700 font-mono">2,000 sq ft</span>
+        <!-- View 3: Continuous Calculator -->
+        <section id="view-calculator" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 lg:p-8 shadow-sm">
+            <h3 class="text-lg font-bold text-navy" data-i18n="calc_heading">Real-Time Continuous Storage Tariff Estimator</h3>
+            <p class="text-xs text-slate-500 mt-0.5 max-w-2xl leading-relaxed" data-i18n="calc_sub">
+              Contract only the exact floor area you need. Billed on continuous square footage with zero block markups, 10% platform ops, and statutory 13% Nepal IRD VAT.
+            </p>
+
+            <div class="grid lg:grid-cols-2 gap-8 mt-6">
+              <div class="space-y-5 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs font-bold text-navy" data-i18n="calc_area_label">Required Storage Area</label>
+                    <span class="font-mono text-sm font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200" id="calcDisplaySqft">2,500 sq ft</span>
+                  </div>
+                  <input type="range" id="calcSlider" min="500" max="25000" step="100" value="2500" oninput="runQuickCalc()" class="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-navy">
+                  <div class="flex justify-between font-mono text-[10px] text-slate-500 mt-1">
+                    <span>500 sq ft</span>
+                    <span>5,000 sq ft</span>
+                    <span>15,000 sq ft</span>
+                    <span>25,000 sq ft</span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold mb-1 text-slate-700" data-i18n="calc_rate_label">Rate per sq ft (Rs.)</label>
+                    <input type="number" id="calcRateInput" value="45" min="15" max="300" oninput="runQuickCalc()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold mb-1 text-slate-700" data-i18n="calc_months_label">Tenure (Months)</label>
+                    <input type="number" id="calcMonthsInput" value="6" min="1" max="60" oninput="runQuickCalc()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs">
+                  </div>
+                </div>
               </div>
-              <input type="range" id="quickSlider" min="500" max="20000" step="100" value="2000" oninput="runQuickCalc()" class="w-full accent-navy">
-            </div>
 
-            <div>
-              <label class="block text-xs font-bold mb-1">Rate per sq ft (Rs.)</label>
-              <input type="number" id="quickRate" value="25" oninput="runQuickCalc()" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono text-sm">
-            </div>
+              <!-- Output Breakdown Card -->
+              <div class="p-6 rounded-2xl bg-navy text-white flex flex-col justify-between shadow-xl">
+                <div>
+                  <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest" data-i18n="calc_financial_breakdown">Financial Breakdown</span>
+                  <div class="mt-4 space-y-3 font-mono text-xs text-slate-300 border-b border-white/10 pb-4">
+                    <div class="flex justify-between">
+                      <span data-i18n="calc_base_rent">Monthly Base Rent:</span>
+                      <strong class="text-white" id="outBaseRent">Rs. 1,12,500</strong>
+                    </div>
+                    <div class="flex justify-between">
+                      <span data-i18n="calc_platform_fee">KWDC Platform Ops (10%):</span>
+                      <strong class="text-amber-400" id="outPlatformFee">Rs. 11,250</strong>
+                    </div>
+                    <div class="flex justify-between">
+                      <span data-i18n="calc_vat">Nepal IRD VAT (13%):</span>
+                      <strong class="text-emerald-400" id="outVat">Rs. 16,088</strong>
+                    </div>
+                  </div>
 
-            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono space-y-2">
-              <div class="flex justify-between"><span class="text-slate-500">Base Rent:</span><span id="resBase" class="font-bold">Rs. 50,000</span></div>
-              <div class="flex justify-between"><span class="text-slate-500">KTM-WDC Margin (10%):</span><span id="resMargin">Rs. 5,000</span></div>
-              <div class="flex justify-between"><span class="text-slate-500">IRD VAT (13%):</span><span id="resVat">Rs. 7,150</span></div>
-              <div class="flex justify-between text-sm font-bold border-t border-slate-200 pt-2"><span class="text-navy">Total Monthly:</span><span id="resTotal" class="text-emerald-700">Rs. 62,150</span></div>
+                  <div class="mt-4 flex items-baseline justify-between">
+                    <div>
+                      <p class="text-xs text-slate-400" data-i18n="calc_total_monthly">Total Monthly Outlay</p>
+                      <h4 class="text-2xl font-black text-white font-mono mt-0.5" id="outTotalMonthly">Rs. 1,39,838</h4>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-[10px] text-slate-400 font-mono" id="outContractDuration">6-Month Contract Total</p>
+                      <p class="text-sm font-bold text-amber-400 font-mono" id="outContractTotal">Rs. 8,39,025</p>
+                    </div>
+                  </div>
+                </div>
+
+                <button onclick="switchTab('catalog')" class="mt-6 w-full py-2.5 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold text-xs shadow transition">
+                  <span data-i18n="btn_browse_matching">Browse Matching Warehouses</span>
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -210,13 +296,34 @@
         <!-- View 4: Digital Gate Passes -->
         <section id="view-gatepass" class="hidden space-y-4">
           <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h3 class="text-base font-bold text-navy">Digital Gate Clearance Tokens</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Generate Inward / Outward clearance passes for incoming freight deliveries.</p>
-            <div class="mt-4 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-xs text-emerald-800 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600"></i>
-                <span>All active leases automatically grant digitally signed gate-in permissions for your assigned fleet trucks.</span>
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-navy" data-i18n="gatepass_title">Digital Gate Clearance Passes</h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="gatepass_sub">Inward / Outward clearance tokens issued for your contracted facilities.</p>
               </div>
+              <button onclick="openNewGatePassModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-navy text-white text-xs font-bold hover:bg-slate-800 shadow">
+                <i data-lucide="plus" class="w-4 h-4 text-amber-400"></i> <span data-i18n="btn_request_gatepass">Request Truck Gate Pass</span>
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold">
+                    <th class="p-3.5" data-i18n="th_token">Pass Token</th>
+                    <th class="p-3.5" data-i18n="th_vehicle">Vehicle License</th>
+                    <th class="p-3.5" data-i18n="th_driver">Driver</th>
+                    <th class="p-3.5" data-i18n="th_cargo">Cargo Description</th>
+                    <th class="p-3.5" data-i18n="th_type">Movement</th>
+                    <th class="p-3.5" data-i18n="th_status">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="clientGatePassTableBody" class="divide-y divide-slate-100 font-mono">
+                  <tr>
+                    <td colspan="6" class="p-8 text-center text-slate-400 font-sans" data-i18n="loading_gatepasses">Loading clearance tokens...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
@@ -226,15 +333,34 @@
           <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
               <div>
-                <h3 class="text-base font-bold text-navy">Nepal IRD Schedule 13 Electronic Tax Invoices</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Download and verify your monthly tax invoices for IRD input tax deductions.</p>
+                <h3 class="text-base font-bold text-navy" data-i18n="invoices_title">Nepal IRD Schedule 13 Electronic Tax Invoices</h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="invoices_sub">Download and verify monthly tax invoices with QR verification for IRD input tax deductions.</p>
               </div>
               <a href="/invoice" target="_blank" class="px-4 py-2 rounded-xl text-xs font-bold text-navy bg-amber hover:bg-amber-400 shadow transition flex items-center gap-1.5">
-                <i data-lucide="external-link" class="w-4 h-4"></i> View Sample VAT Invoice
+                <i data-lucide="external-link" class="w-4 h-4"></i> <span data-i18n="btn_sample_invoice">View Sample VAT Invoice</span>
               </a>
             </div>
+
             <div id="invoicesList" class="divide-y divide-slate-100 text-xs">
-              <p class="text-slate-400 py-6 text-center">Tax invoices generated automatically once commercial lease is activated by SuperAdmin.</p>
+              <div class="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono font-bold text-navy">INV-2083-00418</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">TAX PAID</span>
+                  </div>
+                  <p class="text-slate-500 mt-1 font-mono">Balaju Industrial Godown #3 • Area: 2,500 sq ft • Client PAN: 601289410</p>
+                  <p class="text-slate-400 text-[11px] font-mono mt-0.5">Date: 2083-01-01 • IRD Schedule 13 Verified</p>
+                </div>
+                <div class="flex items-center gap-4">
+                  <div class="text-right font-mono">
+                    <span class="text-slate-400 text-[11px]">Gross Total (Inc. 13% VAT)</span>
+                    <p class="text-sm font-black text-navy">Rs. 1,39,838</p>
+                  </div>
+                  <a href="/invoice" target="_blank" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-navy transition" title="Print Tax Invoice">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -245,90 +371,337 @@
 
   <!-- Mobile Bottom Navigation Bar (For Clients on Mobile) -->
   <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-navy text-slate-300 border-t border-slate-800 z-40 flex items-center justify-around h-14 text-[10px]">
-    <button onclick="switchTab('catalog')" class="flex flex-col items-center justify-center w-full h-full text-amber-400">
+    <button onclick="switchTab('catalog')" id="mob-catalog" class="flex flex-col items-center justify-center w-full h-full text-amber-400">
       <i data-lucide="search" class="w-5 h-5"></i>
-      <span class="mt-0.5">Catalog</span>
+      <span class="mt-0.5" data-i18n="mob_catalog">Catalog</span>
     </button>
-    <button onclick="switchTab('bookings')" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-white">
-      <i data-lucide="calendar" class="w-5 h-5"></i>
-      <span class="mt-0.5">My Spaces</span>
+    <button onclick="switchTab('bookings')" id="mob-bookings" class="flex flex-col items-center justify-center w-full h-full hover:text-white">
+      <i data-lucide="calendar-check" class="w-5 h-5"></i>
+      <span class="mt-0.5" data-i18n="mob_leases">Leases</span>
     </button>
-    <button onclick="switchTab('calculator')" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-white">
+    <button onclick="switchTab('calculator')" id="mob-calculator" class="flex flex-col items-center justify-center w-full h-full hover:text-white">
       <i data-lucide="calculator" class="w-5 h-5"></i>
-      <span class="mt-0.5">Calculator</span>
+      <span class="mt-0.5" data-i18n="mob_calc">Calc</span>
     </button>
-    <button onclick="switchTab('invoices')" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-white">
+    <button onclick="switchTab('gatepass')" id="mob-gatepass" class="flex flex-col items-center justify-center w-full h-full hover:text-white">
+      <i data-lucide="qr-code" class="w-5 h-5"></i>
+      <span class="mt-0.5" data-i18n="mob_gatepass">Gatepass</span>
+    </button>
+    <button onclick="switchTab('invoices')" id="mob-invoices" class="flex flex-col items-center justify-center w-full h-full hover:text-white">
       <i data-lucide="receipt" class="w-5 h-5"></i>
-      <span class="mt-0.5">Invoices</span>
+      <span class="mt-0.5" data-i18n="mob_invoices">Invoices</span>
     </button>
   </nav>
 
-  <!-- Modal: Book Storage in Exact Sq Ft -->
-  <dialog id="bookStorageModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+  <!-- Modal: Book Continuous Space -->
+  <dialog id="bookSpaceModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
       <div class="flex items-center gap-2.5">
         <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
-          <i data-lucide="calendar-check" class="w-4 h-4"></i>
+          <i data-lucide="check" class="w-5 h-5"></i>
         </span>
-        <h3 class="font-bold text-base">Book Commercial Storage Space</h3>
+        <div>
+          <h3 class="font-bold text-base text-white" data-i18n="modal_book_title">Contract Continuous Floor Space</h3>
+          <p class="text-xs text-slate-400" id="bookModalFacilityTitle">Warehouse Facility</p>
+        </div>
       </div>
-      <button onclick="document.getElementById('bookStorageModal').close()" class="text-slate-400 hover:text-white">
+      <button onclick="document.getElementById('bookSpaceModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
 
-    <form id="clientBookingForm" onsubmit="handleBookSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
-      <input type="hidden" id="bWarehouseId">
-      <input type="hidden" id="bRate">
-      <input type="hidden" id="bMaxAvailable">
+    <form onsubmit="handleBookSubmit(event)" class="p-6 space-y-4 text-sm max-h-[80vh] overflow-y-auto">
+      <input type="hidden" id="bookWarehouseId">
+      <input type="hidden" id="bookBaseRate">
 
       <div>
-        <h4 id="bTitle" class="font-bold text-navy text-base">Facility Title</h4>
-        <p id="bLocation" class="text-xs text-slate-500 mt-0.5">Location</p>
+        <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_required_sqft">Required Square Footage *</label>
+        <div class="flex items-center gap-2">
+          <input type="number" id="bookSqftInput" required min="100" oninput="recalcModalBooking()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-sm">
+          <span class="text-xs font-mono text-slate-500 shrink-0">sq ft</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1 font-mono">Available continuous: <strong id="bookMaxAvailable">10,000</strong> sq ft</p>
       </div>
 
-      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-        <div class="flex justify-between items-center">
-          <label class="text-xs font-bold text-navy">Contracted Area (sq ft)</label>
-          <span class="font-mono text-base font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200" id="bSqftDisplay">1,000 sq ft</span>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_lease_duration">Lease Duration (Months) *</label>
+          <input type="number" id="bookDurationInput" required min="1" max="60" value="6" oninput="recalcModalBooking()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs">
         </div>
-        <input type="range" id="bSqftSlider" min="100" max="10000" step="50" value="1000" oninput="recalcModalBooking()" class="w-full accent-navy">
-        <div class="flex justify-between text-[11px] font-mono text-slate-400">
-          <span>Min: 100 sq ft</span>
-          <span id="bMaxLabel">Max: 10,000 sq ft</span>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_intended_cargo">Intended Cargo Type *</label>
+          <input type="text" id="bookCargoType" required placeholder="e.g. FMCG, Electronics" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Company PAN / VAT Number (Optional for Invoice)</label>
-        <input type="text" id="bPan" placeholder="e.g. 600123456" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-navy">
+        <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_client_pan">Company PAN / VAT Number (Optional for Invoice)</label>
+        <input type="text" id="bookPanInput" placeholder="e.g. 601289410" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-mono text-xs">
       </div>
 
-      <!-- Financial Summary Box -->
-      <div class="rounded-xl bg-navy p-4 text-white text-xs space-y-2 font-mono">
-        <div class="flex justify-between text-slate-300"><span>Base Rent:</span><span id="mBaseRent">Rs. 0</span></div>
-        <div class="flex justify-between text-slate-300"><span>KWDC Margin (10%):</span><span id="mMargin">Rs. 0</span></div>
-        <div class="flex justify-between text-slate-300"><span>Nepal IRD VAT (13%):</span><span id="mVat">Rs. 0</span></div>
-        <div class="flex justify-between text-sm font-bold border-t border-white/10 pt-2 text-amber"><span>Total Monthly Bill:</span><span id="mTotal">Rs. 0</span></div>
+      <!-- Real-Time Cost Summary -->
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs font-mono text-slate-700">
+        <div class="flex justify-between">
+          <span data-i18n="calc_base_rent">Monthly Base Rent:</span>
+          <strong id="modalBaseRent">Rs. 0</strong>
+        </div>
+        <div class="flex justify-between">
+          <span data-i18n="calc_platform_fee">KWDC Platform (10%):</span>
+          <strong id="modalPlatformFee">Rs. 0</strong>
+        </div>
+        <div class="flex justify-between">
+          <span data-i18n="calc_vat">Nepal IRD VAT (13%):</span>
+          <strong id="modalVat">Rs. 0</strong>
+        </div>
+        <div class="flex justify-between border-t border-slate-200 pt-2 text-navy font-bold text-sm">
+          <span data-i18n="calc_total_monthly">Total Monthly Outlay:</span>
+          <span id="modalTotalMonthly" class="text-emerald-700">Rs. 0</span>
+        </div>
       </div>
 
-      <div class="pt-2 flex justify-end gap-3">
-        <button type="button" onclick="document.getElementById('bookStorageModal').close()" class="px-4 py-2.5 rounded-xl text-slate-600 font-semibold hover:bg-slate-100">
-          Cancel
-        </button>
-        <button type="submit" id="bookSubmitBtn" class="px-5 py-2.5 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold shadow transition flex items-center gap-2">
-          <i data-lucide="check" class="w-4 h-4"></i> Submit Booking
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+        <button type="button" onclick="document.getElementById('bookSpaceModal').close()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold" data-i18n="btn_cancel">Cancel</button>
+        <button type="submit" id="btnSubmitBook" class="px-5 py-2.5 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold shadow transition flex items-center gap-2">
+          <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="btn_confirm_lease">Submit Lease Request</span>
         </button>
       </div>
     </form>
   </dialog>
 
+  <!-- Modal: Request New Gate Pass -->
+  <dialog id="newGatePassModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-indigo-500 text-white grid place-items-center font-bold">
+          <i data-lucide="qr-code" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white" data-i18n="modal_gp_title">Issue Truck Gate Clearance Pass</h3>
+          <p class="text-xs text-slate-400" data-i18n="modal_gp_sub">For Inward / Outward facility access</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('newGatePassModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleNewGatePassSubmit(event)" class="p-6 space-y-4 text-sm">
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_select_facility">Target Warehouse Facility *</label>
+        <select id="gpWarehouseId" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white"></select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_movement">Movement *</label>
+          <select id="gpMovementType" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white">
+            <option value="inbound">Inbound (आगमन)</option>
+            <option value="outbound">Outbound (प्रस्थान)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_vehicle_plate">Vehicle Plate *</label>
+          <input type="text" id="gpPlate" required placeholder="e.g. Ba 2 Kha 4921" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs uppercase font-mono">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_driver_name">Driver Full Name *</label>
+          <input type="text" id="gpDriver" required placeholder="e.g. Ramesh Thapa" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_unit_count">Pallet / Unit Count *</label>
+          <input type="number" id="gpUnits" required min="1" value="24" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_cargo_manifest">Cargo Manifest Summary *</label>
+        <input type="text" id="gpCargo" required placeholder="e.g. 24 Pallets - Packaged Food Products" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs">
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+        <button type="button" onclick="document.getElementById('newGatePassModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs" data-i18n="btn_cancel">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i> <span data-i18n="btn_issue_token">Generate Digital Pass</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Application Logic & Bilingual Engine -->
   <script>
+    // -------------------------------------------------------------
+    // Bilingual Dictionary (I18N_CLIENT)
+    // -------------------------------------------------------------
+    const I18N_CLIENT = {
+      en: {
+        drawer_subtitle: "Commercial Client Hub",
+        nav_catalog: "Available Storage Catalog",
+        nav_bookings: "My Active Leases",
+        nav_calculator: "Area & Tariff Estimator",
+        nav_gatepass: "Digital Gate Passes",
+        nav_invoices: "IRD Tax Invoices",
+        header_title: "Commercial Storage Marketplace",
+        header_sub: "Rent Exact Continuous Square Feet • IRD Schedule 13 Invoicing • Zero Block Lock-in",
+        btn_quick_calc: "Tariff Calculator",
+        banner_title: "Zero Block Lock-in • Exact Continuous Square Feet Contracting",
+        banner_sub: "No artificial 1,000 sq ft blocks or roundups. You contract the exact continuous area needed with transparent monthly tariffs, full loading bay access, and automated IRD VAT invoicing.",
+        banner_badge: "IRD VAT 13% Ready",
+        filter_district: "District / Region",
+        filter_space_type: "Space Classification",
+        filter_min_space: "Minimum Space Needed",
+        btn_refresh: "Refresh Catalog",
+        loading_catalog: "Loading available audited warehouses...",
+        sec_active_contracts: "Your Active Leases & Storage Space Contracts",
+        sec_active_contracts_sub: "Contracted physical spaces, monthly billing schedules, and digital access passes.",
+        no_active_leases: "No storage contracts currently active. Explore the catalog to contract space.",
+        calc_heading: "Real-Time Continuous Storage Tariff Estimator",
+        calc_sub: "Contract only the exact floor area you need. Billed on continuous square footage with zero block markups, 10% platform ops, and statutory 13% Nepal IRD VAT.",
+        calc_area_label: "Required Storage Area",
+        calc_rate_label: "Rate per sq ft (Rs.)",
+        calc_months_label: "Tenure (Months)",
+        calc_financial_breakdown: "Financial Breakdown",
+        calc_base_rent: "Monthly Base Rent:",
+        calc_platform_fee: "KWDC Platform Ops (10%):",
+        calc_vat: "Nepal IRD VAT (13%):",
+        calc_total_monthly: "Total Monthly Outlay",
+        btn_browse_matching: "Browse Matching Warehouses",
+        gatepass_title: "Digital Gate Clearance Passes",
+        gatepass_sub: "Inward / Outward clearance tokens issued for your contracted facilities.",
+        btn_request_gatepass: "Request Truck Gate Pass",
+        th_token: "Pass Token",
+        th_vehicle: "Vehicle License",
+        th_driver: "Driver",
+        th_cargo: "Cargo Description",
+        th_type: "Movement",
+        th_status: "Status",
+        loading_gatepasses: "Loading clearance tokens...",
+        invoices_title: "Nepal IRD Schedule 13 Electronic Tax Invoices",
+        invoices_sub: "Download and verify monthly tax invoices with QR verification for IRD input tax deductions.",
+        btn_sample_invoice: "View Sample VAT Invoice",
+        mob_catalog: "Catalog",
+        mob_leases: "Leases",
+        mob_calc: "Calc",
+        mob_gatepass: "Gatepass",
+        mob_invoices: "Invoices",
+        modal_book_title: "Contract Continuous Floor Space",
+        label_required_sqft: "Required Square Footage *",
+        label_lease_duration: "Lease Duration (Months) *",
+        label_intended_cargo: "Intended Cargo Type *",
+        label_client_pan: "Company PAN / VAT Number (Optional for Invoice)",
+        btn_cancel: "Cancel",
+        btn_confirm_lease: "Submit Lease Request",
+        modal_gp_title: "Issue Truck Gate Clearance Pass",
+        modal_gp_sub: "For Inward / Outward facility access",
+        label_select_facility: "Target Warehouse Facility *",
+        label_movement: "Movement *",
+        label_vehicle_plate: "Vehicle Plate *",
+        label_driver_name: "Driver Full Name *",
+        label_unit_count: "Pallet / Unit Count *",
+        label_cargo_manifest: "Cargo Manifest Summary *",
+        btn_issue_token: "Generate Digital Pass"
+      },
+      ne: {
+        drawer_subtitle: "व्यावसायिक ग्राहक हब",
+        nav_catalog: "उपलब्ध गोदाम क्याटलग",
+        nav_bookings: "मेरो सक्रिय भाडा सम्झौताहरू",
+        nav_calculator: "निरन्तर क्षेत्रफल तथा दर क्यालकुलेटर",
+        nav_gatepass: "डिजिटल गेट पास",
+        nav_invoices: "आन्तरिक राजस्व भ्याट बिजकहरू",
+        header_title: "व्यावसायिक भण्डारण बजार",
+        header_sub: "आवश्यक निरन्तर वर्ग फिट भाडामा लिनुहोस् • अनुसूची १३ कर बिजक • कुनै कृत्रिम ब्लक बन्देज छैन",
+        btn_quick_calc: "दर क्यालकुलेटर",
+        banner_title: "शून्य ब्लक बन्देज • आवश्यक निरन्तर वर्ग फिट भाडा सम्झौता",
+        banner_sub: "कुनै कृत्रिम १,००० वर्ग फिटका ब्लकहरू छैनन्। तपाईंलाई जति क्षेत्रफल चाहिन्छ ठ्याक्कै त्यति नै वर्ग फिटमा पारदर्शी मासिक दर, लोडिङ डक सुविधा र १३% भ्याट बिजकसहित भाडामा लिनुहोस्।",
+        banner_badge: "१३% आन्तरिक राजस्व भ्याट",
+        filter_district: "जिल्ला / क्षेत्र",
+        filter_space_type: "गोदामको प्रकार",
+        filter_min_space: "न्यूनतम आवश्यक क्षेत्रफल",
+        btn_refresh: "क्याटलग ताजा गर्नुहोस्",
+        loading_catalog: "प्रमाणित गोदामहरू लोड हुँदैछ...",
+        sec_active_contracts: "तपाईंका सक्रिय भाडा सम्झौताहरू",
+        sec_active_contracts_sub: "भाडामा लिइएका गोदाम स्थानहरू, मासिक भुक्तानी र डिजिटल गेट पास विवरण।",
+        no_active_leases: "हाल कुनै सक्रिय सम्झौता छैन। क्याटलगबाट गोदाम छनोट गरी भाडामा लिनुहोस्।",
+        calc_heading: "निरन्तर भण्डारण दर तथा लागत क्यालकुलेटर",
+        calc_sub: "आवश्यक क्षेत्रफल मात्र भाडामा लिनुहोस्। निरन्तर वर्ग फिटमा १०% प्लेटफर्म शुल्क र नेपाल आन्तरिक राजस्व १३% भ्याट सहित गणना।",
+        calc_area_label: "आवश्यक भण्डारण क्षेत्रफल",
+        calc_rate_label: "प्रति वर्ग फिट दर (रु.)",
+        calc_months_label: "अवधि (महिना)",
+        calc_financial_breakdown: "वित्तीय विवरण",
+        calc_base_rent: "मासिक आधार भाडा:",
+        calc_platform_fee: "१०% प्लेटफर्म शुल्क:",
+        calc_vat: "१३% आन्तरिक राजस्व भ्याट:",
+        calc_total_monthly: "कुल मासिक भुक्तानी",
+        btn_browse_matching: "उपलब्ध गोदामहरू हेर्नुहोस्",
+        gatepass_title: "डिजिटल गेट क्लियरेन्स पास",
+        gatepass_sub: "तपाईंको गोदाममा ढुवानी ट्रक प्रवेश तथा प्रस्थानका लागि डिजिटल टोकन।",
+        btn_request_gatepass: "नयाँ गेट पास जारी गर्नुहोस्",
+        th_token: "पास टोकन",
+        th_vehicle: "सवारी नम्बर",
+        th_driver: "चालकको नाम",
+        th_cargo: "सामानको विवरण",
+        th_type: "आगमन/प्रस्थान",
+        th_status: "स्थिति",
+        loading_gatepasses: "गेट पास विवरण लोड हुँदैछ...",
+        invoices_title: "नेपाल आन्तरिक राजस्व विभाग अनुसूची १३ कर बिजक",
+        invoices_sub: "कम्पनी कर कट्टी (VAT Input) का लागि क्युआर कोडसहित आधिकारिक मासिक कर बिजक डाउनलोड गर्नुहोस्।",
+        btn_sample_invoice: "नमुना भ्याट बिजक हेर्नुहोस्",
+        mob_catalog: "क्याटलग",
+        mob_leases: "सम्झौता",
+        mob_calc: "क्याल्क",
+        mob_gatepass: "गेटपास",
+        mob_invoices: "बिजक",
+        modal_book_title: "निरन्तर भण्डारण क्षेत्रफल सम्झौता",
+        label_required_sqft: "आवश्यक वर्ग फिट *",
+        label_lease_duration: "सम्झौता अवधि (महिना) *",
+        label_intended_cargo: "भण्डारण गरिने सामानको प्रकार *",
+        label_client_pan: "कम्पनी प्यान / भ्याट नम्बर (बिजकका लागि)",
+        btn_cancel: "रद्द गर्नुहोस्",
+        btn_confirm_lease: "सम्झौता अनुरोध पठाउनुहोस्",
+        modal_gp_title: "ढुवानी ट्रक गेट पास जारी",
+        modal_gp_sub: "गोदाम प्रवेश तथा प्रस्थानका लागि डिजिटल टोकन",
+        label_select_facility: "सम्बन्धित गोदाम छनोट *",
+        label_movement: "आगमन वा प्रस्थान *",
+        label_vehicle_plate: "सवारी नम्बर *",
+        label_driver_name: "चालकको नाम *",
+        label_unit_count: "प्यालेट / सामान संख्या *",
+        label_cargo_manifest: "सामानको संक्षिप्त विवरण *",
+        btn_issue_token: "डिजिटल गेट पास सिर्जना"
+      }
+    };
+
+    function toggleLanguage() {
+      const cur = localStorage.getItem('kwdc_lang') === 'ne' ? 'en' : 'ne';
+      localStorage.setItem('kwdc_lang', cur);
+      applyTranslations(cur);
+    }
+
+    function applyTranslations(lang) {
+      const dict = I18N_CLIENT[lang] || I18N_CLIENT.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = dict[key];
+          } else {
+            el.textContent = dict[key];
+          }
+        }
+      });
+
+      const langFlag = document.getElementById('langFlag');
+      const langLabel = document.getElementById('langLabel');
+      if (lang === 'ne') {
+        if (langFlag) langFlag.textContent = '🇬🇧';
+        if (langLabel) langLabel.textContent = 'English';
+      } else {
+        if (langFlag) langFlag.textContent = '🇳🇵';
+        if (langLabel) langLabel.textContent = 'नेपाली';
+      }
+    }
+
     function toggleDrawer(force) {
       const drawer = document.getElementById('leftDrawer');
       const backdrop = document.getElementById('drawerBackdrop');
-      const isOpen = force !== undefined ? force : drawer.classList.contains('-translate-x-full');
-      if (isOpen) {
+      const isClosed = drawer.classList.contains('-translate-x-full');
+      if (force === true || (force === undefined && isClosed)) {
         drawer.classList.remove('-translate-x-full');
         backdrop.classList.remove('hidden');
       } else {
@@ -341,145 +714,210 @@
       ['catalog', 'bookings', 'calculator', 'gatepass', 'invoices'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const nav = document.getElementById('nav-' + id);
+        const mob = document.getElementById('mob-' + id);
         if (view) view.classList.toggle('hidden', id !== tabId);
         if (nav) {
-          nav.classList.toggle('bg-white/10', id === tabId);
-          nav.classList.toggle('text-white', id === tabId);
-          nav.classList.toggle('text-slate-300', id !== tabId);
+          if (id === tabId) {
+            nav.classList.add('text-white', 'bg-white/10');
+            nav.classList.remove('text-slate-300', 'hover:bg-white/5');
+          } else {
+            nav.classList.remove('text-white', 'bg-white/10');
+            nav.classList.add('text-slate-300', 'hover:bg-white/5');
+          }
+        }
+        if (mob) {
+          if (id === tabId) {
+            mob.classList.add('text-amber-400');
+            mob.classList.remove('hover:text-white');
+          } else {
+            mob.classList.remove('text-amber-400');
+            mob.classList.add('hover:text-white');
+          }
         }
       });
       if (window.innerWidth < 1024) toggleDrawer(false);
-      lucide.createIcons();
+
+      if (tabId === 'catalog') loadCatalog();
+      if (tabId === 'bookings') loadMyBookings();
+      if (tabId === 'gatepass') loadClientGatePasses();
     }
 
     function showToast(msg, isError = false) {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
-      toast.className = `p-4 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold pointer-events-auto transition-all transform duration-300 ${
-        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-      }`;
-      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4"></i> <span>${msg}</span></div>`;
+      toast.className = `p-4 rounded-xl text-white text-xs font-semibold shadow-xl pointer-events-auto transition-all transform duration-300 ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
+      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4"></i><span>${msg}</span></div>`;
       container.appendChild(toast);
       lucide.createIcons();
-      setTimeout(() => { toast.remove(); }, 4000);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
     }
 
     function getAuthHeaders() {
-      const token = localStorage.getItem('kwdc_token');
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
       return {
         'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
     }
 
-    let catalogItems = [];
+    let allWarehousesCache = [];
 
     async function loadCatalog() {
-      const grid = document.getElementById('clientCatalogGrid');
-      const type = document.getElementById('filterType').value;
-      const minSqft = document.getElementById('filterMinSqft').value;
-      const coldOnly = document.getElementById('filterColdOnly').checked;
-
-      let url = '/api/warehouses/catalog?';
-      if (type) url += `space_type=${type}&`;
-      if (minSqft) url += `min_sqft=${minSqft}&`;
-      if (coldOnly) url += `cold_storage_only=true&`;
-
       try {
-        const res = await fetch(url);
-        const data = await res.json();
-        catalogItems = data;
-        document.getElementById('badgeCatalogCount').textContent = data.length;
-
-        if (data.length === 0) {
-          grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-400">No storage spaces currently match your filters.</div>';
+        const res = await fetch('/api/warehouses/catalog');
+        const grid = document.getElementById('catalogGrid');
+        if (!res.ok) {
+          grid.innerHTML = `<div class="col-span-full p-8 text-center bg-white rounded-2xl border border-red-200 text-red-600 text-xs">Failed to load marketplace catalog.</div>`;
           return;
         }
 
-        grid.innerHTML = data.map(w => `
-          <article class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
-            <div>
-              <div class="flex items-start justify-between gap-2 mb-3">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Verified & Live
-                </span>
-                <span class="font-mono text-xs font-bold text-navy">Rs. ${w.monthly_rate_per_sqft}/sq ft</span>
-              </div>
-              <h4 class="font-bold text-navy text-base">${w.title}</h4>
-              <p class="text-xs text-slate-500 mt-1">${w.neighborhood_landmark || w.district || 'Kathmandu'}</p>
-
-              <div class="grid grid-cols-2 gap-2 mt-4 p-3 rounded-xl bg-slate-50 text-xs text-center font-mono">
-                <div><p class="text-[10px] text-slate-400 uppercase">Total Space</p><p class="font-bold text-navy">${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</p></div>
-                <div><p class="text-[10px] text-slate-400 uppercase">Available</p><p class="font-bold text-emerald-700">${Number(w.available_sqft).toLocaleString('en-IN')} sq ft</p></div>
-              </div>
-
-              <div class="flex flex-wrap gap-1.5 mt-3 text-[11px] text-slate-600">
-                ${w.road_access_ft ? `<span class="bg-slate-100 px-2 py-0.5 rounded">${w.road_access_ft} ft road</span>` : ''}
-                ${w.has_three_phase_power ? `<span class="bg-slate-100 px-2 py-0.5 rounded">3-Phase</span>` : ''}
-                ${w.has_cctv ? `<span class="bg-slate-100 px-2 py-0.5 rounded">CCTV</span>` : ''}
-                ${w.has_cold_storage ? `<span class="bg-sky-50 text-sky-700 font-semibold px-2 py-0.5 rounded">Cold Chain</span>` : ''}
-              </div>
-            </div>
-
-            <div class="mt-5 pt-4 border-t border-slate-100">
-              <button onclick="openBookingModal(${w.id}, '${w.title.replace(/'/g, "\\'")}', '${w.neighborhood_landmark || ''}', ${w.monthly_rate_per_sqft}, ${w.available_sqft})" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold flex items-center justify-center gap-2 shadow-sm transition">
-                <i data-lucide="calendar-check" class="w-4 h-4"></i> Book Space in Sq Ft
-              </button>
-            </div>
-          </article>
-        `).join('');
-        lucide.createIcons();
+        allWarehousesCache = await res.json();
+        document.getElementById('badgeCatalogCount').textContent = allWarehousesCache.length;
+        populateWarehouseSelect(allWarehousesCache);
+        applyFilters();
       } catch (err) {
-        grid.innerHTML = `<div class="col-span-full py-8 text-center text-red-500">Error loading catalog: ${err.message}</div>`;
+        console.error(err);
       }
     }
 
-    function openBookingModal(id, title, location, rate, available) {
-      document.getElementById('bWarehouseId').value = id;
-      document.getElementById('bRate').value = rate;
-      document.getElementById('bMaxAvailable').value = available;
-      document.getElementById('bTitle').textContent = title;
-      document.getElementById('bLocation').textContent = location;
-      
-      const slider = document.getElementById('bSqftSlider');
-      slider.max = available;
-      slider.value = Math.min(available, 1000);
-      document.getElementById('bMaxLabel').textContent = `Max Available: ${Number(available).toLocaleString('en-IN')} sq ft`;
+    function populateWarehouseSelect(warehouses) {
+      const select = document.getElementById('gpWarehouseId');
+      if (!select) return;
+      select.innerHTML = warehouses.map(w => `<option value="${w.id}">${w.title} (${w.municipality || 'Kathmandu'})</option>`).join('');
+    }
 
+    function applyFilters() {
+      const district = document.getElementById('filterDistrict').value;
+      const type = document.getElementById('filterType').value;
+      const minSqft = parseFloat(document.getElementById('filterMinSqft').value) || 0;
+
+      const filtered = allWarehousesCache.filter(w => {
+        if (district !== 'ALL' && w.district !== district) return false;
+        if (type !== 'ALL' && w.space_type !== type) return false;
+        if (w.available_sqft < minSqft) return false;
+        return true;
+      });
+
+      renderCatalogCards(filtered);
+    }
+
+    function renderCatalogCards(warehouses) {
+      const grid = document.getElementById('catalogGrid');
+      if (warehouses.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full p-12 text-center bg-white rounded-2xl border border-slate-200">
+            <span class="w-12 h-12 rounded-2xl bg-amber/15 text-amber-600 grid place-items-center mx-auto mb-3">
+              <i data-lucide="search" class="w-6 h-6"></i>
+            </span>
+            <h4 class="font-bold text-navy text-sm">No Warehouses Match Filter</h4>
+            <p class="text-xs text-slate-500 mt-1">Adjust your district or space classification filters to see available facilities.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      grid.innerHTML = warehouses.map(w => {
+        const ropani = (w.available_sqft / 5476).toFixed(1);
+        const aana = ((w.available_sqft % 5476) / 342.25).toFixed(1);
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">${w.space_type.replace('_', ' ')}</span>
+                  <h4 class="font-bold text-navy text-base leading-snug mt-1.5">${w.title}</h4>
+                  <p class="text-xs text-slate-500 mt-0.5">${w.municipality || 'Kathmandu'}, ${w.district}</p>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] text-slate-400 uppercase font-bold">Base Tariff</span>
+                  <p class="text-base font-black text-navy font-mono">Rs. ${w.base_rate_per_sqft}<span class="text-xs font-normal text-slate-500">/sq ft</span></p>
+                </div>
+              </div>
+
+              <div class="space-y-1.5 py-3 border-y border-slate-100 font-mono text-xs text-slate-600">
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Available Continuous:</span>
+                  <span class="font-bold text-emerald-700">${Number(w.available_sqft).toLocaleString('en-IN')} sq ft</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Traditional Measure:</span>
+                  <span>${Math.floor(w.available_sqft / 5476)} Ropani, ${aana} Aana</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Ceiling Clearance:</span>
+                  <span>${w.ceiling_height_ft || 14} ft clear height</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Road Width:</span>
+                  <span>${w.road_access_width_ft || 24} ft commercial access</span>
+                </div>
+              </div>
+
+              <div class="mt-3 flex flex-wrap gap-1.5 text-[10px] text-slate-600">
+                ${w.has_three_phase_power ? '<span class="bg-slate-100 px-2 py-0.5 rounded">3-Phase Power</span>' : ''}
+                ${w.has_security_guard ? '<span class="bg-slate-100 px-2 py-0.5 rounded">24/7 Security</span>' : ''}
+                ${w.has_cctv ? '<span class="bg-slate-100 px-2 py-0.5 rounded">CCTV</span>' : ''}
+                ${w.has_raised_dock ? '<span class="bg-slate-100 px-2 py-0.5 rounded">Raised Dock</span>' : ''}
+              </div>
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+              <span class="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live Verified
+              </span>
+              <button onclick="openBookingModal(${w.id}, '${w.title.replace(/'/g, "\'")}', '${w.municipality || 'Kathmandu'}', ${w.base_rate_per_sqft}, ${w.available_sqft})" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
+                <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Contract Space
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function openBookingModal(id, title, location, rate, available) {
+      document.getElementById('bookWarehouseId').value = id;
+      document.getElementById('bookBaseRate').value = rate;
+      document.getElementById('bookModalFacilityTitle').textContent = `${title} • ${location}`;
+      document.getElementById('bookMaxAvailable').textContent = Number(available).toLocaleString('en-IN');
+      document.getElementById('bookSqftInput').max = available;
+      document.getElementById('bookSqftInput').value = Math.min(2500, available);
       recalcModalBooking();
-      document.getElementById('bookStorageModal').showModal();
+      document.getElementById('bookSpaceModal').showModal();
       lucide.createIcons();
     }
 
     function recalcModalBooking() {
-      const slider = document.getElementById('bSqftSlider');
-      const sqft = parseInt(slider.value) || 500;
-      const rate = parseFloat(document.getElementById('bRate').value) || 20;
+      const sqft = parseFloat(document.getElementById('bookSqftInput').value) || 0;
+      const rate = parseFloat(document.getElementById('bookBaseRate').value) || 45;
+      const baseMonthly = Math.round(sqft * rate);
+      const platformFee = Math.round(baseMonthly * 0.10);
+      const vat = Math.round((baseMonthly + platformFee) * 0.13);
+      const totalMonthly = baseMonthly + platformFee + vat;
 
-      document.getElementById('bSqftDisplay').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
-
-      const baseRent = sqft * rate;
-      const margin = Math.round(baseRent * 0.10);
-      const taxable = baseRent + margin;
-      const vat = Math.round(taxable * 0.13);
-      const total = taxable + vat;
-
-      document.getElementById('mBaseRent').textContent = 'Rs. ' + baseRent.toLocaleString('en-IN');
-      document.getElementById('mMargin').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
-      document.getElementById('mVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
-      document.getElementById('mTotal').textContent = 'Rs. ' + total.toLocaleString('en-IN');
+      document.getElementById('modalBaseRent').textContent = 'Rs. ' + baseMonthly.toLocaleString('en-IN');
+      document.getElementById('modalPlatformFee').textContent = 'Rs. ' + platformFee.toLocaleString('en-IN');
+      document.getElementById('modalVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+      document.getElementById('modalTotalMonthly').textContent = 'Rs. ' + totalMonthly.toLocaleString('en-IN');
     }
 
     async function handleBookSubmit(e) {
       e.preventDefault();
-      const btn = document.getElementById('bookSubmitBtn');
+      const btn = document.getElementById('btnSubmitBook');
       btn.disabled = true;
-      btn.textContent = 'Processing Booking...';
+      btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Contracting...`;
 
       const payload = {
-        warehouse_id: parseInt(document.getElementById('bWarehouseId').value),
-        requested_sqft: parseFloat(document.getElementById('bSqftSlider').value),
-        buyer_pan: document.getElementById('bPan').value || '301245678'
+        warehouse_id: parseInt(document.getElementById('bookWarehouseId').value),
+        requested_sqft: parseFloat(document.getElementById('bookSqftInput').value),
+        client_intended_use: document.getElementById('bookCargoType').value,
+        client_pan_vat: document.getElementById('bookPanInput').value.trim() || undefined
       };
 
       try {
@@ -490,99 +928,171 @@
         });
         const data = await res.json();
         if (res.ok) {
-          showToast(`Booking submitted for ${data.requested_sqft.toLocaleString('en-IN')} sq ft! Invoice ${data.invoice_number} created.`);
-          document.getElementById('bookStorageModal').close();
-          loadCatalog();
+          showToast("Continuous space lease request submitted! SuperAdmin will review and dispatch digital contract.");
+          document.getElementById('bookSpaceModal').close();
           switchTab('bookings');
         } else {
-          showToast(data.detail || 'Booking failed.', true);
+          showToast(data.detail || "Booking failed.", true);
         }
       } catch (err) {
-        showToast('Connection error: ' + err.message, true);
+        showToast("Network error submitting lease.", true);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Submit Booking';
+        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Submit Lease Request`;
         lucide.createIcons();
       }
     }
 
     function runQuickCalc() {
-      const sqft = parseInt(document.getElementById('quickSlider').value) || 1000;
-      const rate = parseFloat(document.getElementById('quickRate').value) || 25;
-      document.getElementById('quickCalcSqft').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+      const sqft = parseFloat(document.getElementById('calcSlider').value) || 2500;
+      const rate = parseFloat(document.getElementById('calcRateInput').value) || 45;
+      const months = parseInt(document.getElementById('calcMonthsInput').value) || 6;
 
-      const base = sqft * rate;
-      const margin = Math.round(base * 0.10);
-      const vat = Math.round((base + margin) * 0.13);
-      const total = base + margin + vat;
+      document.getElementById('calcDisplaySqft').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
 
-      document.getElementById('resBase').textContent = 'Rs. ' + base.toLocaleString('en-IN');
-      document.getElementById('resMargin').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
-      document.getElementById('resVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
-      document.getElementById('resTotal').textContent = 'Rs. ' + total.toLocaleString('en-IN');
+      const baseMonthly = Math.round(sqft * rate);
+      const platformFee = Math.round(baseMonthly * 0.10);
+      const vat = Math.round((baseMonthly + platformFee) * 0.13);
+      const totalMonthly = baseMonthly + platformFee + vat;
+      const contractTotal = totalMonthly * months;
+
+      document.getElementById('outBaseRent').textContent = 'Rs. ' + baseMonthly.toLocaleString('en-IN');
+      document.getElementById('outPlatformFee').textContent = 'Rs. ' + platformFee.toLocaleString('en-IN');
+      document.getElementById('outVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+      document.getElementById('outTotalMonthly').textContent = 'Rs. ' + totalMonthly.toLocaleString('en-IN');
+      document.getElementById('outContractDuration').textContent = `${months}-Month Contract Total`;
+      document.getElementById('outContractTotal').textContent = 'Rs. ' + contractTotal.toLocaleString('en-IN');
     }
 
     async function loadMyBookings() {
-      const list = document.getElementById('clientBookingsList');
-      const invList = document.getElementById('invoicesList');
       try {
         const res = await fetch('/api/warehouses/my-bookings', { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to load bookings');
+        const list = document.getElementById('clientBookingsList');
+        if (!res.ok) {
+          list.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">Sign in to view your commercial leases.</p>`;
+          return;
+        }
         const data = await res.json();
-
         document.getElementById('badgeActiveLeaseCount').textContent = data.length;
 
         if (data.length === 0) {
-          list.innerHTML = '<p class="text-slate-400 text-center py-8 text-xs">No active bookings yet. Browse the catalog to contract space in exact square feet.</p>';
-          invList.innerHTML = '<p class="text-slate-400 py-6 text-center text-xs">No invoices generated yet.</p>';
+          list.innerHTML = `<p class="text-xs text-slate-400 py-8 text-center">No storage contracts currently active. Explore the catalog to contract space.</p>`;
           return;
         }
 
         list.innerHTML = data.map(b => `
-          <div class="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div class="flex items-center gap-2">
-                <span class="font-bold text-navy text-sm sm:text-base">${b.warehouse_title}</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
-                  b.status === 'active_leased' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                }">${b.status.replace('_', ' ').toUpperCase()}</span>
+                <h4 class="font-bold text-navy text-sm">${b.warehouse_title}</h4>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${b.status === 'APPROVED_CONTRACT_DISPATCHED' || b.status === 'ACTIVE_LEASED' ? 'bg-emerald-100 text-emerald-800' : 'bg-yellow-100 text-yellow-800'}">${b.status}</span>
               </div>
-              <p class="text-xs text-slate-500 mt-0.5">${b.neighborhood_landmark}, ${b.district} &bull; Contracted: <strong class="text-navy font-mono">${Number(b.allocated_billed_sqft).toLocaleString('en-IN')} sq ft</strong></p>
-              <p class="text-[11px] text-slate-400 mt-0.5 font-mono">Invoice: ${b.invoice_number} &bull; ${b.created_at}</p>
+              <p class="text-xs text-slate-500 font-mono mt-1">
+                Continuous Leased Area: <strong>${Number(b.booked_sqft).toLocaleString('en-IN')} sq ft</strong> • Rate: Rs. ${b.rate_per_sqft}/sq ft
+              </p>
+              <p class="text-[11px] text-slate-400 font-mono mt-0.5">
+                Cargo Classification: ${b.cargo_type || 'Commercial Freight'}
+              </p>
             </div>
-            <div class="text-left sm:text-right shrink-0">
-              <p class="font-mono text-sm sm:text-base font-bold text-emerald-700">Rs. ${Number(b.total_monthly_bill).toLocaleString('en-IN')}<span class="text-xs font-normal text-slate-500">/mo</span></p>
-              <p class="text-[11px] text-slate-400">13% IRD VAT Included</p>
-            </div>
-          </div>
-        `).join('');
-
-        invList.innerHTML = data.map(b => `
-          <div class="py-3 flex items-center justify-between">
-            <div>
-              <p class="font-mono font-bold text-navy">${b.invoice_number}</p>
-              <p class="text-[11px] text-slate-500">${b.warehouse_title} &bull; ${Number(b.allocated_billed_sqft).toLocaleString('en-IN')} sq ft</p>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono font-bold text-slate-700">Rs. ${Number(b.total_monthly_bill).toLocaleString('en-IN')}</span>
-              <a href="/invoice" target="_blank" class="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-navy transition flex items-center gap-1">
-                <i data-lucide="eye" class="w-3.5 h-3.5"></i> View
+            <div class="text-right">
+              <span class="text-xs text-slate-400">Monthly Lease Tariff</span>
+              <p class="text-base font-black text-navy font-mono">Rs. ${Number(b.monthly_rent_npr).toLocaleString('en-IN')}</p>
+              <a href="/invoice" target="_blank" class="mt-1 text-[11px] text-amber-600 font-bold hover:underline inline-flex items-center gap-1">
+                <i data-lucide="receipt" class="w-3 h-3"></i> View IRD Tax Invoice
               </a>
             </div>
           </div>
         `).join('');
+
         lucide.createIcons();
       } catch (err) {
-        list.innerHTML = `<p class="text-red-500 text-center py-4 text-xs">Error loading bookings: ${err.message}. Please sign in.</p>`;
+        console.error(err);
+      }
+    }
+
+    async function loadClientGatePasses() {
+      try {
+        const res = await fetch('/api/incharge/gate-passes', { headers: getAuthHeaders() });
+        const tbody = document.getElementById('clientGatePassTableBody');
+        let passes = [];
+        if (res.ok) passes = await res.json();
+
+        if (passes.length === 0) {
+          // Demo fallback
+          passes = [
+            {
+              pass_token: "GP-2083-0091",
+              vehicle_plate: "Ba 2 Kha 4921",
+              driver_name: "Ramesh Thapa",
+              manifest_summary: "24 Pallets - Packaged Food Products",
+              movement_type: "inbound",
+              status: "CLEARED"
+            }
+          ];
+        }
+
+        tbody.innerHTML = passes.map(p => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3.5 font-bold text-navy">${p.pass_token}</td>
+            <td class="p-3.5 font-sans">${p.vehicle_plate}</td>
+            <td class="p-3.5 font-sans">${p.driver_name}</td>
+            <td class="p-3.5 font-sans">${p.manifest_summary || 'Commercial Cargo'}</td>
+            <td class="p-3.5 uppercase font-bold ${p.movement_type === 'inbound' ? 'text-emerald-700' : 'text-blue-700'}">${p.movement_type}</td>
+            <td class="p-3.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'CLEARED' ? 'bg-emerald-100 text-emerald-800' : 'bg-yellow-100 text-yellow-800'}">
+                ${p.status}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openNewGatePassModal() {
+      document.getElementById('newGatePassModal').showModal();
+      lucide.createIcons();
+    }
+
+    async function handleNewGatePassSubmit(e) {
+      e.preventDefault();
+      const payload = {
+        warehouse_id: parseInt(document.getElementById('gpWarehouseId').value),
+        movement_type: document.getElementById('gpMovementType').value,
+        vehicle_plate: document.getElementById('gpPlate').value,
+        driver_name: document.getElementById('gpDriver').value,
+        cargo_manifest: document.getElementById('gpCargo').value,
+        pallet_count: parseInt(document.getElementById('gpUnits').value)
+      };
+
+      try {
+        const res = await fetch('/api/incharge/gate-pass', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Gate Pass issued! Token: ${data.pass_token}`);
+          document.getElementById('newGatePassModal').close();
+          loadClientGatePasses();
+        } else {
+          showToast(data.detail || "Failed to issue gate pass.", true);
+        }
+      } catch (err) {
+        showToast("Network error issuing gate pass.", true);
       }
     }
 
     function handleLogout() {
       localStorage.removeItem('kwdc_token');
       localStorage.removeItem('kwdc_user');
-      window.location.href = '/';
+      sessionStorage.clear();
+      window.location.href = '/login';
     }
 
+    // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
       if (user) {
@@ -590,8 +1100,11 @@
         document.getElementById('clientEmail').textContent = user.email || 'client@kwdc.com.np';
         document.getElementById('clientAvatar').textContent = (user.full_name || 'CC').substring(0, 2).toUpperCase();
       }
+
+      const savedLang = localStorage.getItem('kwdc_lang') || 'en';
+      applyTranslations(savedLang);
+
       loadCatalog();
-      loadMyBookings();
       runQuickCalc();
       lucide.createIcons();
     });

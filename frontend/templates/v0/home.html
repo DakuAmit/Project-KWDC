@@ -81,6 +81,11 @@
       </nav>
 
       <div class="flex items-center gap-2" id="v0AuthArea">
+        <!-- Bilingual Switcher Pill -->
+        <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-bold text-white transition shadow-sm mr-1" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
+          <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
+        </button>
+        
         <button type="button" onclick="openPartnerModal()" data-open-signup class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-navy hover:bg-amber-400">
           <i data-lucide="handshake" class="h-4 w-4"></i> Partner With Us
         </button>
@@ -96,9 +101,9 @@
   </div>
   <nav id="mobileNav" aria-label="Mobile" class="hidden lg:hidden border-t border-white/10 bg-navy">
     <div class="mx-auto max-w-7xl px-4 py-3 flex flex-col text-sm gap-1">
-      <a href="#available-storage" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Available Storage</a>
-      <a href="#calculator" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Storage Calculator</a>
-      <a href="#map-section" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Logistics Network</a>
+      <a href="#available-storage" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium"><span data-i18n="nav_storage">Available Storage</span></a>
+      <a href="#calculator" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium"><span data-i18n="nav_calculator">Storage Calculator</span></a>
+      <a href="#map-section" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium"><span data-i18n="nav_network">Logistics Network</span></a>
       <div id="mobileAuthArea" class="pt-2 border-t border-white/10 flex flex-col gap-2 mt-2">
         <button type="button" onclick="openPartnerModal()" data-open-signup class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber px-4 py-2.5 font-semibold text-navy">
           <i data-lucide="handshake" class="h-4 w-4"></i> Partner With Us
@@ -636,7 +641,7 @@
     </div>
 
     <p class="text-center text-sm text-slate-600">
-      New to KTM-WDC? <a href="#" onclick="openPartnerModal(); return false;" class="font-semibold text-emerald-700 hover:underline">Partner With Us</a>
+      New to KTM-WDC? <a href="#" onclick="openPartnerModal(); return false;" class="font-semibold text-emerald-700 hover:underline"><span data-i18n="btn_partner">Partner With Us</span></a>
     </p>
   </form>
 
@@ -699,7 +704,7 @@
       <i data-lucide="send" class="h-4 w-4"></i> Partner With Us (Send OTP)
     </button>
     <p class="text-center text-xs text-slate-500">No setup fees. Rs. 0 holding liability &mdash; you only pay or earn when space is rented.</p>
-    <p class="text-center text-sm text-slate-600">Already have an account? <a href="#" onclick="openSignInModal(); return false;" class="font-semibold text-emerald-700 hover:underline">Sign In</a></p>
+    <p class="text-center text-sm text-slate-600">Already have an account? <a href="#" onclick="openSignInModal(); return false;" class="font-semibold text-emerald-700 hover:underline"><span data-i18n="btn_signin">Sign In</span></a></p>
   </form>
 
   <!-- Step 2 -->

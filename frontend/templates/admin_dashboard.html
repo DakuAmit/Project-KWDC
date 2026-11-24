@@ -67,7 +67,7 @@
               <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
               <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
             </div>
-            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">SuperAdmin Console</p>
+            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5"><span data-i18n="drawer_subtitle">SuperAdmin Console</span></p>
           </div>
         </a>
         <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
@@ -80,64 +80,64 @@
         
         <!-- Group 1: Operations -->
         <div>
-          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Facility Operations</p>
+          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5"><span data-i18n="cat_facility_ops">Facility Operations</span></p>
           <div class="space-y-1">
             <button type="button" onclick="switchTab('overview')" id="nav-overview" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-white bg-white/10">
-              <span class="flex items-center gap-2.5"><i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-400"></i> Executive Overview</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_overview">Executive Overview</span></span>
             </button>
 
             <button type="button" onclick="switchTab('pending')" id="nav-pending" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="building-check" class="w-4 h-4 text-sky-400"></i> Property Audits</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="building-check" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_audits">Property Audits</span></span>
               <span id="badgePendingCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
             <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> Client Leases &sqft</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_leases">Client Leases &amp; Continuous Sq Ft</span></span>
               <span id="badgeBookingsCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
             <button type="button" onclick="switchTab('incharges')" id="nav-incharges" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="user-plus" class="w-4 h-4 text-indigo-400"></i> Incharge Staff (Ops)</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="user-plus" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_incharges">Incharge Staff (Ops)</span></span>
               <span id="badgeInchargeCount" class="text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
             <button type="button" onclick="switchTab('logs')" id="nav-logs" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="clipboard-list" class="w-4 h-4 text-blue-400"></i> Facility Shift Logs</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="clipboard-list" class="w-4 h-4 text-blue-400"></i> <span data-i18n="nav_shift_logs">Facility Shift Logs</span></span>
             </button>
           </div>
         </div>
 
         <!-- Group 2: Logistics & Settlement -->
         <div>
-          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Logistics &amp; Settlement</p>
+          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5"><span data-i18n="cat_logistics">Logistics &amp; Settlement</span></p>
           <div class="space-y-1">
             <button type="button" onclick="switchTab('fleet-radar')" id="nav-fleet-radar" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="radio" class="w-4 h-4 text-cyan-400 animate-pulse"></i> Fleet Telemetry Radar</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="radio" class="w-4 h-4 text-cyan-400 animate-pulse"></i> <span data-i18n="nav_radar">Fleet Telemetry Radar</span></span>
               <span id="badgeFleetCount" class="text-[11px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
             <button type="button" onclick="switchTab('payouts')" id="nav-payouts" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i> Owner Payouts (90/10)</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_payouts">Owner Payouts (90/10)</span></span>
               <span id="badgePayoutCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
             <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> IRD VAT Invoices</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> <span data-i18n="nav_invoices">IRD VAT Invoices</span></span>
             </button>
           </div>
         </div>
 
         <!-- Group 3: Governance & Risk -->
         <div>
-          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Governance &amp; Controls</p>
+          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5"><span data-i18n="cat_governance">Governance &amp; Controls</span></p>
           <div class="space-y-1">
             <button type="button" onclick="switchTab('maintenance-holds')" id="nav-maintenance-holds" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="tool" class="w-4 h-4 text-amber-400"></i> Maintenance Holds</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="tool" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_maintenance_holds">Maintenance Holds</span></span>
               <span id="badgeHoldsCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
             <button type="button" onclick="switchTab('users')" id="nav-users" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="users" class="w-4 h-4 text-purple-400"></i> User Directory &amp; RBAC</span>
+              <span class="flex items-center gap-2.5"><i data-lucide="users" class="w-4 h-4 text-purple-400"></i> <span data-i18n="nav_users">User Directory &amp; RBAC</span></span>
               <span id="badgeUserCount" class="text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
           </div>
@@ -181,6 +181,10 @@
         </div>
 
         <div class="flex items-center gap-3">
+          <!-- Bilingual Switcher Pill -->
+          <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
+            <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
+          </button>
           <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Sovereign Guarantor Mode
           </span>
@@ -815,7 +819,9 @@ Locks physical specs and dispatches contract.`)) return;
         const data = await res.json();
         if (res.ok) {
           showToast(data.message || 'Facility verified and contract dispatched.');
-          refreshData();
+          const savedLang = localStorage.getItem('kwdc_lang') || 'en';
+      applyTranslations(savedLang);
+      refreshData();
         } else {
           showToast(data.detail || 'Approval failed.', true);
         }
@@ -1379,6 +1385,71 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       loadPayouts();
       loadMaintenanceHolds();
       loadUsers();
+    }
+
+    
+    // -------------------------------------------------------------
+    // Bilingual Dictionary (I18N_ADMIN)
+    // -------------------------------------------------------------
+    const I18N_ADMIN = {
+      en: {
+        drawer_subtitle: "SuperAdmin Console",
+        cat_facility_ops: "Facility Operations",
+        cat_logistics: "Logistics & Settlement",
+        cat_governance: "Governance & Controls",
+        nav_overview: "Executive Overview",
+        nav_audits: "Property Audits",
+        nav_leases: "Client Leases & Continuous Sq Ft",
+        nav_incharges: "Incharge Staff (Ops)",
+        nav_shift_logs: "Facility Shift Logs",
+        nav_radar: "Fleet Telemetry Radar",
+        nav_payouts: "Owner Payouts (90/10)",
+        nav_invoices: "IRD VAT Invoices",
+        nav_maintenance_holds: "Maintenance Holds",
+        nav_users: "User Directory & RBAC"
+      },
+      ne: {
+        drawer_subtitle: "सुपरएडमिन कन्सोल",
+        cat_facility_ops: "गोदाम सञ्चालन",
+        cat_logistics: "लजिस्टिक्स तथा भुक्तानी",
+        cat_governance: "सुशासन तथा नियन्त्रण",
+        nav_overview: "कार्यकारी सारांश",
+        nav_audits: "गोदाम अडिट तथा स्वीकृति",
+        nav_leases: "ग्राहक सम्झौता तथा क्षेत्रफल",
+        nav_incharges: "इन्चार्ज कर्मचारी (सञ्चालन)",
+        nav_shift_logs: "दैनिक सिफ्ट लगहरू",
+        nav_radar: "फ्लीट टेलिमेट्री राडार",
+        nav_payouts: "जग्गाधनी भुक्तानी (९०/१०)",
+        nav_invoices: "आन्तरिक राजस्व भ्याट बिजक",
+        nav_maintenance_holds: "मर्मत तथा होल्डहरू",
+        nav_users: "प्रयोगकर्ता तथा पहुँच नियन्त्रण"
+      }
+    };
+
+    function toggleLanguage() {
+      const cur = localStorage.getItem('kwdc_lang') === 'ne' ? 'en' : 'ne';
+      localStorage.setItem('kwdc_lang', cur);
+      applyTranslations(cur);
+    }
+
+    function applyTranslations(lang) {
+      const dict = I18N_ADMIN[lang] || I18N_ADMIN.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.textContent = dict[key];
+        }
+      });
+
+      const langFlag = document.getElementById('langFlag');
+      const langLabel = document.getElementById('langLabel');
+      if (lang === 'ne') {
+        if (langFlag) langFlag.textContent = '🇬🇧';
+        if (langLabel) langLabel.textContent = 'English';
+      } else {
+        if (langFlag) langFlag.textContent = '🇳🇵';
+        if (langLabel) langLabel.textContent = 'नेपाली';
+      }
     }
 
     function handleLogout() {

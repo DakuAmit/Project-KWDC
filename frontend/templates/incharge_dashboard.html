@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Warehouse Incharge Cockpit | KTM-WDC Nepal</title>
+  <title>Warehouse Incharge Operations | KTM-WDC Nepal</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <script>
     tailwind.config = {
@@ -14,11 +17,16 @@
             navy: '#0f172a',
             amber: '#f59e0b',
             nepal: '#dc2626'
+          },
+          fontFamily: {
+            sans: ['Geist', 'system-ui', 'sans-serif'],
+            mono: ['Geist Mono', 'monospace']
           }
         }
       }
     }
   </script>
+  <style> body { font-family: 'Geist', sans-serif; } </style>
 </head>
 <body class="bg-slate-100 text-slate-900 antialiased font-sans pb-16 lg:pb-0">
   <!-- Mobile Drawer Backdrop -->
@@ -38,7 +46,7 @@
               <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
               <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
             </div>
-            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">Facility Incharge</p>
+            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5" data-i18n="incharge_badge">Facility Incharge Staff</p>
           </div>
         </a>
         <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
@@ -47,27 +55,34 @@
       </div>
 
       <!-- Navigation Drawer Items -->
-      <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm">
+      <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm" id="inchargeNav">
         <button type="button" onclick="switchTab('facilities')" id="nav-facilities" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-white bg-white/10">
-          <span class="flex items-center gap-3"><i data-lucide="building" class="w-4 h-4 text-amber-400"></i> Assigned Facilities</span>
+          <span class="flex items-center gap-3"><i data-lucide="building" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_facilities">Assigned Facilities</span></span>
           <span id="badgeFacilitiesCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
         </button>
 
-        <button type="button" onclick="openGatePassModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="scan-barcode" class="w-4 h-4 text-emerald-400"></i> Issue Gate Pass
+        <button type="button" onclick="switchTab('gatepass')" id="nav-gatepass" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="scan-barcode" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_gatepass">Digital Gate Passes</span></span>
+          <span id="badgeGateCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
         </button>
 
-        <button type="button" onclick="openActivityModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="file-plus" class="w-4 h-4 text-sky-400"></i> Log Shift Inspection
+        <button type="button" onclick="switchTab('logs')" id="nav-logs" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="clipboard-list" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_logs">Shift Inspection Logs</span>
         </button>
 
-        <button type="button" onclick="openIncidentModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i> Report Hazard / Seepage
+        <button type="button" onclick="switchTab('hazards')" id="nav-hazards" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_hazards">Hazard / Seepage Alert</span>
         </button>
 
-        <button type="button" onclick="triggerPoliceAlert()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-red-400 hover:text-red-300 hover:bg-red-500/10">
-          <i data-lucide="siren" class="w-4 h-4 text-red-400"></i> 1-Click Police Escalation
-        </button>
+        <div class="pt-4 border-t border-white/10 mt-4 space-y-2">
+          <button type="button" onclick="openGatePassModal()" class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl font-bold transition text-navy bg-amber hover:bg-amber-400 text-xs">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i> <span data-i18n="btn_issue_gatepass">Issue New Gate Pass</span>
+          </button>
+
+          <button type="button" onclick="triggerPoliceAlert()" class="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl font-bold transition text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs border border-red-500/30">
+            <i data-lucide="siren" class="w-4 h-4"></i> <span data-i18n="btn_police">1-Click Police Escalation</span>
+          </button>
+        </div>
       </nav>
 
       <!-- Drawer Footer: User Profile & Sign Out -->
@@ -98,14 +113,20 @@
             <i data-lucide="menu" class="w-5 h-5"></i>
           </button>
           <div>
-            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle">Warehouse Operations & Gate Control</h1>
-            <p class="text-xs text-slate-500 hidden sm:block">On-Site Facility Oversight • Inward/Outward Gate Passes • Shift Audits</p>
+            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle" data-i18n="incharge_title">Warehouse Operations &amp; Gate Control</h1>
+            <p class="text-xs text-slate-500 hidden sm:block" data-i18n="incharge_subtitle">On-Site Facility Oversight • Inward/Outward Gate Passes • Shift Audits</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2.5">
+          <!-- Bilingual Language Toggle Button -->
+          <button onclick="toggleLanguage()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
+            <span id="langFlag">🇳🇵</span>
+            <span id="langLabel">नेपाली</span>
+          </button>
+
           <button onclick="openGatePassModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-navy text-white text-xs font-bold shadow hover:bg-slate-800 transition">
-            <i data-lucide="scan-barcode" class="w-4 h-4"></i> Gate Pass
+            <i data-lucide="scan-barcode" class="w-4 h-4"></i> <span data-i18n="btn_quick_gate">Gate Pass</span>
           </button>
         </div>
       </header>
@@ -116,17 +137,107 @@
       <!-- Main Panels -->
       <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
 
-        <!-- Assigned Facilities Grid -->
+        <!-- View 1: Assigned Facilities Grid -->
         <section id="view-facilities" class="space-y-6">
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-bold text-navy">Assigned Ground Facilities</h3>
-            <button onclick="loadAssignedFacilities()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200">
-              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-bold text-navy" data-i18n="facilities_heading">Facilities Under Your Oversight</h3>
+              <p class="text-xs text-slate-500 mt-0.5" data-i18n="facilities_subheading">SuperAdmin provisioned facilities assigned to your operations shift.</p>
+            </div>
+            <button onclick="loadAssignedFacilities()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="refresh">Refresh</span>
             </button>
           </div>
 
-          <div id="assignedFacilitiesGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="col-span-full py-12 text-center text-slate-400">Loading assigned warehouses...</div>
+          <div id="assignedFacilitiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div class="col-span-full py-10 text-center text-slate-400">Loading assigned facilities...</div>
+          </div>
+        </section>
+
+        <!-- View 2: Gate Passes -->
+        <section id="view-gatepass" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base" data-i18n="gate_heading">Digital Gate Pass History &amp; Vehicle Manifests</h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="gate_subheading">Inward and outward cargo clearance issued at the warehouse entrance dock.</p>
+              </div>
+              <button onclick="openGatePassModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition">
+                <i data-lucide="plus" class="w-4 h-4"></i> <span data-i18n="btn_issue_gatepass">Issue New Gate Pass</span>
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Pass Ref</th>
+                    <th class="px-5 py-3">Vehicle Plate</th>
+                    <th class="px-5 py-3">Driver Name</th>
+                    <th class="px-5 py-3">Mode</th>
+                    <th class="px-5 py-3">Cargo Units</th>
+                    <th class="px-5 py-3">Issued At</th>
+                    <th class="px-5 py-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="gatePassTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">Loading gate clearance passes...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 3: Shift Inspection Logs -->
+        <section id="view-logs" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base" data-i18n="logs_heading">Daily Shift Inspection Reports</h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="logs_subheading">Shift handover reports, equipment checks, and facility audits transmitted to Admin.</p>
+              </div>
+              <button onclick="openActivityModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-sm transition">
+                <i data-lucide="file-plus" class="w-4 h-4"></i> <span data-i18n="btn_log_shift">Log Shift Report</span>
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Timestamp</th>
+                    <th class="px-5 py-3">Report Category</th>
+                    <th class="px-5 py-3">Summary</th>
+                    <th class="px-5 py-3">Detailed Notes</th>
+                    <th class="px-5 py-3 text-right">Admin Review</th>
+                  </tr>
+                </thead>
+                <tbody id="inchargeLogsTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="5" class="px-5 py-8 text-center text-slate-400">Loading shift inspection logs...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 4: Hazard / Seepage Reports -->
+        <section id="view-hazards" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold text-navy flex items-center gap-2">
+                  <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i> <span data-i18n="hazard_heading">Facility Hazard, Water Seepage &amp; Risk Reporting</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="hazard_subheading">Report physical building issues (leakage, electrical, pests) to immediately alert Admin.</p>
+              </div>
+              <button onclick="openIncidentModal()" class="px-4 py-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold text-xs shadow-sm transition">
+                + Report New Hazard
+              </button>
+            </div>
+
+            <div class="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-xs text-amber-900 leading-relaxed">
+              <strong>SuperAdmin Protocol:</strong> Any verified water seepage or structural crack automatically freezes the affected partition in the public marketplace to prevent commercial goods damage.
+            </div>
           </div>
         </section>
 
@@ -134,147 +245,177 @@
     </div>
   </div>
 
-  <!-- Modal: Gate Pass -->
-  <dialog id="gatePassModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
-    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
-      <h3 class="font-bold text-base flex items-center gap-2">
-        <i data-lucide="scan-barcode" class="w-5 h-5 text-emerald-400"></i> Issue Facility Gate Pass
-      </h3>
-      <button onclick="document.getElementById('gatePassModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+  <!-- Modals -->
+  <!-- 1. Gate Pass Modal -->
+  <dialog id="gatePassModal" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-navy/70 backdrop:backdrop-blur-sm">
+    <div class="bg-navy px-6 py-5 text-white">
+      <h3 class="text-base font-bold" data-i18n="modal_gate_title">Issue Digital Gate Pass</h3>
+      <p class="text-xs text-slate-400 mt-0.5">Authorizes inward/outward vehicle passage at facility dock.</p>
     </div>
     <form id="gatePassForm" onsubmit="handleGatePassSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-navy mb-1">Pass Type *</label>
-          <select id="gpType" class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white">
-            <option value="inward">Inward (Receiving Cargo)</option>
-            <option value="outward">Outward (Dispatch Delivery)</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-navy mb-1">Truck License Plate *</label>
-          <input type="text" id="gpPlate" required placeholder="e.g. Ba 2 Kha 4589" class="w-full h-10 px-3 rounded-xl border border-slate-300">
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-navy mb-1">Driver Name *</label>
-          <input type="text" id="gpDriver" required placeholder="e.g. Ramesh Giri" class="w-full h-10 px-3 rounded-xl border border-slate-300">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-navy mb-1">Pallet / Carton Count *</label>
-          <input type="number" id="gpCount" required value="40" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono">
-        </div>
-      </div>
-
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Cargo Description / Seal Number *</label>
-        <input type="text" id="gpCargo" required placeholder="e.g. 40 cartons FMCG goods, Container Seal #NP-90812" class="w-full h-10 px-3 rounded-xl border border-slate-300">
+        <label class="block font-semibold text-slate-700">Movement Direction</label>
+        <select id="gpType" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
+          <option value="inward">Inward (Receiving Goods / Unloading)</option>
+          <option value="outward">Outward (Dispatching Cargo / Loading)</option>
+        </select>
       </div>
-
-      <div class="pt-3 flex justify-end gap-3 border-t border-slate-200">
-        <button type="button" onclick="document.getElementById('gatePassModal').close()" class="px-4 py-2 text-slate-600 font-semibold">Cancel</button>
-        <button type="submit" class="px-5 py-2.5 rounded-xl bg-navy text-white font-bold hover:bg-slate-800 shadow">Generate Gate Pass</button>
+      <div>
+        <label class="block font-semibold text-slate-700">Vehicle License Plate</label>
+        <input type="text" id="gpPlate" required placeholder="e.g. Ba 3 Kha 9842" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-mono">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700">Driver Full Name</label>
+        <input type="text" id="gpDriver" required placeholder="e.g. Ramesh Tamang" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700">Pallet / Unit Count</label>
+          <input type="number" id="gpCount" min="1" value="12" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700">Cargo Manifest</label>
+          <input type="text" id="gpCargo" placeholder="FMCG / Cartons" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div class="pt-2 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('gatePassModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-700">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700">Issue Gate Pass</button>
       </div>
     </form>
   </dialog>
 
-  <!-- Modal: Shift Activity Log -->
-  <dialog id="activityModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
-    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
-      <h3 class="font-bold text-base flex items-center gap-2">
-        <i data-lucide="file-plus" class="w-5 h-5 text-sky-400"></i> Daily Shift Activity Log
-      </h3>
-      <button onclick="document.getElementById('activityModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+  <!-- 2. Activity Shift Modal -->
+  <dialog id="activityModal" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-navy/70 backdrop:backdrop-blur-sm">
+    <div class="bg-navy px-6 py-5 text-white">
+      <h3 class="text-base font-bold">Log Shift Inspection &amp; Activity</h3>
+      <p class="text-xs text-slate-400 mt-0.5">Dispatches daily status to SuperAdmin governance.</p>
     </div>
     <form id="activityForm" onsubmit="handleActivitySubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Log Type *</label>
-        <select id="actType" class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white">
-          <option value="daily_inspection">Daily Floor Inspection</option>
-          <option value="inward_audit">Inward Cargo Physical Audit</option>
-          <option value="security_patrol">Perimeter Security Patrol</option>
+        <label class="block font-semibold text-slate-700">Category</label>
+        <select id="actType" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
+          <option value="DAILY_SUMMARY">Daily Shift Handover &amp; Summary</option>
+          <option value="STOCK_INSPECTION">Pallet Physical Count &amp; Integrity</option>
+          <option value="MAINTENANCE_ALERT">Power / Lighting / Ramp Check</option>
         </select>
       </div>
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Shift Summary *</label>
-        <input type="text" id="actSummary" required placeholder="e.g. All gates secured, 3 inward container trucks unloaded." class="w-full h-10 px-3 rounded-xl border border-slate-300">
+        <label class="block font-semibold text-slate-700">Summary Headline</label>
+        <input type="text" id="actSummary" required placeholder="e.g. Morning Shift: 4 Trucks cleared, ramp clear" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
       </div>
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Detailed Floor Notes</label>
-        <textarea id="actNotes" rows="3" placeholder="Power backup verified, forklift ramp clear of debris." class="w-full p-3 rounded-xl border border-slate-300"></textarea>
+        <label class="block font-semibold text-slate-700">Detailed Notes</label>
+        <textarea id="actNotes" rows="3" required placeholder="All partitions locked, CCTV running, zero water seepage observed." class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></textarea>
       </div>
-      <div class="pt-3 flex justify-end gap-3 border-t border-slate-200">
-        <button type="button" onclick="document.getElementById('activityModal').close()" class="px-4 py-2 text-slate-600 font-semibold">Cancel</button>
-        <button type="submit" class="px-5 py-2.5 rounded-xl bg-navy text-white font-bold hover:bg-slate-800 shadow">Transmit to Admin</button>
+      <div class="pt-2 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('activityModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-700">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-sky-600 text-white font-bold hover:bg-sky-700">Submit Shift Report</button>
       </div>
     </form>
   </dialog>
 
-  <!-- Modal: Incident / Hazard Report -->
-  <dialog id="incidentModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
-    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
-      <h3 class="font-bold text-base flex items-center gap-2">
-        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber"></i> Log Incident / Damage / Seepage
-      </h3>
-      <button onclick="document.getElementById('incidentModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+  <!-- 3. Incident Modal -->
+  <dialog id="incidentModal" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-navy/70 backdrop:backdrop-blur-sm">
+    <div class="bg-navy px-6 py-5 text-white">
+      <h3 class="text-base font-bold">Report Facility Hazard / Seepage</h3>
+      <p class="text-xs text-slate-400 mt-0.5">Triggers Admin alert and maintenance review.</p>
     </div>
     <form id="incidentForm" onsubmit="handleIncidentSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Incident Classification *</label>
-        <select id="incType" class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white">
-          <option value="water_seepage">Monsoon Water Seepage / Roof Leak</option>
-          <option value="packaging_damage">Minor Rat / Rodent Packaging Damage</option>
-          <option value="power_failure">3-Phase Grid Outage / Generator Fault</option>
-          <option value="seal_tampered">Truck Seal Tampered</option>
+        <label class="block font-semibold text-slate-700">Severity</label>
+        <select id="incSeverity" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
+          <option value="MODERATE">Moderate (Requires scheduled repair)</option>
+          <option value="HIGH">High (Immediate space isolation required)</option>
+          <option value="CRITICAL">Critical (Water flood / fire / power outage)</option>
         </select>
       </div>
       <div>
-        <label class="block text-xs font-bold text-navy mb-1">Incident Description & Location *</label>
-        <textarea id="incDesc" required rows="3" placeholder="Describe damage location and actions taken to protect neighboring client cargo." class="w-full p-3 rounded-xl border border-slate-300"></textarea>
+        <label class="block font-semibold text-slate-700">Issue Title</label>
+        <input type="text" id="incTitle" required placeholder="e.g. Rainwater seepage near East Partition Shutter" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
       </div>
-      <div class="pt-3 flex justify-end gap-3 border-t border-slate-200">
-        <button type="button" onclick="document.getElementById('incidentModal').close()" class="px-4 py-2 text-slate-600 font-semibold">Cancel</button>
-        <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold shadow">Log Incident</button>
+      <div>
+        <label class="block font-semibold text-slate-700">Observation Notes</label>
+        <textarea id="incNotes" rows="3" required placeholder="Goods moved 4 meters away. Landlord notified." class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></textarea>
+      </div>
+      <div class="pt-2 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('incidentModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-700">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-amber text-navy font-bold hover:bg-amber-400">Transmit Hazard Alert</button>
       </div>
     </form>
   </dialog>
 
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT & BILINGUAL TRANSLATION ENGINE -->
+  <!-- ===================================================================== -->
   <script>
-    function toggleDrawer(force) {
-      const drawer = document.getElementById('leftDrawer');
-      const backdrop = document.getElementById('drawerBackdrop');
-      const isOpen = force !== undefined ? force : drawer.classList.contains('-translate-x-full');
-      if (isOpen) {
-        drawer.classList.remove('-translate-x-full');
-        backdrop.classList.remove('hidden');
-      } else {
-        drawer.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
+    lucide.createIcons();
+    let defaultWarehouseId = 1;
+
+    // Bilingual Dictionary
+    const I18N_INCHARGE = {
+      en: {
+        lang_btn: 'नेपाली', lang_flag: '🇳🇵', refresh: 'Refresh',
+        incharge_badge: 'Facility Incharge Staff',
+        incharge_title: 'Warehouse Operations & Gate Control',
+        incharge_subtitle: 'On-Site Facility Oversight • Inward/Outward Gate Passes • Shift Audits',
+        nav_facilities: 'Assigned Facilities',
+        nav_gatepass: 'Digital Gate Passes',
+        nav_logs: 'Shift Inspection Logs',
+        nav_hazards: 'Hazard / Seepage Alert',
+        btn_issue_gatepass: 'Issue New Gate Pass',
+        btn_police: '1-Click Police Escalation',
+        btn_quick_gate: 'Gate Pass',
+        facilities_heading: 'Facilities Under Your Oversight',
+        facilities_subheading: 'SuperAdmin provisioned facilities assigned to your operations shift.',
+        gate_heading: 'Digital Gate Pass History & Vehicle Manifests',
+        gate_subheading: 'Inward and outward cargo clearance issued at the warehouse entrance dock.',
+        logs_heading: 'Daily Shift Inspection Reports',
+        logs_subheading: 'Shift handover reports, equipment checks, and facility audits transmitted to Admin.',
+        hazard_heading: 'Facility Hazard, Water Seepage & Risk Reporting',
+        hazard_subheading: 'Report physical building issues (leakage, electrical, pests) to immediately alert Admin.',
+        modal_gate_title: 'Issue Digital Gate Pass'
+      },
+      ne: {
+        lang_btn: 'English', lang_flag: '🇬🇧', refresh: 'ताजा गर्नुहोस्',
+        incharge_badge: 'गोदाम इन्चार्ज कर्मचारी',
+        incharge_title: 'गोदाम सञ्चालन तथा गेट नियन्त्रण',
+        incharge_subtitle: 'भौतिक गोदाम निरीक्षण • प्रवेश/निकासी गेट पास • सुरक्षा रिपोर्ट',
+        nav_facilities: 'जिम्मेवारी पाएका गोदामहरू',
+        nav_gatepass: 'डिजिटल गेट पास सूची',
+        nav_logs: 'दैनिक निरीक्षण रिपोर्ट',
+        nav_hazards: 'जोखिम तथा चुहावट उजुरी',
+        btn_issue_gatepass: 'गेट पास जारी गर्नुहोस्',
+        btn_police: 'प्रहरी / आपतकालीन सूचना',
+        btn_quick_gate: 'गेट पास',
+        facilities_heading: 'तपाईंको जिम्मामा रहेका गोदामहरू',
+        facilities_subheading: 'मुख्य प्रशासकद्वारा तपाईंलाई तोकिएका भौतिक गोदामहरू।',
+        gate_heading: 'डिजिटल गेट पास तथा गाडी विवरण',
+        gate_subheading: 'गोदाममा सामान ढुवानी गर्ने गाडीहरूको प्रवेश तथा निकासी अनुमति।',
+        logs_heading: 'दैनिक सिफ्ट निरीक्षण विवरण',
+        logs_subheading: 'सिफ्ट हस्तान्तरण, सामग्री सुरक्षा तथा भौतिक अवस्थाको दैनिक प्रतिवेदन।',
+        hazard_heading: 'गोदाम जोखिम, पानी चुहावट तथा सुरक्षा उजुरी',
+        hazard_subheading: 'कुनै पनि चुहावट वा क्षति देखिएमा तुरुन्तै प्रशासकलाई जानकारी गराउनुहोस्।',
+        modal_gate_title: 'डिजिटल गेट पास जारी गर्नुहोस्'
       }
+    };
+
+    function applyTranslations(lang) {
+      const dict = I18N_INCHARGE[lang] || I18N_INCHARGE.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+      const flag = document.getElementById('langFlag');
+      const label = document.getElementById('langLabel');
+      if (flag) flag.textContent = dict.lang_flag;
+      if (label) label.textContent = dict.lang_btn;
     }
 
-    function switchTab(tabId) {
-      // Single view for now
-      if (window.innerWidth < 1024) toggleDrawer(false);
-      lucide.createIcons();
-    }
-
-    function openGatePassModal() { document.getElementById('gatePassModal').showModal(); lucide.createIcons(); }
-    function openActivityModal() { document.getElementById('activityModal').showModal(); lucide.createIcons(); }
-    function openIncidentModal() { document.getElementById('incidentModal').showModal(); lucide.createIcons(); }
-
-    function showToast(msg, isError = false) {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `p-4 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold pointer-events-auto transition-all transform duration-300 ${
-        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-      }`;
-      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4"></i> <span>${msg}</span></div>`;
-      container.appendChild(toast);
-      lucide.createIcons();
-      setTimeout(() => { toast.remove(); }, 4000);
+    function toggleLanguage() {
+      const cur = localStorage.getItem('kwdc_lang') === 'ne' ? 'en' : 'ne';
+      localStorage.setItem('kwdc_lang', cur);
+      applyTranslations(cur);
     }
 
     function getAuthHeaders() {
@@ -285,18 +426,49 @@
       };
     }
 
-    let defaultWarehouseId = 1;
+    function toggleDrawer() {
+      document.getElementById('leftDrawer').classList.toggle('-translate-x-full');
+    }
+
+    function showToast(message, isError = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-xl shadow-xl border text-sm font-semibold pointer-events-auto transition flex items-center gap-2.5 ${
+        isError ? 'bg-red-50 text-red-800 border-red-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+      }`;
+      toast.innerHTML = `<i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4 shrink-0"></i> <span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => { toast.remove(); }, 4000);
+    }
+
+    function switchTab(tabId) {
+      const tabs = ['facilities', 'gatepass', 'logs', 'hazards'];
+      tabs.forEach(t => {
+        const view = document.getElementById(`view-${t}`);
+        const nav = document.getElementById(`nav-${t}`);
+        if (view) view.classList.toggle('hidden', t !== tabId);
+        if (nav) {
+          nav.classList.toggle('bg-white/10', t === tabId);
+          nav.classList.toggle('text-white', t === tabId);
+          nav.classList.toggle('text-slate-300', t !== tabId);
+        }
+      });
+
+      if (window.innerWidth < 1024) {
+        document.getElementById('leftDrawer').classList.add('-translate-x-full');
+      }
+
+      if (tabId === 'gatepass') loadGatePasses();
+      else if (tabId === 'logs') loadInchargeLogs();
+      lucide.createIcons();
+    }
 
     async function loadAssignedFacilities() {
-      const grid = document.getElementById('assignedFacilitiesGrid');
       try {
         const res = await fetch('/api/incharge/assigned-warehouses', { headers: getAuthHeaders() });
-        const data = await res.json();
-
-        document.getElementById('badgeFacilitiesCount').textContent = (data || []).length;
-
-        if (!data || data.length === 0) {
-          // Fallback to active catalog facilities for demo authority
+        const data = res.ok ? await res.json() : [];
+        if (data.length === 0) {
           const catRes = await fetch('/api/warehouses/catalog');
           const catData = await catRes.json();
           renderFacilities(catData.slice(0, 3));
@@ -310,6 +482,7 @@
 
     function renderFacilities(list) {
       const grid = document.getElementById('assignedFacilitiesGrid');
+      document.getElementById('badgeFacilitiesCount').textContent = list.length;
       if (list.length > 0) defaultWarehouseId = list[0].id || list[0].warehouse_id || 1;
 
       grid.innerHTML = list.map(w => `
@@ -335,6 +508,75 @@
       lucide.createIcons();
     }
 
+    async function loadGatePasses() {
+      const tbody = document.getElementById('gatePassTableBody');
+      try {
+        const res = await fetch('/api/incharge/gate-passes', { headers: getAuthHeaders() });
+        const data = res.ok ? await res.json() : [];
+        document.getElementById('badgeGateCount').textContent = data.length;
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">No gate passes issued yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(gp => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3 font-mono font-bold text-navy">#GP-${gp.id}</td>
+            <td class="px-5 py-3 font-mono font-bold text-slate-800">${gp.vehicle_plate}</td>
+            <td class="px-5 py-3 text-slate-700 font-medium">${gp.driver_name}</td>
+            <td class="px-5 py-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${gp.pass_type === 'inward' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}">
+                ${gp.pass_type.toUpperCase()}
+              </span>
+            </td>
+            <td class="px-5 py-3 font-mono font-bold text-navy">${gp.scanned_units_count} ${gp.unit_type}s</td>
+            <td class="px-5 py-3 font-mono text-xs text-slate-500">${gp.issued_at}</td>
+            <td class="px-5 py-3 text-right">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700">CLEARED</span>
+            </td>
+          </tr>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+    }
+
+    async function loadInchargeLogs() {
+      const tbody = document.getElementById('inchargeLogsTableBody');
+      try {
+        const res = await fetch('/api/admin/incharge-logs', { headers: getAuthHeaders() });
+        const data = res.ok ? await res.json() : [];
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-400">No shift inspection logs filed yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(l => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3 font-mono text-[11px] text-slate-500">${l.timestamp || l.created_at}</td>
+            <td class="px-5 py-3 uppercase text-[10px] font-bold tracking-wider text-slate-600">${l.log_type}</td>
+            <td class="px-5 py-3 font-medium text-navy">${l.summary}</td>
+            <td class="px-5 py-3 text-slate-600 text-xs">${l.detailed_notes}</td>
+            <td class="px-5 py-3 text-right">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${l.admin_reviewed ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
+                ${l.admin_reviewed ? 'Reviewed' : 'Sent to Admin'}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+    }
+
+    function openGatePassModal() { document.getElementById('gatePassModal').showModal(); }
+    function openActivityModal() { document.getElementById('activityModal').showModal(); }
+    function openIncidentModal() { document.getElementById('incidentModal').showModal(); }
+
     async function handleGatePassSubmit(e) {
       e.preventDefault();
       const payload = {
@@ -359,6 +601,7 @@
           showToast(data.message || `Gate Pass issued for Truck ${payload.vehicle_plate}!`);
           document.getElementById('gatePassModal').close();
           document.getElementById('gatePassForm').reset();
+          loadGatePasses();
         } else {
           showToast(data.detail || 'Failed to issue gate pass.', true);
         }
@@ -386,6 +629,8 @@
         if (res.ok) {
           showToast('Shift activity report transmitted to SuperAdmin!');
           document.getElementById('activityModal').close();
+          document.getElementById('activityForm').reset();
+          loadInchargeLogs();
         } else {
           showToast(data.detail || 'Log submission failed.', true);
         }
@@ -419,6 +664,8 @@
         document.getElementById('inchargeEmail').textContent = user.email || 'incharge@kwdc.com.np';
         document.getElementById('inchargeAvatar').textContent = (user.full_name || 'WI').substring(0, 2).toUpperCase();
       }
+      const savedLang = localStorage.getItem('kwdc_lang') || 'en';
+      applyTranslations(savedLang);
       loadAssignedFacilities();
       lucide.createIcons();
     });
