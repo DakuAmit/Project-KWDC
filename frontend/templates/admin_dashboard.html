@@ -1,31 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SuperAdmin Executive Console | KTM-WDC Nepal</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SuperAdmin Executive Console | KTM-WDC Logistics Exchange</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Leaflet for Fleet Telemetry Radar -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             navy: '#0f172a',
-            amber: '#f59e0b',
+            ink: '#020617',
+            amber: { DEFAULT: '#f59e0b', 500: '#f59e0b' },
+            brand: '#3b82f6',
             nepal: '#dc2626'
+          },
+          fontFamily: {
+            sans: ['Geist', 'system-ui', 'sans-serif'],
+            mono: ['Geist Mono', 'monospace']
           }
         }
       }
     }
   </script>
+  <style>
+    body { font-family: 'Geist', sans-serif; }
+    .radar-pin {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #3b82f6; border: 2px solid #ffffff;
+      box-shadow: 0 0 10px rgba(59,130,246,0.8);
+      position: relative;
+    }
+    .radar-pin::after {
+      content: ''; position: absolute; inset: -4px;
+      border-radius: 50%; border: 2px solid #3b82f6;
+      animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    @keyframes ping {
+      75%, 100% { transform: scale(2.2); opacity: 0; }
+    }
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-900 antialiased font-sans">
-  <!-- Mobile Drawer Backdrop -->
-  <div id="drawerBackdrop" onclick="toggleDrawer()" class="fixed inset-0 bg-slate-950/60 z-40 hidden lg:hidden transition-opacity"></div>
+<body class="bg-slate-50 text-slate-900 antialiased font-sans">
+  <div class="min-h-screen flex flex-col lg:flex-row">
 
-  <div class="flex h-screen overflow-hidden">
-    <!-- Left Drawer (Sidebar) -->
+    <!-- ===================================================================== -->
+    <!-- OPERATIONAL LEFT DRAWER (ENTERPRISE SUPERADMIN CONSOLE) -->
+    <!-- ===================================================================== -->
     <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-navy text-slate-300 flex flex-col border-r border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
       <!-- Brand & Role Header -->
       <div class="p-5 border-b border-white/10 flex items-center justify-between">
@@ -46,34 +75,74 @@
         </button>
       </div>
 
-      <!-- Navigation Drawer Items -->
-      <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm" id="adminNavList">
-        <button type="button" onclick="switchTab('overview')" id="nav-overview" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-white bg-white/10">
-          <span class="flex items-center gap-3"><i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-400"></i> Executive Overview</span>
-        </button>
+      <!-- Navigation Drawer Items (Categorized by Domain) -->
+      <nav class="flex-1 overflow-y-auto p-4 space-y-4 text-sm" id="adminNavList">
+        
+        <!-- Group 1: Operations -->
+        <div>
+          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Facility Operations</p>
+          <div class="space-y-1">
+            <button type="button" onclick="switchTab('overview')" id="nav-overview" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-white bg-white/10">
+              <span class="flex items-center gap-2.5"><i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-400"></i> Executive Overview</span>
+            </button>
 
-        <button type="button" onclick="switchTab('pending')" id="nav-pending" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="building-check" class="w-4 h-4 text-sky-400"></i> Property Audits</span>
-          <span id="badgePendingCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
-        </button>
+            <button type="button" onclick="switchTab('pending')" id="nav-pending" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="building-check" class="w-4 h-4 text-sky-400"></i> Property Audits</span>
+              <span id="badgePendingCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
 
-        <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> Client Leases & Activation</span>
-          <span id="badgeBookingsCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
-        </button>
+            <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> Client Leases &sqft</span>
+              <span id="badgeBookingsCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
 
-        <button type="button" onclick="switchTab('logs')" id="nav-logs" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="clipboard-list" class="w-4 h-4 text-indigo-400"></i> Facility Incharge Logs</span>
-        </button>
+            <button type="button" onclick="switchTab('incharges')" id="nav-incharges" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="user-plus" class="w-4 h-4 text-indigo-400"></i> Incharge Staff (Ops)</span>
+              <span id="badgeInchargeCount" class="text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
 
-        <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> IRD VAT Invoices</span>
-        </button>
+            <button type="button" onclick="switchTab('logs')" id="nav-logs" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="clipboard-list" class="w-4 h-4 text-blue-400"></i> Facility Shift Logs</span>
+            </button>
+          </div>
+        </div>
 
-        <button type="button" onclick="switchTab('users')" id="nav-users" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4 text-purple-400"></i> User Directory & RBAC</span>
-          <span id="badgeUserCount" class="text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">0</span>
-        </button>
+        <!-- Group 2: Logistics & Settlement -->
+        <div>
+          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Logistics &amp; Settlement</p>
+          <div class="space-y-1">
+            <button type="button" onclick="switchTab('fleet-radar')" id="nav-fleet-radar" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="radio" class="w-4 h-4 text-cyan-400 animate-pulse"></i> Fleet Telemetry Radar</span>
+              <span id="badgeFleetCount" class="text-[11px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
+
+            <button type="button" onclick="switchTab('payouts')" id="nav-payouts" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i> Owner Payouts (90/10)</span>
+              <span id="badgePayoutCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
+
+            <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> IRD VAT Invoices</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Group 3: Governance & Risk -->
+        <div>
+          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Governance &amp; Controls</p>
+          <div class="space-y-1">
+            <button type="button" onclick="switchTab('maintenance-holds')" id="nav-maintenance-holds" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="tool" class="w-4 h-4 text-amber-400"></i> Maintenance Holds</span>
+              <span id="badgeHoldsCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
+
+            <button type="button" onclick="switchTab('users')" id="nav-users" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="users" class="w-4 h-4 text-purple-400"></i> User Directory &amp; RBAC</span>
+              <span id="badgeUserCount" class="text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
+          </div>
+        </div>
+
       </nav>
 
       <!-- Drawer Footer: User Profile & Sign Out -->
@@ -95,7 +164,9 @@
       </div>
     </aside>
 
-    <!-- Main Content Workspace -->
+    <!-- ===================================================================== -->
+    <!-- MAIN WORKSPACE -->
+    <!-- ===================================================================== -->
     <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
       <!-- Top Workspace Bar -->
       <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
@@ -172,10 +243,10 @@
           <!-- Quick Governance Explainer -->
           <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 class="text-base font-bold text-navy flex items-center gap-2">
-              <i data-lucide="file-text" class="w-5 h-5 text-amber-600"></i> Platform Operating Covenant & Master Protocol
+              <i data-lucide="file-text" class="w-5 h-5 text-amber-600"></i> Platform Operating Covenant &amp; Master Protocol
             </h3>
             <p class="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
-              When a Property Owner lists empty space (basement, shutter, godown), it enters <strong>Pending Audit</strong>. SuperAdmin inspects vehicle clearance and power specs, then clicks <em>Verify & Dispatch Master Agreement</em>. This locks specifications permanently and triggers the legal commercial lease via Brevo transactional email. Prior to commercial tenant contract activation, holding liability remains strictly <strong>Rs. 0</strong>.
+              When a Property Owner lists empty space (basement, shutter, godown), it enters <strong>Pending Audit</strong>. SuperAdmin inspects vehicle clearance and power specs, then clicks <em>Verify &amp; Dispatch Master Agreement</em>. This locks specifications permanently and triggers the legal commercial lease via Brevo transactional email. Prior to commercial tenant contract activation, holding liability remains strictly <strong>Rs. 0</strong>.
             </p>
           </div>
         </section>
@@ -185,7 +256,7 @@
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 class="font-bold text-navy text-base">Properties Awaiting Physical Audit & Master Agreement</h3>
+                <h3 class="font-bold text-navy text-base">Properties Awaiting Physical Audit &amp; Master Agreement</h3>
                 <p class="text-xs text-slate-500 mt-0.5">Inspect physical specs and execute Master Commercial Contract to publish to catalog.</p>
               </div>
               <button onclick="loadPendingWarehouses()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
@@ -199,16 +270,14 @@
                   <tr>
                     <th class="px-5 py-3">Property Title</th>
                     <th class="px-5 py-3">Owner Contact</th>
-                    <th class="px-5 py-3">Capacity (sq ft)</th>
-                    <th class="px-5 py-3">Tariff / sq ft</th>
-                    <th class="px-5 py-3">Access & Specs</th>
+                    <th class="px-5 py-3">Gross Area</th>
+                    <th class="px-5 py-3">Tariff Rate</th>
+                    <th class="px-5 py-3">Access &amp; Type</th>
                     <th class="px-5 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody id="pendingTableBody" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading pending submissions...</td>
-                  </tr>
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading pending facilities...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -220,8 +289,8 @@
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 class="font-bold text-navy text-base">Commercial Client Storage Bookings & Lease Activation</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Activating a commercial lease starts the monthly KWDC disbursement to the property owner.</p>
+                <h3 class="font-bold text-navy text-base">Commercial Client Leases &amp; Continuous Sq Ft Allocation</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Approve client leases in continuous square footage and commence owner cashflow.</p>
               </div>
               <button onclick="loadBookings()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
@@ -232,83 +301,253 @@
               <table class="w-full text-left text-xs sm:text-sm">
                 <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
                   <tr>
-                    <th class="px-5 py-3">Booking ID</th>
-                    <th class="px-5 py-3">Client</th>
-                    <th class="px-5 py-3">Facility</th>
-                    <th class="px-5 py-3">Requested Space</th>
-                    <th class="px-5 py-3">Gross Total (13% VAT)</th>
-                    <th class="px-5 py-3">Lease Status</th>
+                    <th class="px-5 py-3">Lease Ref</th>
+                    <th class="px-5 py-3">Commercial Tenant</th>
+                    <th class="px-5 py-3">Warehouse Space</th>
+                    <th class="px-5 py-3">Contracted Sq Ft</th>
+                    <th class="px-5 py-3">Gross Monthly NPR</th>
+                    <th class="px-5 py-3">Status</th>
                     <th class="px-5 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody id="bookingsTableBody" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="7" class="px-5 py-8 text-center text-slate-400">Loading bookings...</td>
-                  </tr>
+                  <tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">Loading active leases...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         </section>
 
-        <!-- View 4: Incharge Activity Logs -->
+        <!-- View 4: Warehouse Incharge Staff Provisioning (Internal Staff Under Admin) -->
+        <section id="view-incharges" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                  <i data-lucide="user-check" class="w-5 h-5 text-indigo-600"></i> Warehouse Incharge Staff Directory &amp; Provisioning
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Incharge accounts are internal facility staff created by Admin and issued to personnel. Public registration is strictly disabled.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openProvisionModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">
+                  <i data-lucide="user-plus" class="w-4 h-4"></i> Provision New Incharge Staff
+                </button>
+                <button onclick="loadIncharges()" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">
+                  <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Incharge Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Staff Member</th>
+                    <th class="px-5 py-3">Contact Details</th>
+                    <th class="px-5 py-3">Assigned Facility</th>
+                    <th class="px-5 py-3">Shift Logs</th>
+                    <th class="px-5 py-3">Account State</th>
+                    <th class="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inchargesTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading incharge staff...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 5: Facility Logs & Gate Operations -->
         <section id="view-logs" class="hidden space-y-4">
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-5 border-b border-slate-200">
-              <h3 class="font-bold text-navy text-base">On-Site Facility Incharge Activity & Incident Reports</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Daily ground reports, inward/outward gate passes, and perimeter security audit logs.</p>
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base">Facility Incharge Shift Logs &amp; Gate Movements</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Real-time daily summaries, stock inspection notes, and incident escalations.</p>
+              </div>
+              <button onclick="loadInchargeLogs()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+              </button>
             </div>
 
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs sm:text-sm">
                 <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
                   <tr>
-                    <th class="px-5 py-3">Date</th>
+                    <th class="px-5 py-3">Timestamp</th>
                     <th class="px-5 py-3">Facility</th>
                     <th class="px-5 py-3">Incharge</th>
-                    <th class="px-5 py-3">Report Type</th>
-                    <th class="px-5 py-3">Summary</th>
-                    <th class="px-5 py-3">Status</th>
+                    <th class="px-5 py-3">Category</th>
+                    <th class="px-5 py-3">Summary / Details</th>
+                    <th class="px-5 py-3">Review Status</th>
                   </tr>
                 </thead>
                 <tbody id="inchargeLogsBody" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading facility reports...</td>
-                  </tr>
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading shift logs...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         </section>
 
-        <!-- View 5: IRD VAT Invoices -->
-        <section id="view-invoices" class="hidden space-y-4">
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <div class="flex items-center justify-between mb-4">
+        <!-- View 6: Live Fleet Telemetry Radar -->
+        <section id="view-fleet-radar" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>
-                <h3 class="font-bold text-navy text-base">Nepal IRD Schedule 13 VAT Register</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Real-time Central Billing Monitoring System (CBMS) synchronisation and cryptographic verification.</p>
+                <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                  <i data-lucide="radio" class="w-5 h-5 text-cyan-600"></i> Central Dispatch Fleet Telemetry Radar
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Live GPS tracking and WebSocket telemetry broadcast across Nepal freight corridors.</p>
               </div>
-              <a href="/invoice" target="_blank" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-navy bg-amber hover:bg-amber-400 shadow transition">
-                <i data-lucide="external-link" class="w-4 h-4"></i> Open Tax Invoice Template
-              </a>
+              <button onclick="loadFleetRadar()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh Radar
+              </button>
             </div>
 
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs space-y-2 text-slate-700 font-mono">
-              <p><strong>IRD Tax Registration:</strong> 600987654</p>
-              <p><strong>Statutory Rate:</strong> 13% Value Added Tax (VAT) on (Base Rent + 10% Platform Ops)</p>
-              <p><strong>Digital Format:</strong> ISO/IEC 18004 QR code containing cryptographic ECDSA P-256 signature.</p>
+            <!-- Leaflet Radar Map Container -->
+            <div id="fleetRadarMap" class="w-full h-80 rounded-xl border border-slate-200 shadow-inner z-10 mb-5"></div>
+
+            <!-- Fleet Vehicles Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Vehicle Plate</th>
+                    <th class="px-5 py-3">Category &amp; Payload</th>
+                    <th class="px-5 py-3">Assigned Driver</th>
+                    <th class="px-5 py-3">Current Node</th>
+                    <th class="px-5 py-3">Telemetry Speed</th>
+                    <th class="px-5 py-3">Broadcast Status</th>
+                  </tr>
+                </thead>
+                <tbody id="fleetTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading telemetry stream...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
 
-        <!-- View 6: Platform Users & RBAC Directory -->
+        <!-- View 7: Space Owner Disbursements & Payouts (90/10 Split) -->
+        <section id="view-payouts" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                  <i data-lucide="wallet" class="w-5 h-5 text-emerald-600"></i> Space Owner Monthly Disbursements &amp; Settlements
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Zero Holding Liability: KWDC collects from commercial client, retains 10% platform fee, and disburses 90% Net Base Rent to Property Owner.
+                </p>
+              </div>
+              <button onclick="loadPayouts()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh Ledger
+              </button>
+            </div>
+
+            <!-- Payout Summary Banner -->
+            <div class="p-5 bg-emerald-50/50 border-b border-emerald-100 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <p class="text-[11px] font-semibold text-slate-500 uppercase">Gross Client Rent Billed</p>
+                <p class="text-xl font-bold text-navy mt-0.5" id="payoutGrossTotal">Rs. 0</p>
+              </div>
+              <div>
+                <p class="text-[11px] font-semibold text-slate-500 uppercase">KWDC Retained Margin (10%)</p>
+                <p class="text-xl font-bold text-amber-700 mt-0.5" id="payoutMarginTotal">Rs. 0</p>
+              </div>
+              <div>
+                <p class="text-[11px] font-semibold text-slate-500 uppercase">Net Owner Monthly Payout (90%)</p>
+                <p class="text-xl font-bold text-emerald-700 mt-0.5" id="payoutNetTotal">Rs. 0</p>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Lease Ref</th>
+                    <th class="px-5 py-3">Facility &amp; Location</th>
+                    <th class="px-5 py-3">Property Owner</th>
+                    <th class="px-5 py-3">Contracted Sq Ft</th>
+                    <th class="px-5 py-3">Gross Rent</th>
+                    <th class="px-5 py-3">Net Owner Payout (90%)</th>
+                    <th class="px-5 py-3">Payout Status</th>
+                    <th class="px-5 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="payoutsTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">Loading disbursement ledger...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 8: Maintenance Hold Requests -->
+        <section id="view-maintenance-holds" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                  <i data-lucide="tool" class="w-5 h-5 text-amber-600"></i> Warehouse Maintenance Hold &amp; Freeze Manager
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Review owner requests to temporarily freeze space availability for repairs and waterproofing.</p>
+              </div>
+              <button onclick="loadMaintenanceHolds()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Facility Title</th>
+                    <th class="px-5 py-3">Property Owner</th>
+                    <th class="px-5 py-3">Capacity</th>
+                    <th class="px-5 py-3">Mandatory Reason Log</th>
+                    <th class="px-5 py-3">Hold State</th>
+                    <th class="px-5 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="holdsTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading maintenance holds...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 9: IRD VAT Invoices -->
+        <section id="view-invoices" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+            <span class="w-12 h-12 rounded-full bg-red-50 text-red-600 grid place-items-center mx-auto mb-3">
+              <i data-lucide="receipt" class="w-6 h-6"></i>
+            </span>
+            <h3 class="text-base font-bold text-navy">Nepal IRD Schedule 13 Electronic VAT System</h3>
+            <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
+              All client bookings automatically generate audited Schedule 13 Electronic Tax Invoices with Seller PAN (609823412), 13% statutory VAT calculation, and ISO/IEC 18004 QR codes.
+            </p>
+            <div class="mt-5">
+              <a href="/invoice" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-navy text-white text-xs font-bold hover:bg-slate-800 transition">
+                <i data-lucide="external-link" class="w-4 h-4"></i> Open IRD Schedule 13 Invoice Viewer
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 10: Platform User Directory & RBAC -->
         <section id="view-users" class="hidden space-y-4">
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 class="font-bold text-navy text-base">Platform User Directory & Role-Based Access</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Manage registered Property Owners, Commercial Clients, Fleet Partners, and Incharges.</p>
+                <h3 class="font-bold text-navy text-base">Platform User Directory &amp; RBAC Governance</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Verified user accounts, KYC compliance, and administrative role permissions.</p>
               </div>
               <button onclick="loadUsers()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
@@ -319,18 +558,16 @@
               <table class="w-full text-left text-xs sm:text-sm">
                 <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
                   <tr>
-                    <th class="px-5 py-3">Full Name</th>
-                    <th class="px-5 py-3">Email & Phone</th>
-                    <th class="px-5 py-3">Role</th>
-                    <th class="px-5 py-3">Location</th>
+                    <th class="px-5 py-3">Full Name / Org</th>
+                    <th class="px-5 py-3">Contact</th>
+                    <th class="px-5 py-3">Assigned Role</th>
+                    <th class="px-5 py-3">Operating Hub</th>
                     <th class="px-5 py-3">KYC Status</th>
-                    <th class="px-5 py-3 text-right">Joined</th>
+                    <th class="px-5 py-3 text-right">Account State</th>
                   </tr>
                 </thead>
                 <tbody id="usersTableBody" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading user directory...</td>
-                  </tr>
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading user directory...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -341,48 +578,122 @@
     </div>
   </div>
 
+  <!-- ===================================================================== -->
+  <!-- MODAL 1: PROVISION NEW INCHARGE STAFF -->
+  <!-- ===================================================================== -->
+  <dialog id="provisionModal" class="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-navy/70 backdrop:backdrop-blur-sm">
+    <div class="relative bg-navy px-6 py-5 text-white">
+      <button type="button" onclick="closeProvisionModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-lg">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+        <i data-lucide="shield" class="w-3.5 h-3.5"></i> Internal Staff Provisioning
+      </span>
+      <h3 class="text-lg font-bold mt-2">Provision Warehouse Incharge Account</h3>
+      <p class="text-xs text-slate-400 mt-0.5">Admin-created operational account issued to on-site warehouse facility supervisor.</p>
+    </div>
+
+    <form id="provisionForm" onsubmit="handleProvisionSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
+      <div>
+        <label class="block font-semibold text-slate-700">Full Name</label>
+        <input type="text" id="provFullName" required placeholder="e.g. Bikash Shrestha" class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-indigo-600 focus:outline-none">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700">Official Email</label>
+          <input type="email" id="provEmail" required placeholder="bikash.teku@kwdc.com.np" class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-indigo-600 focus:outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700">Nepal Mobile Number</label>
+          <input type="tel" id="provPhone" required placeholder="98XXXXXXXX" class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-mono focus:border-indigo-600 focus:outline-none">
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700">Assign Warehouse Facility</label>
+        <select id="provWarehouseSelect" required class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-indigo-600 focus:outline-none bg-white">
+          <option value="" disabled selected>Select an approved facility...</option>
+        </select>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between">
+          <label class="block font-semibold text-slate-700">Temporary Password</label>
+          <button type="button" onclick="generateRandomPassword()" class="text-xs text-indigo-600 font-semibold hover:underline">
+            Generate Secure
+          </button>
+        </div>
+        <input type="text" id="provPassword" placeholder="e.g. Incharge@Teku2081" class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-mono focus:border-indigo-600 focus:outline-none">
+        <p class="text-[11px] text-slate-400 mt-1">Leave blank to auto-generate a secure random password.</p>
+      </div>
+
+      <div id="provisionResultCard" class="hidden rounded-xl border border-emerald-300 bg-emerald-50 p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <p class="font-bold text-emerald-900 text-xs">Credentials Created Successfully!</p>
+          <button type="button" onclick="copyProvisionedCredentials()" class="px-2.5 py-1 rounded bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition">
+            📋 Copy Credentials
+          </button>
+        </div>
+        <div class="font-mono text-[11px] text-slate-700 space-y-0.5" id="provisionedDetailsText"></div>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2">
+        <button type="button" onclick="closeProvisionModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-semibold text-slate-700 hover:bg-slate-100 transition">
+          Cancel
+        </button>
+        <button type="submit" id="btnSubmitProvision" class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm transition">
+          Issue Staff Credentials
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 2: DISBURSE OWNER PAYOUT -->
+  <!-- ===================================================================== -->
+  <dialog id="disburseModal" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-navy/70 backdrop:backdrop-blur-sm">
+    <div class="bg-navy px-6 py-5 text-white">
+      <h3 class="text-base font-bold">Disburse Owner Rental Payout</h3>
+      <p class="text-xs text-slate-400 mt-0.5" id="disburseLeaseRef">Lease #KWDC-LEASE-0000</p>
+    </div>
+    <form id="disburseForm" onsubmit="handleDisburseSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
+      <input type="hidden" id="disburseBookingId">
+      <div>
+        <p class="text-xs text-slate-500">Property Owner</p>
+        <p class="text-sm font-bold text-navy" id="disburseOwnerName">-</p>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500">Net Disbursement Amount (90% Base Rent)</p>
+        <p class="text-xl font-black text-emerald-600 font-mono" id="disburseAmount">-</p>
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700">Settlement Method</label>
+        <select id="disburseMethod" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <option value="CONNECT_IPS">ConnectIPS (Nepal Clearing House NCHL)</option>
+          <option value="ESEWA_B2B">eSewa B2B Direct Settlement</option>
+          <option value="BANK_NEFT">Bank Corporate NEFT / Transfer</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700">Transaction Reference No.</label>
+        <input type="text" id="disburseTxRef" required placeholder="e.g. NCHL-TXN-984210" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-mono">
+      </div>
+      <div class="pt-2 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('disburseModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-700">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700">Confirm &amp; Disburse</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT MASTER GOVERNANCE ENGINE -->
+  <!-- ===================================================================== -->
   <script>
-    // Tab switching with Left Drawer
-    function switchTab(tabId) {
-      ['overview', 'pending', 'bookings', 'logs', 'invoices', 'users'].forEach(id => {
-        const view = document.getElementById('view-' + id);
-        const nav = document.getElementById('nav-' + id);
-        if (view) view.classList.toggle('hidden', id !== tabId);
-        if (nav) {
-          nav.classList.toggle('bg-white/10', id === tabId);
-          nav.classList.toggle('text-white', id === tabId);
-          nav.classList.toggle('text-slate-300', id !== tabId);
-        }
-      });
-      // Close mobile drawer on item tap
-      if (window.innerWidth < 1024) toggleDrawer(false);
-      lucide.createIcons();
-    }
-
-    function toggleDrawer(force) {
-      const drawer = document.getElementById('leftDrawer');
-      const backdrop = document.getElementById('drawerBackdrop');
-      const isOpen = force !== undefined ? force : drawer.classList.contains('-translate-x-full');
-      if (isOpen) {
-        drawer.classList.remove('-translate-x-full');
-        backdrop.classList.remove('hidden');
-      } else {
-        drawer.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
-      }
-    }
-
-    function showToast(msg, isError = false) {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `p-4 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold pointer-events-auto transition-all transform duration-300 ${
-        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-      }`;
-      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4"></i> <span>${msg}</span></div>`;
-      container.appendChild(toast);
-      lucide.createIcons();
-      setTimeout(() => { toast.remove(); }, 4000);
-    }
+    lucide.createIcons();
+    let fleetMap = null;
+    let fleetMarkers = [];
+    let provisionedCredentialsRaw = '';
 
     function getAuthHeaders() {
       const token = localStorage.getItem('kwdc_token');
@@ -392,19 +703,81 @@
       };
     }
 
-    // Load Pending Warehouses
+    function toggleDrawer() {
+      const drawer = document.getElementById('leftDrawer');
+      drawer.classList.toggle('-translate-x-full');
+    }
+
+    function showToast(message, isError = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-xl shadow-xl border text-sm font-semibold pointer-events-auto transition transform translate-y-0 flex items-center gap-2.5 ${
+        isError ? 'bg-red-50 text-red-800 border-red-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+      }`;
+      toast.innerHTML = `<i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4 shrink-0"></i> <span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => { toast.remove(); }, 4000);
+    }
+
+    const TAB_TITLES = {
+      overview: 'Executive Governance Console',
+      pending: 'Property Audits & Lockout Controls',
+      bookings: 'Commercial Client Leases & Continuous Sq Ft',
+      incharges: 'Warehouse Incharge Staff & Provisioning (Ops)',
+      logs: 'Facility Incharge Shift Logs & Gate Records',
+      'fleet-radar': 'Central Dispatch Live Fleet Telemetry Radar',
+      payouts: 'Space Owner Monthly Disbursements (90/10)',
+      'maintenance-holds': 'Warehouse Maintenance Hold & Space Freeze Manager',
+      invoices: 'Nepal IRD Schedule 13 Electronic Tax Ledger',
+      users: 'Platform User Directory & Role-Based Access Control'
+    };
+
+    function switchTab(tabId) {
+      const tabs = ['overview', 'pending', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'maintenance-holds', 'invoices', 'users'];
+      tabs.forEach(t => {
+        const view = document.getElementById(`view-${t}`);
+        const nav = document.getElementById(`nav-${t}`);
+        if (view) view.classList.toggle('hidden', t !== tabId);
+        if (nav) {
+          nav.classList.toggle('bg-white/10', t === tabId);
+          nav.classList.toggle('text-white', t === tabId);
+          nav.classList.toggle('text-slate-300', t !== tabId);
+        }
+      });
+
+      document.getElementById('pageTitle').textContent = TAB_TITLES[tabId] || 'Executive Governance Console';
+      if (window.innerWidth < 1024) {
+        document.getElementById('leftDrawer').classList.add('-translate-x-full');
+      }
+
+      if (tabId === 'fleet-radar') {
+        setTimeout(initFleetRadarMap, 100);
+      } else if (tabId === 'incharges') {
+        loadIncharges();
+      } else if (tabId === 'payouts') {
+        loadPayouts();
+      } else if (tabId === 'maintenance-holds') {
+        loadMaintenanceHolds();
+      }
+
+      lucide.createIcons();
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. PROPERTY AUDITS
+    // -------------------------------------------------------------------------
     async function loadPendingWarehouses() {
       const tbody = document.getElementById('pendingTableBody');
       try {
         const res = await fetch('/api/admin/pending-warehouses', { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to load pending warehouses');
+        if (!res.ok) throw new Error('Failed to load pending audits');
         const data = await res.json();
-        
         document.getElementById('badgePendingCount').textContent = data.length;
         document.getElementById('kpiPendingAudits').textContent = data.length;
 
         if (data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No properties pending audit. All submissions verified.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No properties pending audit. All verified.</td></tr>';
           return;
         }
 
@@ -412,47 +785,36 @@
           <tr class="hover:bg-slate-50/80 transition">
             <td class="px-5 py-3">
               <p class="font-bold text-navy">${w.title}</p>
-              <p class="text-[11px] text-slate-500">${w.neighborhood_landmark || 'Kathmandu Valley'}</p>
+              <p class="text-[11px] text-slate-500">${w.neighborhood_landmark || 'Kathmandu'}</p>
             </td>
             <td class="px-5 py-3">
               <p class="font-medium text-slate-700">${w.owner_name}</p>
               <p class="text-[11px] text-slate-500">${w.owner_phone || w.owner_email}</p>
             </td>
-            <td class="px-5 py-3 font-mono font-bold text-navy">
-              ${Number(w.total_sqft).toLocaleString('en-IN')} sq ft
-            </td>
-            <td class="px-5 py-3 font-mono text-emerald-700 font-semibold">
-              Rs. ${w.monthly_rate_per_sqft}/sq ft
-            </td>
-            <td class="px-5 py-3 text-[11px] text-slate-600">
-              ${w.road_access_ft ? w.road_access_ft + ' ft road' : 'Pickup access'} &bull; ${w.space_type.replace('_', ' ')}
-            </td>
+            <td class="px-5 py-3 font-mono font-bold text-navy">${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</td>
+            <td class="px-5 py-3 font-mono text-emerald-700 font-semibold">Rs. ${w.monthly_rate_per_sqft}/sq ft</td>
+            <td class="px-5 py-3 text-[11px] text-slate-600">${w.road_access_ft ? w.road_access_ft + ' ft road' : 'Pickup access'} &bull; ${w.space_type}</td>
             <td class="px-5 py-3 text-right">
               <button onclick="approveWarehouse(${w.id}, '${w.title}')" class="px-3 py-1.5 rounded-lg bg-navy hover:bg-slate-800 text-white font-semibold text-xs shadow-sm transition flex items-center gap-1.5 ml-auto">
-                <i data-lucide="check" class="w-3.5 h-3.5"></i> Verify & Dispatch Contract
+                <i data-lucide="check" class="w-3.5 h-3.5"></i> Verify &amp; Dispatch Contract
               </button>
             </td>
           </tr>
         `).join('');
         lucide.createIcons();
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">Error: ${err.message}. Please sign in as SuperAdmin.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
       }
     }
 
-    // Approve Warehouse & Dispatch Master Commercial Agreement
     async function approveWarehouse(id, title) {
-      if (!confirm(`Verify specs and execute Master Commercial Lease Agreement for "${title}"?\nThis will email the official contract to the owner and lock features.`)) return;
-
+      if (!confirm(`Verify specifications and execute Master Commercial Lease for "${title}"?
+Locks physical specs and dispatches contract.`)) return;
       try {
-        const res = await fetch(`/api/admin/warehouses/${id}/approve`, {
-          method: 'POST',
-          headers: getAuthHeaders()
-        });
+        const res = await fetch(`/api/admin/warehouses/${id}/approve`, { method: 'POST', headers: getAuthHeaders() });
         const data = await res.json();
         if (res.ok) {
-          showToast(data.message || 'Facility verified! Contract dispatched.');
-          loadPendingWarehouses();
+          showToast(data.message || 'Facility verified and contract dispatched.');
           refreshData();
         } else {
           showToast(data.detail || 'Approval failed.', true);
@@ -462,19 +824,24 @@
       }
     }
 
-    // Load Client Bookings
+    // -------------------------------------------------------------------------
+    // 2. CLIENT LEASES
+    // -------------------------------------------------------------------------
     async function loadBookings() {
       const tbody = document.getElementById('bookingsTableBody');
       try {
         const res = await fetch('/api/admin/bookings', { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to load bookings');
+        if (!res.ok) throw new Error('Failed to load leases');
         const data = await res.json();
-
         document.getElementById('badgeBookingsCount').textContent = data.length;
-        document.getElementById('kpiActiveLeases').textContent = data.filter(b => b.status === 'active_leased').length;
+        document.getElementById('kpiActiveLeases').textContent = data.filter(b => b.status === 'active_leased' || b.status === 'approved').length;
+
+        let totalSqftSum = 0;
+        data.forEach(b => { totalSqftSum += (b.allocated_billed_sqft || b.requested_sqft || 0); });
+        document.getElementById('kpiTotalSqft').innerHTML = `${Number(totalSqftSum).toLocaleString('en-IN')} <span class="text-xs font-normal text-slate-400">sq ft</span>`;
 
         if (data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">No client bookings submitted yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">No client leases submitted yet.</td></tr>';
           return;
         }
 
@@ -483,22 +850,18 @@
             <td class="px-5 py-3 font-mono font-bold text-navy">#KW-${b.id}</td>
             <td class="px-5 py-3">
               <p class="font-medium text-slate-800">${b.client_name}</p>
-              <p class="text-[11px] text-slate-500">${b.client_email}</p>
+              <p class="text-[11px] text-slate-500 font-mono">${b.client_phone || b.client_email}</p>
             </td>
             <td class="px-5 py-3 font-medium text-navy">${b.warehouse_title}</td>
-            <td class="px-5 py-3 font-mono font-bold text-navy">
-              ${Number(b.requested_sqft).toLocaleString('en-IN')} sq ft
-            </td>
-            <td class="px-5 py-3 font-mono text-emerald-700 font-bold">
-              Rs. ${Number(b.total_monthly_bill).toLocaleString('en-IN')}
-            </td>
+            <td class="px-5 py-3 font-mono font-bold text-navy">${Number(b.allocated_billed_sqft || b.requested_sqft).toLocaleString('en-IN')} sq ft</td>
+            <td class="px-5 py-3 font-mono text-emerald-700 font-bold">Rs. ${Number(b.total_monthly_bill).toLocaleString('en-IN')}</td>
             <td class="px-5 py-3">
-              <span class="px-2.5 py-1 rounded-md text-[11px] font-bold ${
-                b.status === 'active_leased' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-              }">${b.status.replace('_', ' ').toUpperCase()}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                b.status === 'active_leased' || b.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }">${b.status.toUpperCase()}</span>
             </td>
             <td class="px-5 py-3 text-right">
-              ${b.status !== 'active_leased' ? `
+              ${b.status !== 'active_leased' && b.status !== 'approved' ? `
                 <button onclick="activateLease(${b.id})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition flex items-center gap-1.5 ml-auto">
                   <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Activate Lease
                 </button>
@@ -508,23 +871,18 @@
         `).join('');
         lucide.createIcons();
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-8 text-center text-red-500">Error loading bookings: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
       }
     }
 
-    // Activate Commercial Lease
     async function activateLease(id) {
-      if (!confirm(`Activate commercial lease #${id}?\nThis commences owner cashflow disbursements and reduces available facility capacity.`)) return;
-
+      if (!confirm(`Activate commercial lease #${id}?
+Commences owner cashflow disbursements and reserves contracted continuous sq ft.`)) return;
       try {
-        const res = await fetch(`/api/admin/bookings/${id}/activate`, {
-          method: 'POST',
-          headers: getAuthHeaders()
-        });
+        const res = await fetch(`/api/admin/bookings/${id}/activate`, { method: 'POST', headers: getAuthHeaders() });
         const data = await res.json();
         if (res.ok) {
           showToast(data.message || 'Lease activated successfully!');
-          loadBookings();
           refreshData();
         } else {
           showToast(data.detail || 'Activation failed.', true);
@@ -534,7 +892,400 @@
       }
     }
 
-    // Load Incharge Logs
+    // -------------------------------------------------------------------------
+    // 3. WAREHOUSE INCHARGE STAFF & PROVISIONING (INTERNAL OPS)
+    // -------------------------------------------------------------------------
+    async function loadIncharges() {
+      const tbody = document.getElementById('inchargesTableBody');
+      try {
+        const res = await fetch('/api/admin/incharges', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load incharges');
+        const data = await res.json();
+        document.getElementById('badgeInchargeCount').textContent = data.length;
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No warehouse incharge staff provisioned yet. Click "Provision New Incharge Staff" above.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(inc => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2.5">
+                <span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 grid place-items-center font-bold text-xs shrink-0">
+                  ${inc.full_name.slice(0, 2).toUpperCase()}
+                </span>
+                <div>
+                  <p class="font-bold text-navy">${inc.full_name}</p>
+                  <p class="text-[11px] text-slate-400">ID: #INC-${inc.id}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-5 py-3 text-slate-700">
+              <p class="font-medium">${inc.email}</p>
+              <p class="text-[11px] text-slate-500 font-mono">${inc.phone_number}</p>
+            </td>
+            <td class="px-5 py-3">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">
+                <i data-lucide="building" class="w-3.5 h-3.5 text-slate-500"></i> ${inc.assigned_warehouse_title}
+              </span>
+            </td>
+            <td class="px-5 py-3 font-mono font-bold text-navy">
+              ${inc.logs_count} shift reports
+            </td>
+            <td class="px-5 py-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${inc.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}">
+                ${inc.is_active ? 'ACTIVE STAFF' : 'SUSPENDED'}
+              </span>
+            </td>
+            <td class="px-5 py-3 text-right">
+              <div class="inline-flex items-center gap-1.5">
+                <button onclick="toggleInchargeStatus(${inc.id})" title="Toggle Active/Suspended" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition">
+                  <i data-lucide="${inc.is_active ? 'pause' : 'play'}" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+    }
+
+    async function toggleInchargeStatus(id) {
+      try {
+        const res = await fetch(`/api/admin/incharges/${id}/status`, { method: 'PUT', headers: getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          loadIncharges();
+        } else {
+          showToast(data.detail || 'Failed to update status', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      }
+    }
+
+    async function loadWarehouseOptionsForProvision() {
+      const select = document.getElementById('provWarehouseSelect');
+      try {
+        const res = await fetch('/api/warehouses/catalog');
+        const data = await res.json();
+        select.innerHTML = '<option value="" disabled selected>Select an approved facility...</option>' +
+          data.map(w => `<option value="${w.id}">${w.title} (${w.district || 'Kathmandu'}) - ${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</option>`).join('');
+      } catch (err) {
+        select.innerHTML = '<option value="" disabled>Error loading warehouses</option>';
+      }
+    }
+
+    function openProvisionModal() {
+      loadWarehouseOptionsForProvision();
+      document.getElementById('provisionForm').reset();
+      document.getElementById('provisionResultCard').classList.add('hidden');
+      document.getElementById('provisionModal').showModal();
+      lucide.createIcons();
+    }
+
+    function closeProvisionModal() {
+      document.getElementById('provisionModal').close();
+    }
+
+    function generateRandomPassword() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let pwd = "KWDC@";
+      for (let i = 0; i < 4; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+      document.getElementById('provPassword').value = pwd;
+    }
+
+    async function handleProvisionSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitProvision');
+      const fullName = document.getElementById('provFullName').value.trim();
+      const email = document.getElementById('provEmail').value.trim();
+      const phone = document.getElementById('provPhone').value.trim();
+      const warehouseId = parseInt(document.getElementById('provWarehouseSelect').value);
+      const password = document.getElementById('provPassword').value.trim();
+
+      btn.disabled = true;
+      btn.textContent = 'Provisioning Staff...';
+
+      try {
+        const res = await fetch('/api/admin/incharges', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            full_name: fullName,
+            email: email,
+            phone_number: phone,
+            warehouse_id: warehouseId,
+            password: password || null
+          })
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.textContent = 'Issue Staff Credentials';
+
+        if (res.ok) {
+          showToast(data.message || 'Staff provisioned successfully!');
+          provisionedCredentialsRaw = `KTM-WDC WAREHOUSE INCHARGE CREDENTIALS\nStaff: ${data.full_name}\nFacility: ${data.assigned_facility_name}\nPortal Login: ${data.login_portal_url}\nUsername: ${data.email}\nTemporary Password: ${data.temporary_password}\n(Strictly Confidential - Do not share)`;
+
+          document.getElementById('provisionedDetailsText').innerHTML = `
+            <p><strong>Username / Email:</strong> ${data.email}</p>
+            <p><strong>Temporary Password:</strong> <span class="bg-amber-100 text-amber-900 px-1 py-0.5 rounded font-bold">${data.temporary_password}</span></p>
+            <p><strong>Assigned Facility:</strong> ${data.assigned_facility_name}</p>
+            <p class="text-slate-500 mt-1">Copy and dispatch these credentials to the staff member via SMS or WhatsApp.</p>
+          `;
+          document.getElementById('provisionResultCard').classList.remove('hidden');
+          loadIncharges();
+        } else {
+          showToast(data.detail || 'Provisioning failed.', true);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Issue Staff Credentials';
+        showToast('Connection error: ' + err.message, true);
+      }
+    }
+
+    function copyProvisionedCredentials() {
+      navigator.clipboard.writeText(provisionedCredentialsRaw).then(() => {
+        showToast('Credentials copied to clipboard! Ready to share with staff.');
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. FLEET TELEMETRY RADAR
+    // -------------------------------------------------------------------------
+    function initFleetRadarMap() {
+      if (!fleetMap && document.getElementById('fleetRadarMap')) {
+        fleetMap = L.map('fleetRadarMap', { zoomControl: true }).setView([27.7000, 85.3200], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(fleetMap);
+      }
+      loadFleetRadar();
+    }
+
+    async function loadFleetRadar() {
+      const tbody = document.getElementById('fleetTableBody');
+      try {
+        const res = await fetch('/api/admin/fleet-radar', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load fleet telemetry');
+        const data = await res.json();
+        document.getElementById('badgeFleetCount').textContent = data.length;
+
+        // Clear existing map markers
+        fleetMarkers.forEach(m => m.remove());
+        fleetMarkers = [];
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No active vehicles streaming telemetry.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(v => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3 font-mono font-bold text-navy">${v.license_plate}</td>
+            <td class="px-5 py-3 text-slate-700">${v.vehicle_category} &bull; <span class="font-mono">${v.payload_capacity_tons} Tons</span></td>
+            <td class="px-5 py-3">
+              <p class="font-medium text-slate-800">${v.driver_name}</p>
+              <p class="text-[11px] text-slate-500 font-mono">${v.driver_phone}</p>
+            </td>
+            <td class="px-5 py-3 text-slate-600">${v.current_node}</td>
+            <td class="px-5 py-3 font-mono font-bold text-cyan-700">${v.speed_kmh} km/h</td>
+            <td class="px-5 py-3">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${v.is_active ? 'bg-cyan-50 text-cyan-800 border border-cyan-200' : 'bg-slate-100 text-slate-600'}">
+                <span class="w-1.5 h-1.5 rounded-full ${v.is_active ? 'bg-cyan-500 animate-pulse' : 'bg-slate-400'}"></span>
+                ${v.telemetry_status}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+
+        // Place markers on map
+        if (fleetMap) {
+          data.forEach(v => {
+            const icon = L.divIcon({ className: '', html: '<div class="radar-pin"></div>', iconSize: [14, 14], iconAnchor: [7, 7] });
+            const marker = L.marker([v.latitude, v.longitude], { icon }).addTo(fleetMap)
+              .bindPopup(`<strong>${v.license_plate}</strong><br>${v.vehicle_category} • Driver: ${v.driver_name}<br>Speed: ${v.speed_kmh} km/h<br>Node: ${v.current_node}`);
+            fleetMarkers.push(marker);
+          });
+        }
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. OWNER DISBURSEMENTS (90/10 RECONCILIATION)
+    // -------------------------------------------------------------------------
+    async function loadPayouts() {
+      const tbody = document.getElementById('payoutsTableBody');
+      try {
+        const res = await fetch('/api/admin/payouts', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load payouts');
+        const data = await res.json();
+        document.getElementById('badgePayoutCount').textContent = data.length;
+
+        let grossSum = 0, marginSum = 0, netSum = 0;
+        data.forEach(p => {
+          grossSum += p.monthly_gross_rent;
+          marginSum += p.kwdc_platform_fee_10pct;
+          netSum += p.net_owner_payout_90pct;
+        });
+
+        document.getElementById('payoutGrossTotal').textContent = 'Rs. ' + grossSum.toLocaleString('en-IN');
+        document.getElementById('payoutMarginTotal').textContent = 'Rs. ' + marginSum.toLocaleString('en-IN');
+        document.getElementById('payoutNetTotal').textContent = 'Rs. ' + netSum.toLocaleString('en-IN');
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">No active leases for payout settlement.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(p => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3 font-mono font-bold text-navy">${p.lease_number}</td>
+            <td class="px-5 py-3">
+              <p class="font-medium text-slate-800">${p.warehouse_title}</p>
+              <p class="text-[11px] text-slate-500">${p.warehouse_location}</p>
+            </td>
+            <td class="px-5 py-3">
+              <p class="font-medium text-slate-700">${p.owner_name}</p>
+              <p class="text-[11px] text-slate-500 font-mono">${p.owner_phone}</p>
+            </td>
+            <td class="px-5 py-3 font-mono font-bold text-navy">${Number(p.allocated_sqft).toLocaleString('en-IN')} sq ft</td>
+            <td class="px-5 py-3 font-mono text-slate-600">Rs. ${Number(p.monthly_gross_rent).toLocaleString('en-IN')}</td>
+            <td class="px-5 py-3 font-mono font-bold text-emerald-700">Rs. ${Number(p.net_owner_payout_90pct).toLocaleString('en-IN')}</td>
+            <td class="px-5 py-3">
+              <span class="px-2.5 py-1 rounded-md text-[10px] font-bold ${
+                p.payout_status === 'DISBURSED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }">${p.payout_status}</span>
+            </td>
+            <td class="px-5 py-3 text-right">
+              ${p.payout_status !== 'DISBURSED' ? `
+                <button onclick="openDisburseModal(${p.booking_id}, '${p.lease_number}', '${p.owner_name}', ${p.net_owner_payout_90pct})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition flex items-center gap-1.5 ml-auto">
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i> Disburse Payout
+                </button>
+              ` : '<span class="text-xs text-slate-400 font-medium">Disbursed</span>'}
+            </td>
+          </tr>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+    }
+
+    function openDisburseModal(bookingId, leaseRef, ownerName, amount) {
+      document.getElementById('disburseBookingId').value = bookingId;
+      document.getElementById('disburseLeaseRef').textContent = `Lease #${leaseRef}`;
+      document.getElementById('disburseOwnerName').textContent = ownerName;
+      document.getElementById('disburseAmount').textContent = 'Rs. ' + Number(amount).toLocaleString('en-IN');
+      document.getElementById('disburseTxRef').value = `NCHL-TXN-${Math.floor(100000 + Math.random() * 900000)}`;
+      document.getElementById('disburseModal').showModal();
+    }
+
+    async function handleDisburseSubmit(e) {
+      e.preventDefault();
+      const bookingId = document.getElementById('disburseBookingId').value;
+      const method = document.getElementById('disburseMethod').value;
+      const txRef = document.getElementById('disburseTxRef').value.trim();
+
+      try {
+        const res = await fetch(`/api/admin/payouts/${bookingId}/disburse`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ payment_method: method, transaction_ref: txRef })
+        });
+        const data = await res.json();
+        document.getElementById('disburseModal').close();
+        if (res.ok) {
+          showToast(data.message || 'Payout disbursed successfully!');
+          loadPayouts();
+        } else {
+          showToast(data.detail || 'Disbursement failed', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. MAINTENANCE HOLDS
+    // -------------------------------------------------------------------------
+    async function loadMaintenanceHolds() {
+      const tbody = document.getElementById('holdsTableBody');
+      try {
+        const res = await fetch('/api/admin/maintenance-holds', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load maintenance holds');
+        const data = await res.json();
+        document.getElementById('badgeHoldsCount').textContent = data.length;
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No active maintenance holds requested.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(h => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3 font-bold text-navy">${h.warehouse_title}</td>
+            <td class="px-5 py-3">
+              <p class="font-medium text-slate-800">${h.owner_name}</p>
+              <p class="text-[11px] text-slate-500 font-mono">${h.owner_phone}</p>
+            </td>
+            <td class="px-5 py-3 font-mono font-bold text-navy">${Number(h.total_sqft).toLocaleString('en-IN')} sq ft</td>
+            <td class="px-5 py-3 text-xs text-slate-700 max-w-xs">${h.hold_reason_note}</td>
+            <td class="px-5 py-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${h.is_on_maintenance_hold ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}">
+                ${h.is_on_maintenance_hold ? 'FROZEN FOR REPAIRS' : 'ACTIVE / RELEASED'}
+              </span>
+            </td>
+            <td class="px-5 py-3 text-right">
+              ${h.is_on_maintenance_hold ? `
+                <button onclick="actionMaintenanceHold(${h.warehouse_id}, 'RELEASE')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition">
+                  Release to Market
+                </button>
+              ` : `
+                <button onclick="actionMaintenanceHold(${h.warehouse_id}, 'APPROVE')" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-sm transition">
+                  Approve Freeze
+                </button>
+              `}
+            </td>
+          </tr>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+    }
+
+    async function actionMaintenanceHold(warehouseId, action) {
+      if (!confirm(`${action === 'RELEASE' ? 'Release space back to public catalog' : 'Approve maintenance hold and freeze space'}?`)) return;
+      try {
+        const res = await fetch(`/api/admin/maintenance-holds/${warehouseId}/action`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ action: action })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          loadMaintenanceHolds();
+        } else {
+          showToast(data.detail || 'Action failed', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. FACILITY LOGS & USERS
+    // -------------------------------------------------------------------------
     async function loadInchargeLogs() {
       const tbody = document.getElementById('inchargeLogsBody');
       try {
@@ -549,7 +1300,7 @@
 
         tbody.innerHTML = data.map(l => `
           <tr class="hover:bg-slate-50/80 transition">
-            <td class="px-5 py-3 font-mono text-[11px] text-slate-500">${l.created_at}</td>
+            <td class="px-5 py-3 font-mono text-[11px] text-slate-500">${l.timestamp}</td>
             <td class="px-5 py-3 font-medium text-navy">${l.warehouse_title}</td>
             <td class="px-5 py-3 text-slate-700">${l.incharge_name}</td>
             <td class="px-5 py-3 uppercase text-[10px] font-bold tracking-wider text-slate-600">${l.log_type}</td>
@@ -563,7 +1314,7 @@
         `).join('');
         lucide.createIcons();
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">Error loading incharge logs: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
       }
     }
 
@@ -601,23 +1352,32 @@
             </td>
             <td class="px-5 py-3 text-slate-600">${u.operating_location || 'Nepal'}</td>
             <td class="px-5 py-3">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.is_verified ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
-                ${u.is_verified ? 'Verified Active' : 'Pending OTP'}
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                u.kyc_status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }">
+                ${u.kyc_status}
               </span>
             </td>
-            <td class="px-5 py-3 font-mono text-[11px] text-slate-500 text-right">${u.created_at}</td>
+            <td class="px-5 py-3 text-right">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}">
+                ${u.is_active ? 'ACTIVE' : 'SUSPENDED'}
+              </span>
+            </td>
           </tr>
         `).join('');
         lucide.createIcons();
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">Error loading users: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
       }
     }
 
     function refreshData() {
       loadPendingWarehouses();
       loadBookings();
+      loadIncharges();
       loadInchargeLogs();
+      loadPayouts();
+      loadMaintenanceHolds();
       loadUsers();
     }
 
@@ -627,7 +1387,6 @@
       window.location.href = '/';
     }
 
-    // Auto-authenticate default admin if not yet present in localStorage
     document.addEventListener('DOMContentLoaded', async () => {
       let user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
       if (!user || user.user_role !== 'superadmin') {

@@ -1,27 +1,69 @@
 """
-SuperAdmin Master Operations Router for KTM-WDC
+SuperAdmin Master Operations & Governance Router for KTM-WDC
 Governs:
-1. Auditing & Approving Property Listings
+1. Auditing & Approving Property Listings (Lockout Rule enforcement)
 2. Executing & Emailing Master Commercial Contracts via Brevo
 3. Post-Approval Governance & Feature Overrides
 4. Client Booking Activation (Starting Owner Cashflow)
-5. Reviewing Warehouse Incharge Logs
+5. Warehouse Incharge Staff Provisioning & Management (Internal staff under Admin)
+6. Reviewing Facility Incharge Logs & Gate Pass Operations
+7. Live Fleet Telemetry Radar (Central Dispatch Stream)
+8. Space Owner Monthly Disbursements & Commission Settlement (90% Owner / 10% KWDC)
+9. Maintenance Hold & Space Freeze Manager
+10. Platform User Directory, RBAC & KYC Governance
 """
+import random
+import string
+from datetime import datetime, timezone, timedelta
+from typing import Optional, List
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+
 from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseRequest, User, UserRole,
-    BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog
+    BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog,
+    WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport
 )
-from backend.auth_utils import require_user, require_roles
+from backend.auth_utils import require_user, require_roles, get_password_hash
 from backend.services.contract_service import generate_master_lease_contract
 from backend.services.email_service import send_contract_approval_email
 
 router = APIRouter(prefix="/api/admin", tags=["SuperAdmin Governance"])
 
+# ---------------------------------------------------------------------------
+# Pydantic Request Models
+# ---------------------------------------------------------------------------
+class InchargeProvisionRequest(BaseModel):
+    full_name: str
+    email: str
+    phone_number: str
+    warehouse_id: int
+    password: Optional[str] = None
+
+class InchargeReassignRequest(BaseModel):
+    warehouse_id: int
+
+class PayoutDisburseRequest(BaseModel):
+    transaction_ref: str
+    payment_method: str = "CONNECT_IPS"
+
+class MaintenanceActionRequest(BaseModel):
+    action: str  # "APPROVE" or "RELEASE"
+    admin_notes: Optional[str] = None
+
+class UserStatusUpdateRequest(BaseModel):
+    is_active: bool
+
+class UserKycUpdateRequest(BaseModel):
+    kyc_status: str
+    admin_notes: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# 1. PROPERTY AUDITS & APPROVALS (RULE 1: PHYSICAL AUDIT & LOCKOUT)
+# ---------------------------------------------------------------------------
 @router.get("/pending-warehouses")
 def get_pending_warehouses(
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
@@ -47,155 +89,350 @@ def get_pending_warehouses(
     return results
 
 @router.post("/warehouses/{warehouse_id}/approve")
-def approve_and_dispatch_contract(
+def approve_warehouse_listing(
     warehouse_id: int,
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
     """
-    Step 7 of Architecture:
-    Admin clicks 'Verify & Dispatch Contract':
-    - Status becomes APPROVED (is_available = True).
-    - Master Commercial Lease Agreement is executed and emailed to owner via Brevo.
-    - Property features are locked permanently from owner tampering.
-    - Zero Holding Liability continues until client assignment.
+    SuperAdmin signs off on the physical audit.
+    Generates Master Commercial Lease PDF, records the physical lockout, and sends email.
     """
     warehouse = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
     if not warehouse:
         raise HTTPException(status_code=404, detail="Warehouse not found.")
 
-    owner = warehouse.owner
-    contract_data = generate_master_lease_contract(warehouse, owner)
+    if warehouse.is_approved:
+        return {"message": "Warehouse is already approved."}
 
+    # Generate master commercial contract PDF
+    contract_url = generate_master_lease_contract(
+        owner_name=warehouse.owner.full_name,
+        warehouse_title=warehouse.title,
+        total_sqft=warehouse.total_sqft,
+        rate=warehouse.monthly_rate_per_sqft
+    )
+
+    # Approve & Lock
     warehouse.is_approved = True
     warehouse.is_available = True
-    warehouse.lease_contract_url = contract_data["contract_number"]
+    warehouse.physical_lockout_enforced = True
+    warehouse.lease_contract_url = contract_url
     db.commit()
 
-    # Send official contract to property owner email
-    email_dispatched = send_contract_approval_email(
-        owner_email=owner.email,
-        owner_name=owner.full_name,
+    # Send Notification Email
+    email_sent = send_contract_approval_email(
+        to_email=warehouse.owner.email,
+        owner_name=warehouse.owner.full_name,
         warehouse_title=warehouse.title,
-        contract_text=contract_data["contract_text"]
+        contract_url=contract_url
     )
 
     return {
-        "message": f"Facility verified and approved! Contract {contract_data['contract_number']} dispatched to {owner.email}.",
-        "contract_number": contract_data["contract_number"],
-        "email_dispatched": email_dispatched,
-        "holding_liability": "NPR 0.00 (Zero Holding Liability until rented)",
-        "features_locked": True
+        "message": f"Warehouse '{warehouse.title}' successfully audited and approved!",
+        "warehouse_id": warehouse.id,
+        "contract_url": contract_url,
+        "email_dispatched": email_sent,
+        "physical_lockout_enforced": True
     }
 
 @router.put("/warehouses/{warehouse_id}/admin-override")
-def admin_override_warehouse(
+def admin_override_features(
     warehouse_id: int,
-    title: Optional[str] = None,
-    monthly_rate_per_sqft: Optional[float] = None,
-    is_available: Optional[bool] = None,
-    is_on_maintenance_hold: Optional[bool] = None,
-    hold_reason_note: Optional[str] = None,
+    total_sqft: Optional[float] = None,
+    monthly_rate: Optional[float] = None,
+    three_phase: Optional[bool] = None,
+    forklift_ramp: Optional[bool] = None,
+    cctv: Optional[bool] = None,
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
-    """
-    Post-approval operations: only Admin can modify warehouse features,
-    adjust tariffs, or alter availability states.
-    """
+    """SuperAdmin feature override."""
     warehouse = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
     if not warehouse:
         raise HTTPException(status_code=404, detail="Warehouse not found.")
 
-    if title:
-        warehouse.title = title
-    if monthly_rate_per_sqft is not None:
-        warehouse.monthly_rate_per_sqft = monthly_rate_per_sqft
-    if is_available is not None:
-        warehouse.is_available = is_available
-    if is_on_maintenance_hold is not None:
-        warehouse.is_on_maintenance_hold = is_on_maintenance_hold
-    if hold_reason_note is not None:
-        warehouse.hold_reason_note = hold_reason_note
+    if total_sqft is not None:
+        diff = total_sqft - warehouse.total_sqft
+        warehouse.total_sqft = total_sqft
+        warehouse.available_sqft = max(0.0, warehouse.available_sqft + diff)
+    if monthly_rate is not None:
+        warehouse.monthly_rate_per_sqft = monthly_rate
+    if three_phase is not None:
+        warehouse.has_three_phase_power = three_phase
+    if forklift_ramp is not None:
+        warehouse.has_forklift_ramp = forklift_ramp
+    if cctv is not None:
+        warehouse.has_cctv = cctv
 
     db.commit()
-    return {"message": "Warehouse updated under SuperAdmin authority."}
+    return {
+        "message": "Warehouse specifications updated successfully.",
+        "warehouse_id": warehouse.id,
+        "total_sqft": warehouse.total_sqft,
+        "available_sqft": warehouse.available_sqft,
+        "monthly_rate_per_sqft": warehouse.monthly_rate_per_sqft
+    }
 
+
+# ---------------------------------------------------------------------------
+# 2. CLIENT LEASES & ACTIVATION (CONTINUOUS SQ FT CONTRACTING)
+# ---------------------------------------------------------------------------
 @router.get("/bookings")
 def get_all_bookings(
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
-    bookings = db.query(WarehouseRequest).all()
+    """Lists all client booking requests and active tenancies."""
+    bookings = db.query(WarehouseRequest).order_by(WarehouseRequest.created_at.desc()).all()
     results = []
     for b in bookings:
         results.append({
             "id": b.id,
             "client_name": b.client.full_name,
             "client_email": b.client.email,
+            "client_phone": b.client.phone_number,
             "warehouse_title": b.warehouse.title,
-            "owner_name": b.warehouse.owner.full_name,
+            "warehouse_id": b.warehouse_id,
             "requested_sqft": b.requested_sqft,
             "allocated_billed_sqft": b.allocated_billed_sqft,
+            "monthly_base_rent": b.monthly_base_rent,
+            "kwdc_margin_amount": b.kwdc_margin_amount,
+            "vat_13_percent": b.vat_13_percent,
             "total_monthly_bill": b.total_monthly_bill,
             "status": b.status.value,
-            "invoice_number": b.invoice.invoice_number if b.invoice else "N/A",
-            "invoice_paid": b.invoice.payment_status.value == "paid" if b.invoice else False
+            "created_at": b.created_at.strftime("%Y-%m-%d %H:%M")
         })
     return results
 
 @router.post("/bookings/{booking_id}/activate")
-def activate_commercial_lease(
+def activate_booking(
     booking_id: int,
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
     """
-    SuperAdmin activates lease:
-    - Rental disbursement to owner starts on this exact date.
-    - Warehouse available capacity is reduced.
+    SuperAdmin verifies client payment and activates the storage tenancy:
+    - Deducts contracted continuous sq ft from available capacity.
+    - Sets lease start and end dates.
+    - Triggers owner disbursement eligibility.
     """
     booking = db.query(WarehouseRequest).filter(WarehouseRequest.id == booking_id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="Booking request not found.")
 
+    if booking.status in (BookingStatus.ACTIVE_LEASED, BookingStatus.APPROVED_CONTRACT_DISPATCHED):
+        return {"message": "Booking is already active."}
+
     warehouse = booking.warehouse
-    now = datetime.now(timezone.utc)
+    if warehouse.available_sqft < booking.allocated_billed_sqft:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot activate: only {warehouse.available_sqft:,.2f} sq ft available."
+        )
+
+    # Deduct continuous square footage
+    warehouse.available_sqft = max(0.0, warehouse.available_sqft - booking.allocated_billed_sqft)
 
     booking.status = BookingStatus.ACTIVE_LEASED
+    now = datetime.now(timezone.utc)
     booking.lease_start_date = now
-    booking.lease_end_date = now + timedelta(days=90) # Standard 3 months
-    
-    # Deduct available capacity
-    warehouse.available_sqft = max(0.0, warehouse.available_sqft - booking.allocated_billed_sqft)
-    if warehouse.available_sqft <= 0:
-        warehouse.is_available = False
+    booking.lease_end_date = now + timedelta(days=365)
+
+    if booking.invoice:
+        booking.invoice.payment_status = PaymentStatus.PAID
 
     db.commit()
+
     return {
-        "message": f"Commercial lease activated for {booking.allocated_billed_sqft:,.2f} sq ft! Owner rental cashflow commenced today.",
-        "lease_start_date": booking.lease_start_date.strftime("%Y-%m-%d"),
-        "warehouse_remaining_sqft": warehouse.available_sqft
+        "message": f"Booking #{booking.id} activated! {booking.allocated_billed_sqft:,.2f} sq ft leased.",
+        "warehouse_available_sqft": warehouse.available_sqft,
+        "status": "ACTIVE",
+        "lease_start": booking.lease_start_date.strftime("%Y-%m-%d"),
+        "lease_end": booking.lease_end_date.strftime("%Y-%m-%d")
     }
 
-@router.get("/incharge-logs")
-def get_incharge_activity_logs(
+
+# ---------------------------------------------------------------------------
+# 3. WAREHOUSE INCHARGE PROVISIONING & STAFF MANAGEMENT
+# (Staff accounts created & provisioned by Admin and issued to Incharge)
+# ---------------------------------------------------------------------------
+@router.get("/incharges")
+def get_all_incharges(
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
-    logs = db.query(WarehouseActivityLog).order_by(WarehouseActivityLog.created_at.desc()).all()
+    """
+    Returns all Warehouse Incharge staff accounts provisioned by SuperAdmin,
+    along with their assigned facility names and operational activity metrics.
+    """
+    incharges = db.query(User).filter(User.role == UserRole.WAREHOUSE_INCHARGE).order_by(User.created_at.desc()).all()
+    results = []
+    for inc in incharges:
+        assignment = db.query(WarehouseInchargeAssignment).filter(
+            WarehouseInchargeAssignment.incharge_id == inc.id,
+            WarehouseInchargeAssignment.is_active == True
+        ).first()
+
+        assigned_warehouse_id = assignment.warehouse_id if assignment else None
+        assigned_warehouse_title = assignment.warehouse.title if (assignment and assignment.warehouse) else "Unassigned / Roaming"
+        assigned_date = assignment.assigned_date.strftime("%Y-%m-%d") if assignment else None
+        logs_count = db.query(WarehouseActivityLog).filter(WarehouseActivityLog.incharge_id == inc.id).count()
+
+        results.append({
+            "id": inc.id,
+            "full_name": inc.full_name,
+            "email": inc.email,
+            "phone_number": inc.phone_number,
+            "is_active": inc.is_active,
+            "is_verified": inc.is_verified,
+            "kyc_status": inc.kyc_status.value,
+            "assigned_warehouse_id": assigned_warehouse_id,
+            "assigned_warehouse_title": assigned_warehouse_title,
+            "assigned_date": assigned_date,
+            "logs_count": logs_count,
+            "created_at": inc.created_at.strftime("%Y-%m-%d %H:%M")
+        })
+    return results
+
+@router.post("/incharges")
+def provision_incharge_staff(
+    payload: InchargeProvisionRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    SuperAdmin provisions a new Warehouse Incharge staff account:
+    - Creates staff user with WAREHOUSE_INCHARGE role.
+    - Assigns to specific warehouse facility.
+    - Generates or sets temporary password.
+    - Pre-verifies account (is_active=True, is_verified=True, kyc_status=APPROVED).
+    - Returns credentials bundle for immediate sharing to incharge via SMS/WhatsApp/Email.
+    """
+    email_clean = payload.email.strip().lower()
+    phone_clean = payload.phone_number.strip()
+
+    if db.query(User).filter(User.email == email_clean).first():
+        raise HTTPException(status_code=400, detail="A staff user with this email address already exists.")
+
+    if db.query(User).filter(User.phone_number == phone_clean).first():
+        raise HTTPException(status_code=400, detail="A staff user with this mobile number already exists.")
+
+    warehouse = db.query(Warehouse).filter(Warehouse.id == payload.warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Selected warehouse facility does not exist.")
+
+    # Determine password
+    raw_password = payload.password.strip() if payload.password and payload.password.strip() else f"KTMwdc@{random.randint(1000, 9999)}"
+
+    incharge_user = User(
+        email=email_clean,
+        phone_number=phone_clean,
+        full_name=payload.full_name.strip(),
+        company_name="KTM-WDC Facility Operations",
+        operating_location=warehouse.district or "Kathmandu",
+        hashed_password=get_password_hash(raw_password),
+        role=UserRole.WAREHOUSE_INCHARGE,
+        is_active=True,
+        is_verified=True,
+        kyc_status=KycStatus.APPROVED
+    )
+    db.add(incharge_user)
+    db.commit()
+    db.refresh(incharge_user)
+
+    # Create assignment
+    assignment = WarehouseInchargeAssignment(
+        incharge_id=incharge_user.id,
+        warehouse_id=warehouse.id,
+        is_active=True
+    )
+    db.add(assignment)
+    db.commit()
+
+    return {
+        "message": f"Warehouse Incharge '{incharge_user.full_name}' provisioned successfully!",
+        "incharge_id": incharge_user.id,
+        "full_name": incharge_user.full_name,
+        "email": incharge_user.email,
+        "phone_number": incharge_user.phone_number,
+        "temporary_password": raw_password,
+        "assigned_facility_id": warehouse.id,
+        "assigned_facility_name": warehouse.title,
+        "login_portal_url": "https://ktmwdc.vercel.app/login"
+    }
+
+@router.put("/incharges/{incharge_id}/reassign")
+def reassign_incharge_facility(
+    incharge_id: int,
+    payload: InchargeReassignRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    inc = db.query(User).filter(User.id == incharge_id, User.role == UserRole.WAREHOUSE_INCHARGE).first()
+    if not inc:
+        raise HTTPException(status_code=404, detail="Incharge staff member not found.")
+
+    warehouse = db.query(Warehouse).filter(Warehouse.id == payload.warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Selected warehouse facility not found.")
+
+    # Deactivate previous active assignments
+    db.query(WarehouseInchargeAssignment).filter(
+        WarehouseInchargeAssignment.incharge_id == inc.id
+    ).update({"is_active": False})
+
+    # Create new active assignment
+    new_assign = WarehouseInchargeAssignment(
+        incharge_id=inc.id,
+        warehouse_id=warehouse.id,
+        is_active=True
+    )
+    db.add(new_assign)
+    db.commit()
+
+    return {"message": f"Staff '{inc.full_name}' reassigned to '{warehouse.title}' successfully."}
+
+@router.put("/incharges/{incharge_id}/status")
+def toggle_incharge_status(
+    incharge_id: int,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    inc = db.query(User).filter(User.id == incharge_id, User.role == UserRole.WAREHOUSE_INCHARGE).first()
+    if not inc:
+        raise HTTPException(status_code=404, detail="Incharge staff member not found.")
+
+    inc.is_active = not inc.is_active
+    db.commit()
+    status_str = "Activated" if inc.is_active else "Suspended"
+    return {"message": f"Incharge staff '{inc.full_name}' is now {status_str}.", "is_active": inc.is_active}
+
+
+# ---------------------------------------------------------------------------
+# 4. FACILITY LOGS & SECURITY OPERATIONS
+# ---------------------------------------------------------------------------
+@router.get("/incharge-logs")
+def get_incharge_logs(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Lists all activity and inspection logs submitted by Warehouse Incharges."""
+    logs = db.query(WarehouseActivityLog).order_by(WarehouseActivityLog.timestamp.desc()).all()
     results = []
     for l in logs:
+        wh = db.query(Warehouse).filter(Warehouse.id == l.warehouse_id).first()
+        inc = db.query(User).filter(User.id == l.incharge_id).first()
         results.append({
             "id": l.id,
-            "warehouse_title": l.warehouse.title,
-            "incharge_name": l.incharge.full_name,
+            "warehouse_title": wh.title if wh else "Storage Facility",
+            "incharge_name": inc.full_name if inc else "Staff",
             "log_type": l.log_type,
             "summary": l.summary,
             "detailed_notes": l.detailed_notes,
             "admin_reviewed": l.admin_reviewed,
             "admin_feedback": l.admin_feedback,
-            "created_at": l.created_at.strftime("%Y-%m-%d %H:%M")
+            "timestamp": l.timestamp.strftime("%Y-%m-%d %H:%M")
         })
     return results
 
@@ -215,6 +452,192 @@ def submit_admin_feedback(
     db.commit()
     return {"message": "Feedback submitted to Warehouse Incharge."}
 
+
+# ---------------------------------------------------------------------------
+# 5. LIVE FLEET TELEMETRY RADAR (CENTRAL DISPATCH RADAR)
+# ---------------------------------------------------------------------------
+@router.get("/fleet-radar")
+def get_fleet_telemetry_radar(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns all registered fleet vehicles and live GPS telemetry metrics for SuperAdmin central dispatch.
+    """
+    vehicles = db.query(Vehicle).all()
+    results = []
+
+    hubs = [
+        {"node": "Teku Freight Terminal", "lat": 27.6950, "lng": 85.3060},
+        {"node": "Balaju Industrial Ring Road", "lat": 27.7350, "lng": 85.3010},
+        {"node": "Koteshwor Junction", "lat": 27.6785, "lng": 85.3490},
+        {"node": "Kalimati Cargo Hub", "lat": 27.6985, "lng": 85.2930},
+        {"node": "Birgunj ICD Corridor", "lat": 27.0330, "lng": 84.8580},
+    ]
+
+    for idx, v in enumerate(vehicles):
+        driver_name = v.assigned_driver.full_name if v.assigned_driver else "Unassigned / Fleet Pool"
+        driver_phone = v.assigned_driver.phone_number if v.assigned_driver else "-"
+        partner_name = v.fleet_partner.company_name or v.fleet_partner.full_name if v.fleet_partner else "Independent Partner"
+
+        hub = hubs[idx % len(hubs)]
+        lat = getattr(v, "current_latitude", None) or hub["lat"]
+        lng = getattr(v, "current_longitude", None) or hub["lng"]
+        speed = getattr(v, "current_speed_kmh", None) or (32.0 if v.is_active else 0.0)
+
+        results.append({
+            "id": v.id,
+            "license_plate": v.license_plate,
+            "vehicle_category": v.vehicle_category.value if hasattr(v.vehicle_category, "value") else str(v.vehicle_category),
+            "payload_capacity_tons": v.payload_capacity_tons,
+            "bluebook_number": v.bluebook_number or f"BB-2081-{v.id:04d}",
+            "is_active": v.is_active,
+            "driver_name": driver_name,
+            "driver_phone": driver_phone,
+            "partner_name": partner_name,
+            "current_node": hub["node"],
+            "latitude": lat,
+            "longitude": lng,
+            "speed_kmh": speed,
+            "telemetry_status": "BROADCASTING_LIVE" if v.is_active else "IDLE_OFFLINE"
+        })
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 6. SPACE OWNER DISBURSEMENTS & PAYOUTS LEDGER (FIN-TECH RECONCILIATION)
+# ---------------------------------------------------------------------------
+@router.get("/payouts")
+def get_owner_disbursement_ledger(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    Computes monthly rental payouts for Property Owners:
+    - Gross Rent contracted from Client.
+    - 10% KTM-WDC platform operating commission.
+    - 90% Net Owner monthly disbursement (NPR).
+    """
+    bookings = db.query(WarehouseRequest).filter(
+        WarehouseRequest.status.in_([BookingStatus.APPROVED_CONTRACT_DISPATCHED, BookingStatus.ACTIVE_LEASED])
+    ).order_by(WarehouseRequest.created_at.desc()).all()
+
+    results = []
+    for b in bookings:
+        wh = b.warehouse
+        owner = wh.owner if wh else None
+
+        gross_rent = b.monthly_base_rent or 0.0
+        margin_fee = round(gross_rent * 0.10, 2)
+        net_owner_payout = round(gross_rent - margin_fee, 2)
+
+        is_paid = b.invoice and b.invoice.payment_status == PaymentStatus.PAID
+        payout_status = "DISBURSED" if is_paid else "APPROVED_PENDING_DISBURSEMENT"
+
+        results.append({
+            "booking_id": b.id,
+            "lease_number": f"KWDC-LEASE-{b.id:04d}",
+            "warehouse_id": wh.id if wh else None,
+            "warehouse_title": wh.title if wh else "Storage Space",
+            "warehouse_location": f"{wh.district or 'Kathmandu'}, {wh.neighborhood_landmark or 'Bagmati'}" if wh else "-",
+            "owner_name": owner.full_name if owner else "Verified Owner",
+            "owner_email": owner.email if owner else "-",
+            "owner_phone": owner.phone_number if owner else "-",
+            "client_name": b.client.full_name if b.client else "Commercial Client",
+            "allocated_sqft": b.allocated_billed_sqft,
+            "monthly_gross_rent": gross_rent,
+            "kwdc_platform_fee_10pct": margin_fee,
+            "net_owner_payout_90pct": net_owner_payout,
+            "payout_status": payout_status,
+            "disbursement_cycle": "Monthly (End of Month)",
+            "lease_start_date": b.lease_start_date.strftime("%Y-%m-%d") if b.lease_start_date else "Active"
+        })
+    return results
+
+@router.post("/payouts/{booking_id}/disburse")
+def disburse_owner_payout(
+    booking_id: int,
+    payload: PayoutDisburseRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    b = db.query(WarehouseRequest).filter(WarehouseRequest.id == booking_id).first()
+    if not b:
+        raise HTTPException(status_code=404, detail="Lease record not found.")
+
+    if b.invoice:
+        b.invoice.payment_status = PaymentStatus.PAID
+    b.status = BookingStatus.ACTIVE_LEASED
+    db.commit()
+
+    return {
+        "message": f"Owner payout for Lease #KWDC-LEASE-{b.id:04d} disbursed successfully via {payload.payment_method}.",
+        "transaction_ref": payload.transaction_ref,
+        "disbursement_status": "DISBURSED"
+    }
+
+
+# ---------------------------------------------------------------------------
+# 7. MAINTENANCE HOLD & SPACE FREEZE MANAGER
+# ---------------------------------------------------------------------------
+@router.get("/maintenance-holds")
+def get_maintenance_hold_requests(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Returns all warehouse maintenance holds requested by property owners."""
+    holds = db.query(Warehouse).filter(
+        (Warehouse.is_on_maintenance_hold == True) | (Warehouse.hold_reason_note.isnot(None))
+    ).order_by(Warehouse.created_at.desc()).all()
+
+    results = []
+    for w in holds:
+        results.append({
+            "warehouse_id": w.id,
+            "warehouse_title": w.title,
+            "owner_name": w.owner.full_name,
+            "owner_phone": w.owner.phone_number,
+            "total_sqft": w.total_sqft,
+            "available_sqft": w.available_sqft,
+            "is_on_maintenance_hold": w.is_on_maintenance_hold,
+            "hold_reason_note": w.hold_reason_note or "Routine inspection and maintenance.",
+            "is_available": w.is_available,
+            "created_at": w.created_at.strftime("%Y-%m-%d %H:%M")
+        })
+    return results
+
+@router.post("/maintenance-holds/{warehouse_id}/action")
+def manage_maintenance_hold(
+    warehouse_id: int,
+    payload: MaintenanceActionRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    wh = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found.")
+
+    action_upper = payload.action.upper()
+    if action_upper == "APPROVE":
+        wh.is_on_maintenance_hold = True
+        wh.is_available = False
+        msg = f"Maintenance hold on '{wh.title}' APPROVED. Space temporarily frozen from public marketplace."
+    elif action_upper == "RELEASE":
+        wh.is_on_maintenance_hold = False
+        wh.hold_reason_note = None
+        if wh.is_approved:
+            wh.is_available = True
+        msg = f"Maintenance hold on '{wh.title}' RELEASED. Space restored to active marketplace capacity."
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Must be 'APPROVE' or 'RELEASE'.")
+
+    db.commit()
+    return {"message": msg, "is_on_maintenance_hold": wh.is_on_maintenance_hold, "is_available": wh.is_available}
+
+
+# ---------------------------------------------------------------------------
+# 8. PLATFORM USER DIRECTORY & RBAC GOVERNANCE
+# ---------------------------------------------------------------------------
 @router.get("/users")
 def get_all_users(
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
@@ -231,8 +654,50 @@ def get_all_users(
             "phone_number": u.phone_number,
             "role": u.role.value,
             "operating_location": u.operating_location,
+            "is_active": u.is_active,
             "is_verified": u.is_verified,
             "kyc_status": u.kyc_status.value,
             "created_at": u.created_at.strftime("%Y-%m-%d %H:%M")
         })
     return results
+
+@router.post("/users/{user_id}/status")
+def toggle_user_account_status(
+    user_id: int,
+    payload: UserStatusUpdateRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found.")
+    if u.role == UserRole.SUPERADMIN and u.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot deactivate the active SuperAdmin session.")
+
+    u.is_active = payload.is_active
+    db.commit()
+    state = "Active" if u.is_active else "Suspended"
+    return {"message": f"User account '{u.full_name}' is now {state}.", "is_active": u.is_active}
+
+@router.post("/users/{user_id}/kyc-verify")
+def set_user_kyc_status(
+    user_id: int,
+    payload: UserKycUpdateRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    status_upper = payload.kyc_status.upper()
+    if status_upper == "APPROVED":
+        u.kyc_status = KycStatus.APPROVED
+        u.is_verified = True
+    elif status_upper == "REJECTED":
+        u.kyc_status = KycStatus.REJECTED
+    else:
+        u.kyc_status = KycStatus.PENDING_REVIEW
+
+    db.commit()
+    return {"message": f"KYC status for '{u.full_name}' updated to {u.kyc_status.value}.", "kyc_status": u.kyc_status.value}

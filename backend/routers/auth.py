@@ -28,6 +28,13 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
     Takes Name/Company, Email, Contact, Operating Location, Role, Password & Confirm Password.
     Dispatches 6-digit OTP via Brevo email for account activation.
     """
+    # Warehouse Incharge and SuperAdmin cannot be self-registered publicly
+    if payload.role in (UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Warehouse Incharge accounts cannot be self-registered. They are created and provisioned directly by the SuperAdmin."
+        )
+
     # Check existing email
     if db.query(User).filter(User.email == payload.email.lower()).first():
         raise HTTPException(
