@@ -1,7 +1,7 @@
 """
 Pydantic Request & Response Validation Schemas for KTM-WDC
 """
-from typing import Optional, List
+from typing import Optional, List, Any, Union
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field, model_validator
 from backend.models import (
@@ -16,13 +16,13 @@ class UserRegister(BaseModel):
     company_name: Optional[str] = None
     email: EmailStr
     phone_number: str = Field(..., min_length=7, description="Contact phone")
-    operating_location: str = Field(default="Kathmandu Valley", description="Primary operating city/district")
+    operating_location: Optional[str] = Field(default="Kathmandu Valley", description="Primary operating city/district")
     password: str = Field(..., min_length=6)
-    confirm_password: str = Field(..., min_length=6)
+    confirm_password: Optional[str] = None
 
     @model_validator(mode="after")
     def check_passwords_match(self):
-        if self.password != self.confirm_password:
+        if self.confirm_password and self.password != self.confirm_password:
             raise ValueError("Password and Confirm Password do not match.")
         return self
 
@@ -54,68 +54,83 @@ class PhysicalAuditSubmit(BaseModel):
 
 class WarehouseCreate(BaseModel):
     title: str
-    space_type: SpaceType = SpaceType.RESIDENTIAL_BASEMENT
-    input_unit: AreaUnit = AreaUnit.SQFT
-    input_value: float = Field(..., gt=0)
-    ceiling_height_ft: float = 10.0
-    monthly_rate_per_sqft: float = Field(..., gt=0)
+    space_type: Any = SpaceType.COVERED_GODOWN
+    input_unit: Any = AreaUnit.SQFT
+    input_value: Optional[float] = None
+    total_sqft: Optional[float] = None
+    ceiling_height_ft: float = 12.0
+    monthly_rate_per_sqft: Optional[float] = None
+    base_rate_per_sqft: Optional[float] = None
     min_lease_months: int = 1
     
     # Location
     province: str = "Bagmati"
     district: str = "Kathmandu"
-    municipality: str
+    municipality: Optional[str] = "Kathmandu"
     ward_no: int = 1
-    neighborhood_landmark: str
-    latitude: float
-    longitude: float
+    neighborhood_landmark: Optional[str] = "Kathmandu Valley Hub"
+    latitude: Optional[float] = 27.7172
+    longitude: Optional[float] = 85.3240
     
     # Specs
-    road_access_ft: float = 16.0
+    road_access_ft: Optional[float] = 20.0
+    road_access_width_ft: Optional[float] = None
     has_three_phase_power: bool = False
     has_forklift_ramp: bool = False
     has_cctv: bool = False
     has_cold_storage: bool = False
+    has_security_guard: bool = False
+    has_raised_dock: bool = False
+    has_forklift_access: bool = False
+    has_fire_safety: bool = False
     temp_min_c: Optional[float] = None
     temp_max_c: Optional[float] = None
 
 class MaintenanceHoldRequest(BaseModel):
-    warehouse_id: int
-    is_on_hold: bool
+    warehouse_id: Optional[int] = None
+    is_on_hold: Optional[bool] = None
+    is_on_maintenance_hold: Optional[bool] = None
     hold_reason_note: str
 
 class BookingRequestCreate(BaseModel):
     warehouse_id: int
     requested_sqft: float = Field(..., gt=0)
     duration_months: int = Field(default=3, ge=1)
+    client_intended_use: Optional[str] = "Commercial Freight"
+    client_pan_vat: Optional[str] = None
     buyer_pan: Optional[str] = None
 
 class InchargeReportCreate(BaseModel):
     warehouse_id: int
-    log_type: str
+    log_type: str = "security_check"
     summary: str
     detailed_notes: str
 
 class IncidentReportCreate(BaseModel):
     warehouse_id: int
-    incident_category: str
-    severity: IncidentSeverity = IncidentSeverity.MINOR
-    description: str
+    severity: Optional[str] = "low"
+    title: Optional[str] = None
+    observation_notes: Optional[str] = None
+    incident_category: Optional[str] = "general"
+    description: Optional[str] = None
     action_taken: Optional[str] = None
     police_alert_dispatched: bool = False
 
 class GatePassCreate(BaseModel):
     warehouse_id: int
-    client_id: int
-    pass_type: str
+    client_id: Optional[int] = None
+    movement_type: Optional[str] = "inbound"
+    pass_type: Optional[str] = "inbound"
     vehicle_plate: str
     driver_name: str
+    cargo_manifest: Optional[str] = None
+    pallet_count: Optional[int] = 1
     unit_type: InventoryUnitType = InventoryUnitType.CARTOON
-    scanned_units_count: int
+    scanned_units_count: Optional[int] = 1
     remarks: Optional[str] = None
 
 class VehicleCreate(BaseModel):
-    category: VehicleCategory
+    category: Any = VehicleCategory.SIX_WHEELER
     model_name: str
     license_plate: str
     bluebook_number: str
@@ -126,5 +141,5 @@ class DriverCreate(BaseModel):
     full_name: str
     phone_number: str
     license_number: str
-    citizenship_no: str
+    citizenship_no: Optional[str] = "CTZ-VERIFIED"
     assigned_vehicle_id: Optional[int] = None

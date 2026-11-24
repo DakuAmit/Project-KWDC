@@ -22,6 +22,26 @@ from backend.services.vat_service import generate_ird_tax_invoice
 
 router = APIRouter(prefix="/api/fleet", tags=["Fleet Partner & Logistics"])
 
+def normalize_vehicle_category(val) -> VehicleCategory:
+    if not val:
+        return VehicleCategory.SIX_WHEELER
+    if isinstance(val, VehicleCategory):
+        return val
+    s = str(val.value if hasattr(val, "value") else val).upper().replace("-", "_")
+    mapping = {
+        "TWO_WHEELER": VehicleCategory.TWO_WHEELER,
+        "THREE_WHEELER": VehicleCategory.THREE_WHEELER,
+        "MINI_TRUCK": VehicleCategory.MINI_TRUCK,
+        "PICKUP": VehicleCategory.MEDIUM_PICKUP,
+        "MEDIUM_PICKUP": VehicleCategory.MEDIUM_PICKUP,
+        "HEAVY_TRUCK": VehicleCategory.SIX_WHEELER,
+        "SIX_WHEELER": VehicleCategory.SIX_WHEELER,
+        "TEN_WHEELER": VehicleCategory.TEN_WHEELER,
+        "CONTAINER_TRAILER": VehicleCategory.CONTAINER_TRAILER,
+        "TRAILER": VehicleCategory.CONTAINER_TRAILER,
+    }
+    return mapping.get(s, VehicleCategory.SIX_WHEELER)
+
 @router.post("/vehicles")
 def register_vehicle(
     payload: VehicleCreate,
@@ -33,9 +53,10 @@ def register_vehicle(
     if existing:
         raise HTTPException(status_code=400, detail="Vehicle with this license plate already registered.")
 
+    cat = normalize_vehicle_category(payload.category)
     vehicle = Vehicle(
         fleet_partner_id=current_user.id,
-        category=payload.category,
+        category=cat,
         model_name=payload.model_name,
         license_plate=payload.license_plate,
         bluebook_number=payload.bluebook_number,

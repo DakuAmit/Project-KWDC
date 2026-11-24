@@ -36,71 +36,71 @@ class UserRole(str, enum.Enum):
     SUPERADMIN = "superadmin"
 
 class SpaceType(str, enum.Enum):
-    RESIDENTIAL_BASEMENT = "residential_basement"
-    COMMERCIAL_SHUTTER = "commercial_shutter"
-    COVERED_GODOWN = "covered_godown"
-    WALLED_LAND_PLOT = "walled_land_plot"
+    RESIDENTIAL_BASEMENT = "RESIDENTIAL_BASEMENT"
+    COMMERCIAL_SHUTTER = "COMMERCIAL_SHUTTER"
+    COVERED_GODOWN = "COVERED_GODOWN"
+    WALLED_LAND_PLOT = "WALLED_LAND_PLOT"
 
 class AreaUnit(str, enum.Enum):
-    SQFT = "sqft"       # Square Feet (Standard Base)
-    SQM = "sqm"         # Square Meters
-    AANA = "aana"       # Nepali Hill Unit (342.25 sq ft)
-    ROPANI = "ropani"   # Nepali Hill Unit (5476 sq ft)
-    BIGHA = "bigha"     # Nepali Terai Unit (72900 sq ft)
-    KATTHA = "kattha"   # Nepali Terai Unit (3645 sq ft)
-    CUFT = "cuft"       # Cubic Feet (Volume for High-Ceiling Godowns)
+    SQFT = "SQFT"       # Square Feet (Standard Base)
+    SQM = "SQM"         # Square Meters
+    AANA = "AANA"       # Nepali Hill Unit (342.25 sq ft)
+    ROPANI = "ROPANI"   # Nepali Hill Unit (5476 sq ft)
+    BIGHA = "BIGHA"     # Nepali Terai Unit (72900 sq ft)
+    KATTHA = "KATTHA"   # Nepali Terai Unit (3645 sq ft)
+    CUFT = "CUFT"       # Cubic Feet (Volume for High-Ceiling Godowns)
 
 class InventoryUnitType(str, enum.Enum):
-    CARTOON = "cartoon"         # Individual Carton / Box
-    PALLET = "pallet"           # Wooden / Plastic Pallet
-    CONTAINER = "container"     # 20ft / 40ft Shipping Container
+    CARTOON = "CARTOON"         # Individual Carton / Box
+    PALLET = "PALLET"           # Wooden / Plastic Pallet
+    CONTAINER = "CONTAINER"     # 20ft / 40ft Shipping Container
 
 class VehicleCategory(str, enum.Enum):
-    TWO_WHEELER = "two_wheeler"         # Motorcycle / Delivery Scooter / Cargo Bike (< 50kg)
-    THREE_WHEELER = "three_wheeler"     # Cargo Auto-Tempo (300-500kg)
-    MINI_TRUCK = "mini_truck"           # Tata Ace / Batta / Dost (750-1200kg)
-    MEDIUM_PICKUP = "medium_pickup"     # Mahindra Bolero / 3-Ton Pickup (1.5-3 Ton)
-    SIX_WHEELER = "six_wheeler"         # Eicher / Tata 1109 Commercial (5-9 Ton)
-    TEN_WHEELER = "ten_wheeler"         # Multi-Axle Heavy Hauler (16-25 Ton)
-    CONTAINER_TRAILER = "container_trailer" # 20ft / 40ft Container Bed (30+ Ton)
+    TWO_WHEELER = "TWO_WHEELER"         # Motorcycle / Delivery Scooter / Cargo Bike (< 50kg)
+    THREE_WHEELER = "THREE_WHEELER"     # Cargo Auto-Tempo (300-500kg)
+    MINI_TRUCK = "MINI_TRUCK"           # Tata Ace / Batta / Dost (750-1200kg)
+    MEDIUM_PICKUP = "MEDIUM_PICKUP"     # Mahindra Bolero / 3-Ton Pickup (1.5-3 Ton)
+    SIX_WHEELER = "SIX_WHEELER"         # Eicher / Tata 1109 Commercial (5-9 Ton)
+    TEN_WHEELER = "TEN_WHEELER"         # Multi-Axle Heavy Hauler (16-25 Ton)
+    CONTAINER_TRAILER = "CONTAINER_TRAILER" # 20ft / 40ft Container Bed (30+ Ton)
 
 class BookingStatus(str, enum.Enum):
-    PENDING_REVIEW = "pending_review"
-    APPROVED_CONTRACT_DISPATCHED = "approved_contract_dispatched"
-    ACTIVE_LEASED = "active_leased"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    APPROVED_CONTRACT_DISPATCHED = "APPROVED_CONTRACT_DISPATCHED"
+    ACTIVE_LEASED = "ACTIVE_LEASED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 class FreightStatus(str, enum.Enum):
-    REQUESTED = "requested"
-    ASSIGNED = "assigned"
-    PICKUP_IN_PROGRESS = "pickup_in_progress"
-    IN_TRANSIT = "in_transit"
-    DELIVERED = "delivered"
-    CANCELLED = "cancelled"
+    REQUESTED = "REQUESTED"
+    ASSIGNED = "ASSIGNED"
+    PICKUP_IN_PROGRESS = "PICKUP_IN_PROGRESS"
+    IN_TRANSIT = "IN_TRANSIT"
+    DELIVERED = "DELIVERED"
+    CANCELLED = "CANCELLED"
 
 class PaymentStatus(str, enum.Enum):
-    UNPAID = "unpaid"
-    PAID = "paid"
-    REFUNDED = "refunded"
+    UNPAID = "UNPAID"
+    PAID = "PAID"
+    REFUNDED = "REFUNDED"
 
 class IncidentSeverity(str, enum.Enum):
-    MINOR = "minor"         # e.g., Minor rat nibbling on outer packaging
-    MODERATE = "moderate"   # e.g., Moisture ingress, broken stack
-    MAJOR = "major"         # e.g., Water leakage during monsoon, broken lock/seal
-    CRITICAL = "critical"   # e.g., Fire hazard, structural collapse, burglary
+    MINOR = "MINOR"         # e.g., Minor rat nibbling on outer packaging
+    MODERATE = "MODERATE"   # e.g., Moisture ingress, broken stack
+    MAJOR = "MAJOR"         # e.g., Water leakage during monsoon, broken lock/seal
+    CRITICAL = "CRITICAL"   # e.g., Fire hazard, structural collapse, burglary
 
 class KycStatus(str, enum.Enum):
-    PENDING_SUBMISSION = "pending_submission"
-    UNDER_REVIEW = "under_review"
-    VERIFIED = "verified"
-    REJECTED = "rejected"
+    PENDING_SUBMISSION = "PENDING_SUBMISSION"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    VERIFIED = "VERIFIED"
+    REJECTED = "REJECTED"
 
 class PhysicalAuditStatus(str, enum.Enum):
-    PENDING_INSPECTION = "pending_inspection"
-    AUDIT_SCHEDULED = "audit_scheduled"
-    VERIFIED_PASSED = "verified_passed"
-    REPAIRS_REQUIRED = "repairs_required"
+    PENDING_INSPECTION = "PENDING_INSPECTION"
+    AUDIT_SCHEDULED = "AUDIT_SCHEDULED"
+    VERIFIED_PASSED = "VERIFIED_PASSED"
+    REPAIRS_REQUIRED = "REPAIRS_REQUIRED"
 
 
 # ---------------------------------------------------------------------------
@@ -462,6 +462,10 @@ class GatePass(Base):
     scanned_units_count = Column(Integer, default=0)
     remarks = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    warehouse = relationship("Warehouse")
+    client = relationship("User", foreign_keys=[client_id])
+    incharge = relationship("User", foreign_keys=[incharge_id])
 
 
 # ---------------------------------------------------------------------------

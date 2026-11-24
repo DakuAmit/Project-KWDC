@@ -54,12 +54,16 @@ def send_email_via_brevo(
         print(f"[BREVO EXCEPTION] Failed to send email: {e}")
         return False
 
-def send_contract_approval_email(owner_email: str, owner_name: str, warehouse_title: str, contract_text: str):
+def send_contract_approval_email(owner_email: str = None, owner_name: str = "Property Owner", warehouse_title: str = "Commercial Facility", contract_text: str = None, **kwargs):
     """
     Dispatches the Master Commercial Lease Agreement to the Property Owner
     once approved by SuperAdmin.
     """
-    formatted_contract = contract_text.replace("\n", "<br>")
+    target_email = owner_email or kwargs.get("to_email")
+    if not target_email:
+        return False
+    contract_content = contract_text or kwargs.get("contract_url") or "Master Commercial Lease Agreement on file."
+    formatted_contract = contract_content.replace("\n", "<br>")
     html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 650px; margin: auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 8px; color: #1e293b;">
         <div style="background-color: #0f172a; padding: 15px 20px; border-radius: 6px; color: white; text-align: center;">
@@ -90,7 +94,7 @@ def send_contract_approval_email(owner_email: str, owner_name: str, warehouse_ti
     </div>
     """
     return send_email_via_brevo(
-        to_email=owner_email,
+        to_email=target_email,
         to_name=owner_name,
         subject=f"[KTM-WDC] Master Storage Lease Executed - {warehouse_title}",
         html_content=html

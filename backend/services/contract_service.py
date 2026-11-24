@@ -11,9 +11,28 @@ Generates legally binding agreements between Property Owners and KWDC:
 from datetime import datetime, timezone
 from backend.models import Warehouse, User
 
-def generate_master_lease_contract(warehouse: Warehouse, owner: User) -> dict:
-    contract_number = f"KWDC-MLA-2083-{warehouse.id:04d}"
+def generate_master_lease_contract(warehouse: Warehouse = None, owner: User = None, **kwargs) -> dict:
+    w_id = getattr(warehouse, "id", None) or kwargs.get("warehouse_id", 1)
+    contract_number = f"KWDC-MLA-2083-{w_id:04d}"
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    owner_name = getattr(owner, "full_name", None) or kwargs.get("owner_name", "Property Owner")
+    owner_email = getattr(owner, "email", None) or kwargs.get("owner_email", "owner@kwdc.com.np")
+    owner_phone = getattr(owner, "phone_number", None) or kwargs.get("owner_phone", "+977-9800000000")
+
+    w_title = getattr(warehouse, "title", None) or kwargs.get("warehouse_title", "Commercial Warehouse")
+    w_space_type = getattr(warehouse, "space_type", None)
+    stype_str = w_space_type.value.upper() if hasattr(w_space_type, "value") else str(w_space_type or "COVERED_GODOWN")
+    total_sqft = getattr(warehouse, "total_sqft", None) or kwargs.get("total_sqft", 1000.0)
+    ceiling_ht = getattr(warehouse, "clear_ceiling_height_ft", 12.0)
+    ward = getattr(warehouse, "ward_no", 1)
+    muni = getattr(warehouse, "municipality", "Kathmandu")
+    dist = getattr(warehouse, "district", "Kathmandu")
+    prov = getattr(warehouse, "province", "Bagmati")
+    landmark = getattr(warehouse, "neighborhood_landmark", "Kathmandu Valley Hub")
+    lat = getattr(warehouse, "latitude", 27.7172)
+    lng = getattr(warehouse, "longitude", 85.3240)
+    rate = getattr(warehouse, "monthly_rate_per_sqft", None) or kwargs.get("rate", 45.0)
 
     contract_text = f"""
 ================================================================================
@@ -30,19 +49,19 @@ PARTIES TO THIS AGREEMENT:
    PAN / VAT Registration No.: 600987654
 
 2. VERIFIED PROPERTY OWNER:
-   Name: {owner.full_name}
-   Contact Email: {owner.email}
-   Phone: {owner.phone_number}
+   Name: {owner_name}
+   Contact Email: {owner_email}
+   Phone: {owner_phone}
 
 --------------------------------------------------------------------------------
 ARTICLE 1: PROPERTY SPECIFICATIONS & AUDITED CAPACITY
-Facility Title: {warehouse.title}
-Physical Space Classification: {warehouse.space_type.value.upper()}
-Audited Floor Space: {warehouse.total_sqft:,.2f} sq ft
-Clear Ceiling Height: {warehouse.clear_ceiling_height_ft} ft
-Location: Ward {warehouse.ward_no}, {warehouse.municipality}, {warehouse.district}, {warehouse.province}
-Nearest Landmark: {warehouse.neighborhood_landmark}
-GPS Geolocation Coordinates: {warehouse.latitude:.5f}° N, {warehouse.longitude:.5f}° E
+Facility Title: {w_title}
+Physical Space Classification: {stype_str}
+Audited Floor Space: {total_sqft:,.2f} sq ft
+Clear Ceiling Height: {ceiling_ht} ft
+Location: Ward {ward}, {muni}, {dist}, {prov}
+Nearest Landmark: {landmark}
+GPS Geolocation Coordinates: {lat:.5f}° N, {lng:.5f}° E
 Heavy Vehicle Road Access: {warehouse.road_access_ft} ft
 
 --------------------------------------------------------------------------------
@@ -76,7 +95,7 @@ ARTICLE 4: ADMINISTRATIVE GOVERNANCE & LOCKOUT PROVISION
 --------------------------------------------------------------------------------
 DIGITAL CERTIFICATE OF VERIFICATION:
 Approved by: KTM-WDC Commercial Real Estate Directorate
-Cryptographic Contract Stamp: SHA256:{hash(contract_number + owner.email + str(warehouse.id))}
+Cryptographic Contract Stamp: SHA256:{hash(contract_number + owner_email + str(w_id))}
 Status: VERIFIED & DIGITALLY EXECUTED
 ================================================================================
 """
@@ -84,9 +103,9 @@ Status: VERIFIED & DIGITALLY EXECUTED
         "contract_number": contract_number,
         "executed_at": now_str,
         "contract_text": contract_text.strip(),
-        "owner_name": owner.full_name,
-        "warehouse_title": warehouse.title,
-        "total_sqft": warehouse.total_sqft,
+        "owner_name": owner_name,
+        "warehouse_title": w_title,
+        "total_sqft": total_sqft,
         "holding_liability": "NPR 0.00 (Zero Holding Liability)",
-        "rate_per_sqft": warehouse.monthly_rate_per_sqft
+        "rate_per_sqft": rate
     }

@@ -65,6 +65,7 @@ class UserKycUpdateRequest(BaseModel):
 # 1. PROPERTY AUDITS & APPROVALS (RULE 1: PHYSICAL AUDIT & LOCKOUT)
 # ---------------------------------------------------------------------------
 @router.get("/pending-warehouses")
+@router.get("/pending")
 def get_pending_warehouses(
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
@@ -75,22 +76,24 @@ def get_pending_warehouses(
     for w in pending:
         results.append({
             "id": w.id,
-            "owner_name": w.owner.full_name,
-            "owner_email": w.owner.email,
-            "owner_phone": w.owner.phone_number,
+            "owner_name": w.owner.full_name if w.owner else "Property Owner",
+            "owner_email": w.owner.email if w.owner else "-",
+            "owner_phone": w.owner.phone_number if w.owner else "-",
             "title": w.title,
-            "space_type": w.space_type.value,
+            "space_type": w.space_type.value if hasattr(w.space_type, "value") else str(w.space_type),
             "total_sqft": w.total_sqft,
             "monthly_rate_per_sqft": w.monthly_rate_per_sqft,
             "neighborhood_landmark": w.neighborhood_landmark,
             "road_access_ft": w.road_access_ft,
-            "created_at": w.created_at.strftime("%Y-%m-%d %H:%M")
+            "created_at": w.created_at.strftime("%Y-%m-%d %H:%M") if w.created_at else "Recent"
         })
     return results
 
 @router.post("/warehouses/{warehouse_id}/approve")
+@router.post("/warehouses/{warehouse_id}/audit")
 def approve_warehouse_listing(
     warehouse_id: int,
+    payload: dict = None,
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
@@ -105,13 +108,10 @@ def approve_warehouse_listing(
     if warehouse.is_approved:
         return {"message": "Warehouse is already approved."}
 
-    # Generate master commercial contract PDF
-    contract_url = generate_master_lease_contract(
-        owner_name=warehouse.owner.full_name,
-        warehouse_title=warehouse.title,
-        total_sqft=warehouse.total_sqft,
-        rate=warehouse.monthly_rate_per_sqft
-    )
+    # Generate master commercial contract
+    owner = warehouse.owner or db.query(User).filter(User.id == warehouse.owner_id).first()
+    contract_data = generate_master_lease_contract(warehouse, owner) if owner else {}
+    contract_url = contract_data.get("contract_number", f"KWDC-MLA-2083-{warehouse.id:04d}")
 
     # Approve & Lock
     warehouse.is_approved = True
@@ -121,12 +121,13 @@ def approve_warehouse_listing(
     db.commit()
 
     # Send Notification Email
-    email_sent = send_contract_approval_email(
-        to_email=warehouse.owner.email,
-        owner_name=warehouse.owner.full_name,
-        warehouse_title=warehouse.title,
-        contract_url=contract_url
-    )
+    if owner:
+        email_sent = send_contract_approval_email(
+            to_email=owner.email,
+            owner_name=owner.full_name,
+            warehouse_title=warehouse.title,
+            contract_url=contract_url
+        )
 
     return {
         "message": f"Warehouse '{warehouse.title}' successfully audited and approved!",
@@ -335,7 +336,7 @@ def provision_incharge_staff(
         role=UserRole.WAREHOUSE_INCHARGE,
         is_active=True,
         is_verified=True,
-        kyc_status=KycStatus.APPROVED
+        kyc_status=KycStatus.VERIFIED
     )
     db.add(incharge_user)
     db.commit()
@@ -476,22 +477,26 @@ def get_fleet_telemetry_radar(
     ]
 
     for idx, v in enumerate(vehicles):
-        driver_name = v.assigned_driver.full_name if v.assigned_driver else "Unassigned / Fleet Pool"
-        driver_phone = v.assigned_driver.phone_number if v.assigned_driver else "-"
-        partner_name = v.fleet_partner.company_name or v.fleet_partner.full_name if v.fleet_partner else "Independent Partner"
+        driver_name = getattr(v, "assigned_driver", None).full_name if getattr(v, "assigned_driver", None) else "Unassigned / Fleet Pool"
+        driver_phone = getattr(v, "assigned_driver", None).phone_number if getattr(v, "assigned_driver", None) else "-"
+        partner_name = v.fleet_partner.company_name or v.fleet_partner.full_name if getattr(v, "fleet_partner", None) else "Independent Partner"
 
         hub = hubs[idx % len(hubs)]
-        lat = getattr(v, "current_latitude", None) or hub["lat"]
-        lng = getattr(v, "current_longitude", None) or hub["lng"]
-        speed = getattr(v, "current_speed_kmh", None) or (32.0 if v.is_active else 0.0)
+        lat = getattr(v, "current_lat", None) or getattr(v, "current_latitude", None) or hub["lat"]
+        lng = getattr(v, "current_lng", None) or getattr(v, "current_longitude", None) or hub["lng"]
+        is_avail = getattr(v, "is_available", True) or getattr(v, "is_active", True)
+        speed = getattr(v, "current_speed_kmh", None) or (32.0 if is_avail else 0.0)
+        v_cat = getattr(v, "category", None) or getattr(v, "vehicle_category", "mini_truck")
+        v_cat_str = v_cat.value if hasattr(v_cat, "value") else str(v_cat)
+        payload_tons = round(getattr(v, "payload_capacity_kg", 5000.0) / 1000.0, 1)
 
         results.append({
             "id": v.id,
             "license_plate": v.license_plate,
-            "vehicle_category": v.vehicle_category.value if hasattr(v.vehicle_category, "value") else str(v.vehicle_category),
-            "payload_capacity_tons": v.payload_capacity_tons,
+            "vehicle_category": v_cat_str,
+            "payload_capacity_tons": payload_tons,
             "bluebook_number": v.bluebook_number or f"BB-2081-{v.id:04d}",
-            "is_active": v.is_active,
+            "is_active": is_avail,
             "driver_name": driver_name,
             "driver_phone": driver_phone,
             "partner_name": partner_name,
@@ -499,7 +504,7 @@ def get_fleet_telemetry_radar(
             "latitude": lat,
             "longitude": lng,
             "speed_kmh": speed,
-            "telemetry_status": "BROADCASTING_LIVE" if v.is_active else "IDLE_OFFLINE"
+            "telemetry_status": "BROADCASTING_LIVE" if is_avail else "IDLE_OFFLINE"
         })
     return results
 
@@ -691,13 +696,42 @@ def set_user_kyc_status(
         raise HTTPException(status_code=404, detail="User not found.")
 
     status_upper = payload.kyc_status.upper()
-    if status_upper == "APPROVED":
-        u.kyc_status = KycStatus.APPROVED
+    if status_upper in ["APPROVED", "VERIFIED"]:
+        u.kyc_status = KycStatus.VERIFIED
         u.is_verified = True
     elif status_upper == "REJECTED":
         u.kyc_status = KycStatus.REJECTED
+        u.is_verified = False
     else:
-        u.kyc_status = KycStatus.PENDING_REVIEW
+        u.kyc_status = KycStatus.UNDER_REVIEW
 
     db.commit()
     return {"message": f"KYC status for '{u.full_name}' updated to {u.kyc_status.value}.", "kyc_status": u.kyc_status.value}
+
+@router.get("/invoices")
+def get_admin_invoices(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Retrieves all IRD Schedule 13 electronic tax invoices for platform accounting."""
+    invoices = db.query(TaxInvoice).order_by(TaxInvoice.issued_at.desc()).all()
+    results = []
+    for inv in invoices:
+        results.append({
+            "id": inv.id,
+            "invoice_number": inv.invoice_number,
+            "buyer_name": inv.buyer_name,
+            "buyer_pan_vat": inv.buyer_pan_vat or "N/A",
+            "seller_name": inv.seller_name,
+            "seller_pan_vat": inv.seller_pan_vat,
+            "taxable_base_amount": inv.taxable_base_amount,
+            "kwdc_admin_margin": inv.kwdc_admin_margin,
+            "vat_13_percent": inv.vat_13_percent,
+            "gross_total_npr": inv.gross_total_npr,
+            "qr_payload": inv.qr_payload,
+            "payment_status": inv.payment_status.value if hasattr(inv.payment_status, "value") else str(inv.payment_status),
+            "issued_at": inv.issued_at.isoformat() if inv.issued_at else None,
+            "storage_booking_id": inv.storage_booking_id,
+            "freight_order_id": inv.freight_order_id
+        })
+    return results

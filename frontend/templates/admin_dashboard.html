@@ -529,18 +529,40 @@
 
         <!-- View 9: IRD VAT Invoices -->
         <section id="view-invoices" class="hidden space-y-4">
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
-            <span class="w-12 h-12 rounded-full bg-red-50 text-red-600 grid place-items-center mx-auto mb-3">
-              <i data-lucide="receipt" class="w-6 h-6"></i>
-            </span>
-            <h3 class="text-base font-bold text-navy">Nepal IRD Schedule 13 Electronic VAT System</h3>
-            <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
-              All client bookings automatically generate audited Schedule 13 Electronic Tax Invoices with Seller PAN (609823412), 13% statutory VAT calculation, and ISO/IEC 18004 QR codes.
-            </p>
-            <div class="mt-5">
-              <a href="/invoice" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-navy text-white text-xs font-bold hover:bg-slate-800 transition">
-                <i data-lucide="external-link" class="w-4 h-4"></i> Open IRD Schedule 13 Invoice Viewer
-              </a>
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base">Nepal IRD Schedule 13 Electronic VAT System</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Automated Schedule 13 Electronic Tax Invoices with Seller PAN (600987654), 13% statutory VAT, and ISO/IEC 18004 QR verification.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <a href="/invoice" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-navy text-white text-xs font-bold hover:bg-slate-800 transition">
+                  <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Single Invoice Viewer
+                </a>
+                <button onclick="loadInvoices()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Invoice #</th>
+                    <th class="px-5 py-3">Buyer (Tenant / Consignee)</th>
+                    <th class="px-5 py-3">Buyer PAN/VAT</th>
+                    <th class="px-5 py-3">Taxable Base</th>
+                    <th class="px-5 py-3">13% VAT</th>
+                    <th class="px-5 py-3">Gross Total</th>
+                    <th class="px-5 py-3">Status</th>
+                    <th class="px-5 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="invoicesTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">Loading tax invoices...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
@@ -707,6 +729,11 @@
       };
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+
     function toggleDrawer() {
       const drawer = document.getElementById('leftDrawer');
       drawer.classList.toggle('-translate-x-full');
@@ -763,6 +790,10 @@
         loadPayouts();
       } else if (tabId === 'maintenance-holds') {
         loadMaintenanceHolds();
+      } else if (tabId === 'invoices') {
+        loadInvoices();
+      } else if (tabId === 'users') {
+        loadUsers();
       }
 
       lucide.createIcons();
@@ -1377,6 +1408,44 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       }
     }
 
+    async function loadInvoices() {
+      const tbody = document.getElementById('invoicesTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">Loading tax invoices...</td></tr>';
+      try {
+        const res = await fetch('/api/admin/invoices', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load tax invoices');
+        const invoices = await res.json();
+        if (!invoices.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">No IRD tax invoices generated yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = invoices.map(inv => `
+          <tr class="hover:bg-slate-50/60 transition">
+            <td class="px-5 py-3 font-mono font-bold text-navy text-xs">${inv.invoice_number}</td>
+            <td class="px-5 py-3 font-medium text-slate-800">${escapeHtml(inv.buyer_name)}</td>
+            <td class="px-5 py-3 font-mono text-slate-600">${escapeHtml(inv.buyer_pan_vat || 'N/A')}</td>
+            <td class="px-5 py-3 font-mono text-slate-700">Rs. ${Number(inv.taxable_base_amount).toLocaleString()}</td>
+            <td class="px-5 py-3 font-mono text-slate-700">Rs. ${Number(inv.vat_13_percent).toLocaleString()}</td>
+            <td class="px-5 py-3 font-mono font-bold text-navy">Rs. ${Number(inv.gross_total_npr).toLocaleString()}</td>
+            <td class="px-5 py-3">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${inv.payment_status === 'PAID' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                ${inv.payment_status}
+              </span>
+            </td>
+            <td class="px-5 py-3 text-right">
+              <a href="/invoice?id=${inv.id}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-navy/5 text-navy hover:bg-navy hover:text-white text-xs font-semibold transition">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i> View
+              </a>
+            </td>
+          </tr>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-8 text-center text-rose-500 font-semibold">${err.message}</td></tr>`;
+      }
+    }
+
     function refreshData() {
       loadPendingWarehouses();
       loadBookings();
@@ -1384,6 +1453,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       loadInchargeLogs();
       loadPayouts();
       loadMaintenanceHolds();
+      loadInvoices();
       loadUsers();
     }
 

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseInchargeAssignment, WarehouseActivityLog,
-    IncidentReport, GatePass, User, UserRole, StockItem, InventoryUnit
+    IncidentReport, IncidentSeverity, GatePass, User, UserRole, StockItem, InventoryUnit
 )
 from backend.schemas import InchargeReportCreate, IncidentReportCreate, GatePassCreate
 from backend.auth_utils import require_user, require_roles
@@ -78,12 +78,26 @@ def log_incident(
     - Seal tampering
     - Fire or burglary (with immediate 1-click police alert)
     """
+    # Map low/high to standard IncidentSeverity
+    sev_str = str(payload.severity).lower()
+    if "low" in sev_str:
+        sev = IncidentSeverity.MINOR
+    elif "med" in sev_str or "moderate" in sev_str:
+        sev = IncidentSeverity.MODERATE
+    elif "crit" in sev_str:
+        sev = IncidentSeverity.CRITICAL
+    else:
+        sev = IncidentSeverity.MAJOR if "maj" in sev_str else IncidentSeverity.MINOR
+
+    desc = payload.description or payload.observation_notes or payload.title or "General observation"
+    cat = payload.incident_category or payload.title or "Structural Observation"
+
     report = IncidentReport(
         warehouse_id=payload.warehouse_id,
         incharge_id=current_user.id,
-        incident_category=payload.incident_category,
-        severity=payload.severity,
-        description=payload.description,
+        incident_category=cat,
+        severity=sev,
+        description=desc,
         action_taken=payload.action_taken,
         police_alert_dispatched=payload.police_alert_dispatched,
         admin_notified=True
@@ -101,23 +115,41 @@ def log_incident(
 @router.post("/gate-pass")
 def process_gate_pass(
     payload: GatePassCreate,
-    current_user: User = Depends(require_roles([UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN, UserRole.SECURITY_AGENCY])),
+    current_user: User = Depends(require_roles([UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN, UserRole.COMMERCIAL_CLIENT, UserRole.SECURITY_AGENCY])),
     db: Session = Depends(get_db)
 ):
     """Stamps digital Inward or Outward Gate Pass with verified unit counts."""
+    p_type = (payload.movement_type or payload.pass_type or "inbound").upper()
+    c_id = payload.client_id or (current_user.id if current_user.role == UserRole.COMMERCIAL_CLIENT else None)
+    
+    # If client_id is None, assign to first user or current user
+    if not c_id:
+        c_id = current_user.id
+
+    units = payload.pallet_count or payload.scanned_units_count or 1
+    manifest = payload.cargo_manifest or payload.remarks or "Commercial Cargo"
+
     gate_pass = GatePass(
         warehouse_id=payload.warehouse_id,
-        client_id=payload.client_id,
+        client_id=c_id,
         incharge_id=current_user.id,
-        pass_type=payload.pass_type.upper(),
+        pass_type=p_type,
         vehicle_plate=payload.vehicle_plate,
         driver_name=payload.driver_name,
         unit_type=payload.unit_type,
-        scanned_units_count=payload.scanned_units_count,
-        remarks=payload.remarks
+        scanned_units_count=units,
+        remarks=manifest
     )
     db.add(gate_pass)
     db.commit()
+    db.refresh(gate_pass)
+
+    return {
+        "message": f"Gate pass {p_type} clearance stamped.",
+        "gate_pass_id": gate_pass.id,
+        "pass_token": f"GP-2083-{gate_pass.id:04d}",
+        "status": "CLEARED"
+    }
     db.refresh(gate_pass)
 
     return {
@@ -132,18 +164,20 @@ def get_gate_passes(
     db: Session = Depends(get_db)
 ):
     """Retrieves all digital gate passes issued across facilities."""
-    passes = db.query(GatePass).order_by(GatePass.issued_at.desc()).limit(50).all()
+    passes = db.query(GatePass).order_by(GatePass.created_at.desc()).limit(50).all()
     results = []
     for g in passes:
+        wh_title = g.warehouse.title if getattr(g, 'warehouse', None) else f"Warehouse #{g.warehouse_id}"
         results.append({
             "id": g.id,
-            "warehouse_title": g.warehouse.title if g.warehouse else "Facility",
+            "warehouse_title": wh_title,
             "pass_type": g.pass_type,
             "vehicle_plate": g.vehicle_plate,
             "driver_name": g.driver_name,
             "unit_type": g.unit_type.value if hasattr(g.unit_type, 'value') else str(g.unit_type),
             "scanned_units_count": g.scanned_units_count,
             "remarks": g.remarks,
-            "issued_at": g.issued_at.strftime("%Y-%m-%d %H:%M") if g.issued_at else ""
+            "issued_at": g.created_at.strftime("%Y-%m-%d %H:%M") if g.created_at else "",
+            "created_at": g.created_at.strftime("%Y-%m-%d %H:%M") if g.created_at else ""
         })
     return results

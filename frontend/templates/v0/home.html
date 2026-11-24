@@ -29,10 +29,7 @@
   input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 4px solid #3b82f6; cursor: grab; box-shadow: 0 2px 6px rgba(15,23,42,.25); }
   input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 4px solid #3b82f6; cursor: grab; }
   input[type=range]:focus-visible::-webkit-slider-thumb { outline: 3px solid #f59e0b; outline-offset: 2px; }
-  .block-zone { transition: background-color .25s, border-color .25s, transform .15s, color .25s; }
-  .block-zone:hover { transform: translateY(-2px); }
-  .block-zone.on { background: #3b82f6; border-color: #1d4ed8; color: #fff; }
-  .block-zone.focus { box-shadow: 0 0 0 3px #f59e0b; }
+
   #map { background: #0b1222; }
   .leaflet-container { font-family: Geist, system-ui, sans-serif; }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #0f172a; color: #e2e8f0; border: 1px solid #1e293b; }
@@ -1362,7 +1359,78 @@
     }
   })();
 
+  
+    // -------------------------------------------------------------
+    // Bilingual Dictionary (I18N_HOME)
+    // -------------------------------------------------------------
+    const I18N_HOME = {
+      en: {
+        nav_storage: "Available Storage",
+        nav_calculator: "Storage Calculator",
+        nav_network: "Logistics Network",
+        btn_partner: "Partner With Us",
+        btn_signin: "Sign In",
+        hero_tag: "1,240+ community warehouses live across 7 provinces",
+        hero_title: "Kathmandu Warehousing & Distribution Center",
+        hero_sub: "The open marketplace for decentralized community storage and smart freight telemetry across Nepal.",
+        hero_btn_explore: "Explore Storage Spaces",
+        hero_btn_partner: "Monetize Empty Space",
+        card_liability_title: "Rs. 0 KWDC Holding Liability",
+        card_liability_sub: "Payouts are guaranteed only when your space is rented. No listing fees, no subscriptions — zero platform burn while idle.",
+        card_continuous_title: "Continuous Square Footage Contracting",
+        card_continuous_sub: "Contract the exact commercial floor space you need in continuous square feet. Transparent monthly tariffs, clear pickup access, and no arbitrary minimum block lock-in.",
+        card_vat_title: "Nepal IRD 13% VAT FinTech",
+        card_vat_sub: "Every rental generates a Schedule 13 compliant tax invoice with a verification QR, ready for IRD audit."
+      },
+      ne: {
+        nav_storage: "उपलब्ध गोदामहरू",
+        nav_calculator: "दर क्यालकुलेटर",
+        nav_network: "लजिस्टिक्स सञ्जाल",
+        btn_partner: "साझेदार बन्नुहोस्",
+        btn_signin: "लगइन",
+        hero_tag: "७ वटै प्रदेशमा १,२४०+ सामुदायिक गोदामहरू प्रत्यक्ष सञ्चालनमा",
+        hero_title: "काठमाडौं भण्डारण तथा वितरण केन्द्र",
+        hero_sub: "नेपालभर विकेन्द्रीकृत सामुदायिक भण्डारण र स्मार्ट ढुवानी टेलिमेट्रीको खुला बजार।",
+        hero_btn_explore: "गोदाम स्थानहरू हेर्नुहोस्",
+        hero_btn_partner: "खाली गोदामबाट आम्दानी",
+        card_liability_title: "रु. ० शून्य होल्डिङ दायित्व",
+        card_liability_sub: "गोदाम भाडामा लागेपछि मात्र भुक्तानी। कुनै दर्ता शुल्क वा मासिक सब्स्क्रिप्सन छैन — खाली रहँदा शून्य खर्च।",
+        card_continuous_title: "निरन्तर वर्ग फिट भाडा सम्झौता",
+        card_continuous_sub: "आवश्यक क्षेत्रफल ठ्याक्कै निरन्तर वर्ग फिटमा भाडामा लिनुहोस्। पारदर्शी मासिक दर, लोडिङ डक र कुनै कृत्रिम ब्लक बन्देज छैन।",
+        card_vat_title: "नेपाल आन्तरिक राजस्व १३% भ्याट",
+        card_vat_sub: "प्रत्येक सम्झौतामा आन्तरिक राजस्व विभागको अनुसूची १३ बमोजिम क्युआर कोडसहितको विद्युतीय कर बिजक जारी हुन्छ।"
+      }
+    };
+
+    function toggleLanguage() {
+      const cur = localStorage.getItem('kwdc_lang') === 'ne' ? 'en' : 'ne';
+      localStorage.setItem('kwdc_lang', cur);
+      applyTranslations(cur);
+    }
+
+    function applyTranslations(lang) {
+      const dict = I18N_HOME[lang] || I18N_HOME.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.textContent = dict[key];
+        }
+      });
+
+      const langFlag = document.getElementById('langFlag');
+      const langLabel = document.getElementById('langLabel');
+      if (lang === 'ne') {
+        if (langFlag) langFlag.textContent = '🇬🇧';
+        if (langLabel) langLabel.textContent = 'English';
+      } else {
+        if (langFlag) langFlag.textContent = '🇳🇵';
+        if (langLabel) langLabel.textContent = 'नेपाली';
+      }
+    }
+
   document.addEventListener('DOMContentLoaded', () => {
+    const savedLang = localStorage.getItem('kwdc_lang') || 'en';
+    applyTranslations(savedLang);
     if (typeof updateV0AuthHeader === 'function') updateV0AuthHeader();
   });
 </script>
@@ -1375,7 +1443,7 @@
     'list empty space': '/owner',
     'fleet partner': '/fleet',
     'incharge': '/incharge',
-    'reserve these blocks': '/marketplace',
+    'contract continuous space': '/marketplace',
     'superadmin': '/admin',
     'ird tax invoice': '/invoice',
     'home': '/'

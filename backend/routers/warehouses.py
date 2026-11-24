@@ -25,6 +25,34 @@ from backend.config import settings
 
 router = APIRouter(prefix="/api/warehouses", tags=["Warehouses & Storage"])
 
+def normalize_space_type(val) -> SpaceType:
+    if not val:
+        return SpaceType.COVERED_GODOWN
+    s = str(val.value if hasattr(val, "value") else val).upper()
+    mapping = {
+        "RESIDENTIAL_BASEMENT": SpaceType.RESIDENTIAL_BASEMENT,
+        "COMMERCIAL_SHUTTER": SpaceType.COMMERCIAL_SHUTTER,
+        "COVERED_GODOWN": SpaceType.COVERED_GODOWN,
+        "WALLED_LAND_PLOT": SpaceType.WALLED_LAND_PLOT,
+        "DRY_STORAGE": SpaceType.COVERED_GODOWN,
+        "COLD_STORAGE": SpaceType.COVERED_GODOWN,
+        "BONDED_WAREHOUSE": SpaceType.COVERED_GODOWN,
+        "HEAVY_INDUSTRIAL": SpaceType.COVERED_GODOWN,
+        "OPEN_YARD": SpaceType.WALLED_LAND_PLOT
+    }
+    return mapping.get(s, SpaceType.COVERED_GODOWN)
+
+def normalize_area_unit(val) -> AreaUnit:
+    if not val:
+        return AreaUnit.SQFT
+    if isinstance(val, AreaUnit):
+        return val
+    s = str(val.value if hasattr(val, "value") else val).upper()
+    try:
+        return AreaUnit[s]
+    except KeyError:
+        return AreaUnit.SQFT
+
 @router.post("/list-space")
 def list_warehouse_space(
     payload: WarehouseCreate,
@@ -44,27 +72,32 @@ def list_warehouse_space(
         )
 
     # Convert entered unit to standard sqft
-    normalized_sqft = to_sqft(payload.input_value, payload.input_unit.value, payload.ceiling_height_ft)
+    raw_val = payload.input_value if payload.input_value is not None else (payload.total_sqft if payload.total_sqft is not None else 1000.0)
+    unit_str = payload.input_unit.value if hasattr(payload.input_unit, "value") else str(payload.input_unit or "sqft")
+    normalized_sqft = to_sqft(raw_val, unit_str, payload.ceiling_height_ft)
+    rate = payload.monthly_rate_per_sqft if payload.monthly_rate_per_sqft is not None else (payload.base_rate_per_sqft if payload.base_rate_per_sqft is not None else 45.0)
+    road_width = payload.road_access_width_ft if payload.road_access_width_ft is not None else (payload.road_access_ft if payload.road_access_ft is not None else 20.0)
+    stype = normalize_space_type(payload.space_type)
 
     new_warehouse = Warehouse(
         owner_id=current_user.id,
         title=payload.title,
-        space_type=payload.space_type,
+        space_type=stype,
         total_sqft=normalized_sqft,
         available_sqft=normalized_sqft,
         clear_ceiling_height_ft=payload.ceiling_height_ft,
-        original_input_unit=payload.input_unit,
-        original_input_value=payload.input_value,
-        monthly_rate_per_sqft=payload.monthly_rate_per_sqft,
+        original_input_unit=normalize_area_unit(payload.input_unit),
+        original_input_value=raw_val,
+        monthly_rate_per_sqft=rate,
         min_lease_months=payload.min_lease_months,
-        province=payload.province,
-        district=payload.district,
-        municipality=payload.municipality,
-        ward_no=payload.ward_no,
-        neighborhood_landmark=payload.neighborhood_landmark,
-        latitude=payload.latitude,
-        longitude=payload.longitude,
-        road_access_ft=payload.road_access_ft,
+        province=payload.province or "Bagmati",
+        district=payload.district or "Kathmandu",
+        municipality=payload.municipality or "Kathmandu",
+        ward_no=payload.ward_no or 1,
+        neighborhood_landmark=payload.neighborhood_landmark or "Kathmandu Valley Hub",
+        latitude=payload.latitude or 27.7172,
+        longitude=payload.longitude or 85.3240,
+        road_access_ft=road_width,
         has_three_phase_power=payload.has_three_phase_power,
         has_forklift_ramp=payload.has_forklift_ramp,
         has_cctv=payload.has_cctv,
