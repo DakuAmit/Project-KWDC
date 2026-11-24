@@ -124,6 +124,11 @@
             <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
               <span class="flex items-center gap-2.5"><i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> <span data-i18n="nav_invoices">IRD VAT Invoices</span></span>
             </button>
+
+            <button type="button" onclick="switchTab('tariff-margin')" id="nav-tariff-margin" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_tariff">Freight Tariff & Margin</span></span>
+              <span id="badgeTariffMargin" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">10%</span>
+            </button>
           </div>
         </div>
 
@@ -571,6 +576,198 @@
                 </thead>
                 <tbody id="invoicesTableBody" class="divide-y divide-slate-100">
                   <tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">Loading tax invoices...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 10: Freight Tariff Engine & Platform Margin Control Center (Option A) -->
+        <section id="view-tariff-margin" class="hidden space-y-6">
+          <!-- Formula HUD Banner -->
+          <div class="bg-gradient-to-r from-navy via-slate-800 to-navy rounded-3xl p-6 text-white border border-slate-700 shadow-xl relative overflow-hidden">
+            <div class="absolute -right-8 -bottom-8 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold mb-2">
+                  <i data-lucide="calculator" class="w-3.5 h-3.5"></i> Base Formula Engine (Option A)
+                </div>
+                <h3 class="text-xl font-black tracking-tight text-white">Freight Tariff & Platform Margin Controller</h3>
+                <p class="text-xs text-slate-300 mt-1 max-w-2xl font-mono leading-relaxed">
+                  Benchmark Fare = Base Flag Drop (Vehicle Category) + (Distance KM × Fuel Rate × Fuel Multiplier) + (Cargo Weight in Tonnes × Rate/Tonne)
+                </p>
+                <p class="text-xs text-amber-400 mt-1 font-mono">
+                  KTM-WDC Margin = Agreed Fare × Platform Margin % &nbsp;•&nbsp; Net Driver Payout = Agreed Fare - KTM-WDC Margin
+                </p>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button type="button" onclick="resetFareTariffDefaults()" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition flex items-center gap-1.5">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Defaults
+                </button>
+                <button type="button" onclick="loadFareTariffConfig()" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition flex items-center gap-1.5">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Configuration Form -->
+          <form onsubmit="saveFareTariffConfig(event)" class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+              <!-- Column 1: Margin & Global Multipliers -->
+              <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-4">
+                <div class="flex items-center gap-2 pb-2 border-b border-slate-200">
+                  <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 grid place-items-center font-bold text-xs">1</div>
+                  <h4 class="text-xs font-black uppercase tracking-wider text-navy">Platform Margin &amp; Yield</h4>
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-bold text-slate-700">KTM-WDC Platform Margin % *</label>
+                    <span id="lblMarginPercent" class="text-xs font-mono font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">10.0%</span>
+                  </div>
+                  <input type="range" id="cfgMarginSlider" min="1" max="25" step="0.5" value="10" oninput="handleMarginSlider(this.value)" class="w-full accent-amber-500 cursor-pointer">
+                  <input type="number" id="cfgMarginPercent" step="0.1" min="0" max="100" value="10.0" oninput="handleMarginInput(this.value)" class="mt-2 w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-bold text-navy focus:border-amber-500 focus:outline-none">
+                  <p class="text-[10px] text-slate-500 mt-1">Platform fee retained by KTM-WDC from each locked job before driver payout.</p>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Fuel Price Multiplier (Factor) *</label>
+                  <input type="number" id="cfgFuelMultiplier" step="0.05" min="0.5" max="3.0" value="1.0" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  <p class="text-[10px] text-slate-500 mt-1">Set to 1.0 for standard. Use &gt; 1.0 (e.g. 1.15) for diesel price inflation spikes.</p>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Cargo Weight Surcharge (Rs. / Tonne) *</label>
+                  <input type="number" id="cfgWeightRate" step="10" min="0" value="150.0" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  <p class="text-[10px] text-slate-500 mt-1">Additional tariff per 1,000 KG (1 Metric Tonne) of payload.</p>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Statutory IRD VAT % *</label>
+                  <input type="number" id="cfgVatPercent" step="0.5" min="0" value="13.0" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                </div>
+              </div>
+
+              <!-- Column 2: Base Flag Drops -->
+              <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-4">
+                <div class="flex items-center gap-2 pb-2 border-b border-slate-200">
+                  <div class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 grid place-items-center font-bold text-xs">2</div>
+                  <h4 class="text-xs font-black uppercase tracking-wider text-navy">Base Flag Drop (NPR)</h4>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Van / Pickup / Tata Ace (&lt; 1.5T)</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+                    <input type="number" id="cfgFlagVan" step="50" min="0" value="1200.0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Mini Truck / Canter (1.5T - 3.5T)</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+                    <input type="number" id="cfgFlagMini" step="50" min="0" value="1800.0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Heavy Truck / 6-Wheeler (3.5T - 10T)</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+                    <input type="number" id="cfgFlagHeavy" step="50" min="0" value="3200.0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Container / Trailer (&gt; 10 Tonnes)</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+                    <input type="number" id="cfgFlagContainer" step="50" min="0" value="5000.0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Column 3: Distance Rates (NPR/KM) -->
+              <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-4">
+                <div class="flex items-center gap-2 pb-2 border-b border-slate-200">
+                  <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 grid place-items-center font-bold text-xs">3</div>
+                  <h4 class="text-xs font-black uppercase tracking-wider text-navy">Distance Rate (NPR / KM)</h4>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Van / Pickup Rate per KM</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+                    <input type="number" id="cfgRateVan" step="5" min="0" value="65.0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Mini Truck Rate per KM</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+                    <input type="number" id="cfgRateMini" step="5" min="0" value="85.0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Heavy Truck Rate per KM</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+                    <input type="number" id="cfgRateHeavy" step="5" min="0" value="125.0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Container Trailer Rate per KM</label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+                    <input type="number" id="cfgRateContainer" step="5" min="0" value="175.0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p class="text-xs text-slate-500 flex items-center gap-1.5">
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                <span>SuperAdmin authorized: Saving updates benchmark calculations across all client and fleet portals instantly.</span>
+              </p>
+              <button type="submit" id="btnSaveTariff" class="px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-navy font-black text-sm tracking-wide shadow-lg shadow-amber-500/20 flex items-center gap-2 transition active:scale-[0.98]">
+                <i data-lucide="save" class="w-4 h-4"></i> Save Tariff &amp; Platform Margin
+              </button>
+            </div>
+          </form>
+
+          <!-- Live Corridor Simulation Table -->
+          <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 class="font-bold text-navy text-sm">Live 15-KM Valley Corridor Simulation (Real-Time Impact Preview)</h4>
+                <p class="text-xs text-slate-500 mt-0.5">Calculated using the active base formula for a typical Kathmandu Ring Road corridor dispatch (15 KM).</p>
+              </div>
+              <span class="text-xs font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200">
+                Corridor: 15.0 KM
+              </span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Vehicle Class</th>
+                    <th class="px-5 py-3">Sample Payload</th>
+                    <th class="px-5 py-3">Formula Breakdown</th>
+                    <th class="px-5 py-3">Benchmark Fare</th>
+                    <th class="px-5 py-3 text-amber-600">KTM-WDC Margin</th>
+                    <th class="px-5 py-3 text-emerald-600 font-bold">Net Driver Payout</th>
+                  </tr>
+                </thead>
+                <tbody id="tariffSimulationTbody" class="divide-y divide-slate-100 font-mono text-xs">
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400 font-sans">Loading benchmark simulation...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1033,12 +1230,13 @@
       payouts: 'Space Owner Monthly Disbursements (90/10)',
       'maintenance-holds': 'Warehouse Maintenance Hold & Space Freeze Manager',
       invoices: 'Nepal IRD Schedule 13 Electronic Tax Ledger',
+      'tariff-margin': 'Freight Tariff Engine & Platform Margin Control Center',
       insurance: 'Cargo & Stock Insurance Underwriting Policies',
       users: 'Platform User Directory & Role-Based Access Control'
     };
 
     function switchTab(tabId) {
-      const tabs = ['overview', 'pending', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'maintenance-holds', 'invoices', 'insurance', 'users'];
+      const tabs = ['overview', 'pending', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'invoices', 'tariff-margin', 'maintenance-holds', 'insurance', 'users'];
       tabs.forEach(t => {
         const view = document.getElementById(`view-${t}`);
         const nav = document.getElementById(`nav-${t}`);
@@ -1065,6 +1263,8 @@
         loadMaintenanceHolds();
       } else if (tabId === 'invoices') {
         loadInvoices();
+      } else if (tabId === 'tariff-margin') {
+        loadFareTariffConfig();
       } else if (tabId === 'insurance') {
         loadInsuranceRequests();
       } else if (tabId === 'users') {
@@ -2148,6 +2348,144 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       }
     }
 
+    // -------------------------------------------------------------
+    // Freight Tariff & Platform Margin Controller (Option A)
+    // -------------------------------------------------------------
+    function handleMarginSlider(val) {
+      document.getElementById('cfgMarginPercent').value = parseFloat(val).toFixed(1);
+      document.getElementById('lblMarginPercent').textContent = parseFloat(val).toFixed(1) + '%';
+    }
+
+    function handleMarginInput(val) {
+      const v = parseFloat(val) || 0;
+      document.getElementById('cfgMarginSlider').value = v;
+      document.getElementById('lblMarginPercent').textContent = v.toFixed(1) + '%';
+    }
+
+    function resetFareTariffDefaults() {
+      document.getElementById('cfgMarginPercent').value = '10.0';
+      document.getElementById('cfgMarginSlider').value = '10.0';
+      document.getElementById('lblMarginPercent').textContent = '10.0%';
+      document.getElementById('cfgFuelMultiplier').value = '1.0';
+      document.getElementById('cfgWeightRate').value = '150.0';
+      document.getElementById('cfgVatPercent').value = '13.0';
+
+      document.getElementById('cfgFlagVan').value = '1200.0';
+      document.getElementById('cfgFlagMini').value = '1800.0';
+      document.getElementById('cfgFlagHeavy').value = '3200.0';
+      document.getElementById('cfgFlagContainer').value = '5000.0';
+
+      document.getElementById('cfgRateVan').value = '65.0';
+      document.getElementById('cfgRateMini').value = '85.0';
+      document.getElementById('cfgRateHeavy').value = '125.0';
+      document.getElementById('cfgRateContainer').value = '175.0';
+      showToast("Reset to KTM-WDC default parameters. Click 'Save' to apply.");
+    }
+
+    async function loadFareTariffConfig() {
+      try {
+        const res = await fetch('/api/admin/fare-config', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load tariff config');
+        const data = await res.json();
+
+        // Populate Form
+        const margin = parseFloat(data.platform_margin_percent || 10.0);
+        document.getElementById('cfgMarginPercent').value = margin.toFixed(1);
+        document.getElementById('cfgMarginSlider').value = margin;
+        document.getElementById('lblMarginPercent').textContent = margin.toFixed(1) + '%';
+        const badge = document.getElementById('badgeTariffMargin');
+        if (badge) badge.textContent = margin.toFixed(0) + '%';
+
+        document.getElementById('cfgFuelMultiplier').value = data.fuel_multiplier || 1.0;
+        document.getElementById('cfgWeightRate').value = data.weight_rate_per_tonne || 150.0;
+        document.getElementById('cfgVatPercent').value = data.vat_rate_percent || 13.0;
+
+        if (data.flag_drops) {
+          document.getElementById('cfgFlagVan').value = data.flag_drops.van_pickup || 1200.0;
+          document.getElementById('cfgFlagMini').value = data.flag_drops.mini_truck || 1800.0;
+          document.getElementById('cfgFlagHeavy').value = data.flag_drops.heavy_truck || 3200.0;
+          document.getElementById('cfgFlagContainer').value = data.flag_drops.container_trailer || 5000.0;
+        }
+
+        if (data.rates_per_km) {
+          document.getElementById('cfgRateVan').value = data.rates_per_km.van_pickup || 65.0;
+          document.getElementById('cfgRateMini').value = data.rates_per_km.mini_truck || 85.0;
+          document.getElementById('cfgRateHeavy').value = data.rates_per_km.heavy_truck || 125.0;
+          document.getElementById('cfgRateContainer').value = data.rates_per_km.container_trailer || 175.0;
+        }
+
+        // Render simulation preview
+        renderTariffSimulations(data.simulations_15km || []);
+      } catch (err) {
+        showToast("Error loading tariff config: " + err.message, true);
+      }
+    }
+
+    function renderTariffSimulations(sims) {
+      const tbody = document.getElementById('tariffSimulationTbody');
+      if (!tbody) return;
+      if (!sims || sims.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-4 text-center text-slate-400 font-sans">No simulations available.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = sims.map(s => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-5 py-3 font-sans font-bold text-navy">${s.category_label}</td>
+          <td class="px-5 py-3 text-slate-600 font-sans">${(s.weight_kg / 1000).toFixed(1)} Tonnes (${s.weight_kg} kg)</td>
+          <td class="px-5 py-3 text-slate-500 text-[11px] font-mono">${s.formula_breakdown}</td>
+          <td class="px-5 py-3 font-bold text-navy">Rs. ${s.benchmark_fare_npr.toLocaleString('en-IN')}</td>
+          <td class="px-5 py-3 text-amber-600 font-bold">Rs. ${s.platform_revenue_npr.toLocaleString('en-IN')}</td>
+          <td class="px-5 py-3 text-emerald-600 font-black">Rs. ${s.driver_payout_npr.toLocaleString('en-IN')}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function saveFareTariffConfig(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSaveTariff');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin"></div> Saving...`;
+
+      const payload = {
+        platform_margin_percent: parseFloat(document.getElementById('cfgMarginPercent').value) || 10.0,
+        fuel_multiplier: parseFloat(document.getElementById('cfgFuelMultiplier').value) || 1.0,
+        weight_rate_per_tonne: parseFloat(document.getElementById('cfgWeightRate').value) || 150.0,
+        vat_rate_percent: parseFloat(document.getElementById('cfgVatPercent').value) || 13.0,
+
+        flag_drop_van_pickup: parseFloat(document.getElementById('cfgFlagVan').value) || 1200.0,
+        flag_drop_mini_truck: parseFloat(document.getElementById('cfgFlagMini').value) || 1800.0,
+        flag_drop_heavy_truck: parseFloat(document.getElementById('cfgFlagHeavy').value) || 3200.0,
+        flag_drop_container_trailer: parseFloat(document.getElementById('cfgFlagContainer').value) || 5000.0,
+
+        rate_per_km_van_pickup: parseFloat(document.getElementById('cfgRateVan').value) || 65.0,
+        rate_per_km_mini_truck: parseFloat(document.getElementById('cfgRateMini').value) || 85.0,
+        rate_per_km_heavy_truck: parseFloat(document.getElementById('cfgRateHeavy').value) || 125.0,
+        rate_per_km_container_trailer: parseFloat(document.getElementById('cfgRateContainer').value) || 175.0
+      };
+
+      try {
+        const res = await fetch('/api/admin/fare-config', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || "Tariff and margin updated!");
+          loadFareTariffConfig();
+        } else {
+          showToast(data.detail || "Failed to update tariff config.", true);
+        }
+      } catch (err) {
+        showToast("Network error saving tariff: " + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> Save Tariff & Platform Margin`;
+        lucide.createIcons();
+      }
+    }
+
     function refreshData() {
       loadPendingWarehouses();
       loadBookings();
@@ -2156,6 +2494,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       loadPayouts();
       loadMaintenanceHolds();
       loadInvoices();
+      loadFareTariffConfig();
       loadInsuranceRequests();
       loadUsers();
     }

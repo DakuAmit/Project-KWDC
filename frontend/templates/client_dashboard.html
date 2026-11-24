@@ -1828,21 +1828,57 @@
 
         if (whList) {
           whList.innerHTML = orders.map(o => `
-            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-mono font-bold text-navy text-xs">${escapeHtml(o.order_number)}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.status === 'IN_TRANSIT' ? 'bg-sky-100 text-sky-800' : (o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800')}">${escapeHtml(o.status)}</span>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between gap-3">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono font-bold text-navy text-xs">${escapeHtml(o.order_number)}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.status === 'IN_TRANSIT' ? 'bg-sky-100 text-sky-800' : (o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800')}">${escapeHtml(o.status)}</span>
+                  </div>
+                  <p class="text-xs text-slate-700 font-medium mt-1">${escapeHtml(o.cargo_description)} • <span class="capitalize font-mono">${escapeHtml(o.required_vehicle_category.replace(/_/g, ' '))}</span></p>
+                  <p class="text-[11px] text-slate-500 font-mono mt-0.5">${escapeHtml(o.pickup_address)} &rarr; ${escapeHtml(o.destination_address)} (${o.total_distance_km} km)</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">Carrier: <strong>${escapeHtml(o.driver_name)}</strong> (${escapeHtml(o.vehicle_plate)})</p>
                 </div>
-                <p class="text-xs text-slate-700 font-medium mt-1">${escapeHtml(o.cargo_description)} • <span class="capitalize font-mono">${escapeHtml(o.required_vehicle_category.replace(/_/g, ' '))}</span></p>
-                <p class="text-[11px] text-slate-500 font-mono mt-0.5">${escapeHtml(o.pickup_address)} &rarr; ${escapeHtml(o.destination_address)} (${o.total_distance_km} km)</p>
-                <p class="text-[11px] text-slate-400 mt-0.5">Carrier: <strong>${escapeHtml(o.driver_name)}</strong> (${escapeHtml(o.vehicle_plate)})</p>
+                <div class="text-right shrink-0">
+                  <span class="text-[10px] text-slate-400 uppercase font-mono">Agreed / Offered Fare</span>
+                  <p class="text-sm font-black text-navy font-mono">Rs. ${Number(o.total_fare_npr).toLocaleString('en-IN')}</p>
+                  <span class="text-[10px] text-emerald-600 font-medium">Inc. 13% IRD VAT</span>
+                </div>
               </div>
-              <div class="text-right shrink-0">
-                <span class="text-[10px] text-slate-400 uppercase font-mono">Guaranteed Fare</span>
-                <p class="text-sm font-black text-navy font-mono">Rs. ${Number(o.total_fare_npr).toLocaleString('en-IN')}</p>
-                <span class="text-[10px] text-emerald-600 font-medium">Inc. 13% IRD VAT</span>
-              </div>
+
+              ${(o.counter_offers && o.counter_offers.length > 0 && (o.status === 'REQUESTED' || o.status === 'requested')) ? `
+                <div class="mt-2 p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2">
+                  <div class="flex items-center justify-between text-xs font-bold text-navy">
+                    <span class="flex items-center gap-1.5"><i data-lucide="handshake" class="w-3.5 h-3.5 text-amber-600"></i> Incoming Driver Counter-Offers (${o.counter_offers.length})</span>
+                    <span class="text-[10px] text-amber-700 font-mono font-semibold">InDrive Live Negotiation</span>
+                  </div>
+                  <div class="space-y-2">
+                    ${o.counter_offers.map(off => `
+                      <div class="p-2.5 bg-white rounded-lg border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <strong class="text-xs text-navy">${escapeHtml(off.fleet_partner_name)}</strong>
+                            <span class="text-[10px] text-slate-500 font-mono">(${escapeHtml(off.vehicle_plate)} • ${escapeHtml(off.driver_name)})</span>
+                          </div>
+                          ${off.counter_note ? `<p class="text-[11px] text-slate-600 italic mt-0.5 font-sans">"${escapeHtml(off.counter_note)}"</p>` : ''}
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
+                          <span class="font-mono font-black text-sm text-navy">Rs. ${Number(off.offered_fare_npr).toLocaleString('en-IN')}</span>
+                          ${off.status === 'PENDING' ? `
+                            <button onclick="acceptClientCounterOffer(${off.id}, '${escapeHtml(o.order_number)}', ${off.offered_fare_npr})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-1 transition">
+                              <i data-lucide="check" class="w-3.5 h-3.5"></i> Accept Deal
+                            </button>
+                          ` : `
+                            <span class="text-[10px] font-bold uppercase font-mono px-2 py-0.5 rounded ${off.status === 'ACCEPTED' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">
+                              ${escapeHtml(off.status)}
+                            </span>
+                          `}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
             </div>
           `).join('');
         }
@@ -1869,6 +1905,25 @@
         lucide.createIcons();
       } catch (err) {
         console.error("Failed to load client freight orders:", err);
+      }
+    }
+
+    async function acceptClientCounterOffer(offerId, orderNumber, fare) {
+      if (!confirm(`Accept carrier offer of Rs. ${Number(fare).toLocaleString('en-IN')} for order #${orderNumber}? This will lock the freight haul.`)) return;
+      try {
+        const res = await fetch(`/api/fleet/counter-offers/${offerId}/accept`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || "Counter-offer accepted! Trip locked.");
+          loadClientOrders();
+        } else {
+          showToast(data.detail || "Failed to accept counter-offer.", true);
+        }
+      } catch (err) {
+        showToast("Network error accepting counter-offer: " + err.message, true);
       }
     }
 

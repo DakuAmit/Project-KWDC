@@ -173,22 +173,26 @@
         <!-- Independent Owner-Driver Notice Banner (Shows when in Owner-Driver Mode) -->
         <div id="ownerDriverBanner" class="hidden bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
           <div class="flex items-center gap-3">
-            <span class="w-10 h-10 rounded-xl bg-amber text-navy font-bold grid place-items-center shrink-0">
+            <span class="w-10 h-10 rounded-xl bg-amber text-navy font-bold grid place-items-center shrink-0 shadow-sm">
               <i data-lucide="user-check" class="w-5 h-5"></i>
             </span>
             <div>
               <div class="flex items-center gap-2">
-                <span class="text-xs font-black text-navy uppercase tracking-wider">Independent Owner-Driver Mode Active</span>
-                <span class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full">Single Vehicle Operator</span>
+                <span class="text-xs font-black text-navy uppercase tracking-wider">Independent Owner-Driver Mode</span>
+                <span class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full">Single Cab Operator</span>
               </div>
-              <p class="text-xs text-slate-600 mt-0.5">
-                You drive your registered vehicle. Your mobile credentials and 4-digit PIN grant direct access to the Driver Run Terminal.
+              <p class="text-xs text-slate-600 mt-0.5" id="ownerDriverNotice">
+                You drive your registered vehicle. Use your registered mobile number and security PIN to operate your cab.
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-2 shrink-0">
+          <div class="flex items-center gap-2.5 shrink-0">
+            <div class="px-3 py-1.5 rounded-xl bg-white border border-amber-300 font-mono text-xs font-bold text-navy flex items-center gap-1.5 shadow-sm">
+              <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-600"></i>
+              <span>Cab PIN: <strong id="ownerCabPinDisplay" class="text-amber-600 tracking-wider">1234</strong></span>
+            </div>
             <a href="/driver" target="_blank" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center gap-1.5 transition">
-              <i data-lucide="smartphone" class="w-4 h-4 text-amber-400"></i> Open Driver Cab App ↗
+              <i data-lucide="smartphone" class="w-4 h-4 text-amber-400"></i> Launch Cab Terminal ↗
             </a>
           </div>
         </div>
@@ -728,6 +732,76 @@
     </form>
   </dialog>
 
+  <!-- Modal: Submit Counter-Offer (Option A: InDrive Negotiation) -->
+  <dialog id="counterOfferModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
+          <i data-lucide="handshake" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Freight Counter-Offer (InDrive)</h3>
+          <p class="text-xs text-slate-400">Propose custom rate to commercial client</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('counterOfferModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form onsubmit="handleCounterOfferSubmit(event)" class="p-6 space-y-4 text-xs">
+      <input type="hidden" id="counterOrderId">
+
+      <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 font-mono text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Order Reference:</span>
+          <span id="counterOrderNum" class="font-bold text-navy bg-white px-2 py-0.5 rounded border border-slate-200">FRT-2083-XXXX</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Client Initial Offer:</span>
+          <span id="counterClientOffer" class="font-bold text-navy">Rs. 0</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">System Formula Benchmark:</span>
+          <span id="counterBenchmark" class="font-bold text-slate-600">Rs. 0</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">Your Proposed Counter Fare (NPR) *</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">Rs.</span>
+          <input type="number" id="counterOfferFareInput" required min="300" step="50" oninput="updateCounterSummary()" class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 font-mono text-base font-bold text-navy focus:border-amber-500 focus:outline-none">
+        </div>
+        <p class="text-[10px] text-slate-500 mt-1">Enter your quote based on road conditions, terrain, or extra loaders.</p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">Carrier Note / Value-Add (Optional)</label>
+        <input type="text" id="counterOfferNoteInput" maxlength="150" placeholder="e.g. Includes 2 helpers, ready to dispatch immediately" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs focus:border-amber-500 focus:outline-none">
+      </div>
+
+      <!-- Live Yield Breakdown -->
+      <div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1 font-mono text-[11px]">
+        <div class="flex justify-between text-slate-600">
+          <span>KTM-WDC Platform Margin (10%):</span>
+          <span id="counterKtmMargin">Rs. 0</span>
+        </div>
+        <div class="flex justify-between text-emerald-800 font-bold text-xs pt-1 border-t border-amber-200/80">
+          <span>Your Net Fleet Earnings:</span>
+          <span id="counterNetYield">Rs. 0</span>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+        <button type="button" onclick="document.getElementById('counterOfferModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs">Cancel</button>
+        <button type="submit" id="btnSubmitCounter" class="px-5 py-2.5 rounded-2xl bg-amber hover:bg-amber-400 text-navy font-black text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i> Submit Counter-Offer
+        </button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Modal: Fleet Partner Authentication & Registration -->
   <dialog id="fleetAuthModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
@@ -1134,6 +1208,9 @@
 
     function handleApiAuthError(res) {
       if (res && res.status === 401) {
+        localStorage.removeItem('kwdc_token');
+        localStorage.removeItem('kwdc_user');
+        updateFleetUiAuth(null, null);
         showToast("Authentication required or session expired. Please sign in.", true);
         openFleetAuthModal('signin');
         return true;
@@ -1270,14 +1347,26 @@
 
             <div class="mt-4 pt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
               <div>
-                <span class="text-[10px] text-slate-400 font-mono">Net Fleet Settlement:</span>
-                <p class="text-base font-black text-emerald-700 font-mono">Rs. ${Number(j.net_fleet_earnings_npr).toLocaleString('en-IN')}</p>
+                <span class="text-[10px] text-slate-400 font-mono">Client Offer / Net Settlement:</span>
+                <p class="text-base font-black text-emerald-700 font-mono">
+                  Rs. ${Number(j.client_offered_fare_npr || j.gross_fare_npr).toLocaleString('en-IN')}
+                  <span class="text-xs text-slate-400 font-normal font-sans">(Net: Rs. ${Number(j.net_fleet_earnings_npr).toLocaleString('en-IN')})</span>
+                </p>
+                ${j.benchmark_fare_npr ? `<span class="text-[10px] text-slate-400 font-mono">Benchmark: Rs. ${Number(j.benchmark_fare_npr).toLocaleString('en-IN')}</span>` : ''}
               </div>
 
               <div class="flex flex-wrap items-center gap-2">
                 ${j.status === 'requested' ? `
-                  <button onclick="acceptFreightJob(${j.id})" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
-                    <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Accept Job
+                  ${j.my_counter_offer ? `
+                    <span class="px-2.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-700 border border-amber-300 font-mono text-xs font-bold flex items-center gap-1">
+                      <i data-lucide="clock" class="w-3.5 h-3.5"></i> Offered: Rs. ${Number(j.my_counter_offer.offered_fare_npr).toLocaleString('en-IN')} (${escapeHtml(j.my_counter_offer.status)})
+                    </span>
+                  ` : ''}
+                  <button onclick="acceptFreightJob(${j.id})" class="px-3.5 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
+                    <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Accept at Rs. ${Number(j.client_offered_fare_npr || j.gross_fare_npr).toLocaleString('en-IN')}
+                  </button>
+                  <button onclick="openCounterOfferModal(${j.id}, '${escapeHtml(j.order_number)}', ${j.client_offered_fare_npr || j.gross_fare_npr}, ${j.benchmark_fare_npr || j.gross_fare_npr})" class="px-3.5 py-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-black text-xs shadow-sm transition flex items-center gap-1.5">
+                    <i data-lucide="handshake" class="w-3.5 h-3.5"></i> ${j.my_counter_offer ? 'Revise Offer' : 'Counter-Offer'}
                   </button>
                 ` : (j.status === 'in_transit' || j.status === 'assigned' ? `
                   <button onclick="openBreakdownModal(${j.id}, '${escapeHtml(j.order_number)}', '${escapeHtml(j.pickup_address)}', '${escapeHtml(j.delivery_address)}')" class="px-3 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs shadow-sm transition flex items-center gap-1.5" title="Vehicle Breakdown Emergency Reassignment">
@@ -1310,11 +1399,66 @@
         });
         if (handleApiAuthError(res)) return;
         const data = await res.json();
-        cachedVehicles = data.vehicles || [];
-        showToast(data.message || "Dispatch order accepted! Dispatched to fleet driver.");
+        showToast(data.message || "Dispatch order accepted! Locked for transit.");
         loadDispatchOrders();
       } catch (err) {
         showToast("Error accepting dispatch job.", true);
+      }
+    }
+
+    function openCounterOfferModal(orderId, orderNum, clientOffer, benchmark) {
+      document.getElementById('counterOrderId').value = orderId;
+      document.getElementById('counterOrderNum').textContent = orderNum;
+      document.getElementById('counterClientOffer').textContent = 'Rs. ' + Number(clientOffer).toLocaleString('en-IN');
+      document.getElementById('counterBenchmark').textContent = 'Rs. ' + Number(benchmark).toLocaleString('en-IN');
+      document.getElementById('counterOfferFareInput').value = clientOffer;
+      document.getElementById('counterOfferNoteInput').value = '';
+      updateCounterSummary();
+      document.getElementById('counterOfferModal').showModal();
+      lucide.createIcons();
+    }
+
+    function updateCounterSummary() {
+      const fare = parseFloat(document.getElementById('counterOfferFareInput').value) || 0;
+      const margin = Math.round(fare * 0.10);
+      const net = fare - margin;
+      document.getElementById('counterKtmMargin').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
+      document.getElementById('counterNetYield').textContent = 'Rs. ' + net.toLocaleString('en-IN');
+    }
+
+    async function handleCounterOfferSubmit(e) {
+      e.preventDefault();
+      const orderId = document.getElementById('counterOrderId').value;
+      const fare = parseFloat(document.getElementById('counterOfferFareInput').value);
+      const note = document.getElementById('counterOfferNoteInput').value.trim();
+      const btn = document.getElementById('btnSubmitCounter');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="inline-block animate-spin mr-1">↻</span> Submitting...`;
+
+      try {
+        const res = await fetch(`/api/fleet/dispatch-orders/${orderId}/counter-offer`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            offered_fare_npr: fare,
+            counter_note: note || undefined
+          })
+        });
+        if (handleApiAuthError(res)) return;
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || `Counter-offer of Rs. ${fare.toLocaleString('en-IN')} submitted!`);
+          document.getElementById('counterOfferModal').close();
+          loadDispatchOrders();
+        } else {
+          showToast(formatToastMessage(data.detail) || "Failed to submit counter-offer.", true);
+        }
+      } catch (err) {
+        showToast("Network error submitting counter-offer: " + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="send" class="w-3.5 h-3.5"></i> Submit Counter-Offer`;
+        lucide.createIcons();
       }
     }
 
@@ -1353,6 +1497,13 @@
         document.getElementById('badgeDriverCount').textContent = data.drivers.length;
         document.getElementById('hudActiveVehicles').textContent = data.vehicles.length || 3;
         document.getElementById('hudActiveDrivers').textContent = data.drivers.length || 3;
+
+        if (data.drivers && data.drivers.length > 0) {
+          const pinEl = document.getElementById('ownerCabPinDisplay');
+          if (pinEl && data.drivers[0].login_pin) {
+            pinEl.textContent = data.drivers[0].login_pin;
+          }
+        }
 
         if (data.vehicles.length > 0) {
           vList.innerHTML = data.vehicles.map(v => `

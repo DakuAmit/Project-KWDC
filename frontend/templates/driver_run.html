@@ -463,10 +463,11 @@
         });
         const data = await res.json();
         if (res.ok) {
+          const drv = data.driver || data;
           localStorage.setItem('kwdc_driver_token', data.access_token);
-          localStorage.setItem('kwdc_driver', JSON.stringify(data.driver));
-          showToast(`Welcome back, ${data.driver.full_name}!`);
-          setupCockpitView(data.driver);
+          localStorage.setItem('kwdc_driver', JSON.stringify(drv));
+          showToast(`Welcome back, ${drv.full_name || 'Driver'}!`);
+          setupCockpitView(drv);
         } else {
           showToast(data.detail || "Authentication failed. Check phone and PIN.", true);
         }
@@ -512,7 +513,7 @@
           return;
         }
         const data = await res.json();
-        const trip = data.active_trip;
+        const trip = data.trip || data.active_trip;
 
         const standbyEl = document.getElementById('standbyCard');
         const activeEl = document.getElementById('activeTripCard');

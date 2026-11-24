@@ -24,11 +24,13 @@ from backend.database import get_db, get_db_info
 from backend.models import (
     Warehouse, WarehouseRequest, User, UserRole,
     BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog,
-    WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport, UserKycProfile
+    WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport, UserKycProfile,
+    PlatformConfig
 )
 from backend.auth_utils import require_user, require_roles, get_password_hash
 from backend.services.contract_service import generate_master_lease_contract
 from backend.services.email_service import send_contract_approval_email, send_otp_email
+from backend.services.fare_service import get_platform_config, calculate_freight_benchmark
 
 router = APIRouter(prefix="/api/admin", tags=["SuperAdmin Governance"])
 
@@ -59,6 +61,20 @@ class UserStatusUpdateRequest(BaseModel):
 class UserKycUpdateRequest(BaseModel):
     kyc_status: str
     admin_notes: Optional[str] = None
+
+class FareConfigUpdateRequest(BaseModel):
+    platform_margin_percent: Optional[float] = 10.0
+    flag_drop_van_pickup: Optional[float] = 1200.0
+    flag_drop_mini_truck: Optional[float] = 1800.0
+    flag_drop_heavy_truck: Optional[float] = 3200.0
+    flag_drop_container_trailer: Optional[float] = 5000.0
+    rate_per_km_van_pickup: Optional[float] = 65.0
+    rate_per_km_mini_truck: Optional[float] = 85.0
+    rate_per_km_heavy_truck: Optional[float] = 125.0
+    rate_per_km_container_trailer: Optional[float] = 175.0
+    weight_rate_per_tonne: Optional[float] = 150.0
+    vat_rate_percent: Optional[float] = 13.0
+    fuel_multiplier: Optional[float] = 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -858,3 +874,116 @@ def get_admin_invoices(
             "freight_order_id": inv.freight_order_id
         })
     return results
+
+
+# ---------------------------------------------------------------------------
+# 11. SUPERADMIN FREIGHT TARIFF & PLATFORM MARGIN CONTROLLER (OPTION A)
+# ---------------------------------------------------------------------------
+@router.get("/fare-config")
+def get_fare_tariff_config(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns current platform margin % and base formula tariff parameters.
+    Includes simulated 15 KM corridor benchmark calculations across vehicle types.
+    """
+    cfg = get_platform_config(db)
+
+    # Simulate 15km benchmark samples for admin instant preview
+    sample_categories = [
+        ("PICKUP_VAN", "Pickup / Tata Ace / Bolero (< 1.5T)", 1000.0),
+        ("MINI_TRUCK", "Mini Truck / Canter (1.5T - 3.5T)", 2500.0),
+        ("HEAVY_TRUCK", "Heavy Truck (3.5T - 10T)", 6000.0),
+        ("CONTAINER_TRAILER", "Container / Trailer (> 10T)", 12000.0)
+    ]
+    simulations = []
+    for cat_code, cat_label, weight_kg in sample_categories:
+        calc = calculate_freight_benchmark(
+            db=db,
+            vehicle_category=cat_code,
+            distance_km=15.0,
+            cargo_weight_kg=weight_kg
+        )
+        simulations.append({
+            "category_code": cat_code,
+            "category_label": cat_label,
+            "distance_km": 15.0,
+            "weight_kg": weight_kg,
+            "benchmark_fare_npr": calc["benchmark_fare_npr"],
+            "platform_revenue_npr": calc["platform_revenue_npr"],
+            "driver_payout_npr": calc["driver_payout_npr"],
+            "formula_breakdown": calc["formula_description"]
+        })
+
+    return {
+        "config_key": cfg.config_key,
+        "platform_margin_percent": cfg.platform_margin_percent,
+        "flag_drops": {
+            "van_pickup": cfg.flag_drop_van_pickup,
+            "mini_truck": cfg.flag_drop_mini_truck,
+            "heavy_truck": cfg.flag_drop_heavy_truck,
+            "container_trailer": cfg.flag_drop_container_trailer
+        },
+        "rates_per_km": {
+            "van_pickup": cfg.rate_per_km_van_pickup,
+            "mini_truck": cfg.rate_per_km_mini_truck,
+            "heavy_truck": cfg.rate_per_km_heavy_truck,
+            "container_trailer": cfg.rate_per_km_container_trailer
+        },
+        "weight_rate_per_tonne": cfg.weight_rate_per_tonne,
+        "fuel_multiplier": cfg.fuel_multiplier,
+        "vat_rate_percent": cfg.vat_rate_percent,
+        "updated_at": cfg.updated_at.isoformat() if cfg.updated_at else None,
+        "simulations_15km": simulations
+    }
+
+
+@router.post("/fare-config")
+def update_fare_tariff_config(
+    payload: FareConfigUpdateRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    SuperAdmin updates the platform margin % and freight tariff base formula parameters.
+    Changes apply dynamically to all subsequent benchmark calculations.
+    """
+    cfg = get_platform_config(db)
+
+    if payload.platform_margin_percent is not None:
+        cfg.platform_margin_percent = max(0.0, min(100.0, float(payload.platform_margin_percent)))
+    if payload.flag_drop_van_pickup is not None:
+        cfg.flag_drop_van_pickup = max(0.0, float(payload.flag_drop_van_pickup))
+    if payload.flag_drop_mini_truck is not None:
+        cfg.flag_drop_mini_truck = max(0.0, float(payload.flag_drop_mini_truck))
+    if payload.flag_drop_heavy_truck is not None:
+        cfg.flag_drop_heavy_truck = max(0.0, float(payload.flag_drop_heavy_truck))
+    if payload.flag_drop_container_trailer is not None:
+        cfg.flag_drop_container_trailer = max(0.0, float(payload.flag_drop_container_trailer))
+
+    if payload.rate_per_km_van_pickup is not None:
+        cfg.rate_per_km_van_pickup = max(0.0, float(payload.rate_per_km_van_pickup))
+    if payload.rate_per_km_mini_truck is not None:
+        cfg.rate_per_km_mini_truck = max(0.0, float(payload.rate_per_km_mini_truck))
+    if payload.rate_per_km_heavy_truck is not None:
+        cfg.rate_per_km_heavy_truck = max(0.0, float(payload.rate_per_km_heavy_truck))
+    if payload.rate_per_km_container_trailer is not None:
+        cfg.rate_per_km_container_trailer = max(0.0, float(payload.rate_per_km_container_trailer))
+
+    if payload.weight_rate_per_tonne is not None:
+        cfg.weight_rate_per_tonne = max(0.0, float(payload.weight_rate_per_tonne))
+    if payload.fuel_multiplier is not None:
+        cfg.fuel_multiplier = max(0.1, float(payload.fuel_multiplier))
+    if payload.vat_rate_percent is not None:
+        cfg.vat_rate_percent = max(0.0, float(payload.vat_rate_percent))
+
+    db.commit()
+    db.refresh(cfg)
+
+    return {
+        "message": f"Freight tariff & platform margin updated successfully! Platform margin set to {cfg.platform_margin_percent}%.",
+        "platform_margin_percent": cfg.platform_margin_percent,
+        "fuel_multiplier": cfg.fuel_multiplier,
+        "weight_rate_per_tonne": cfg.weight_rate_per_tonne
+    }

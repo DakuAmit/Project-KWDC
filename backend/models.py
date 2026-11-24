@@ -440,6 +440,11 @@ class DispatchOrder(Base):
     delivery_otp = Column(String(6), nullable=True)
     delivered_at = Column(DateTime, nullable=True)
 
+    # Option A: InDrive-style Pricing & Counter-Offer Negotiations
+    benchmark_fare_npr = Column(Float, nullable=True)
+    client_offered_fare_npr = Column(Float, nullable=True)
+    cargo_weight_kg = Column(Float, default=1000.0)
+
     # Emergency Breakdown Mid-Trip Reassignment Tracking
     reassigned_from_vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
     reassigned_from_driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=True)
@@ -452,6 +457,7 @@ class DispatchOrder(Base):
     reassigned_from_vehicle = relationship("Vehicle", foreign_keys=[reassigned_from_vehicle_id])
     reassigned_from_driver = relationship("Driver", foreign_keys=[reassigned_from_driver_id])
     stops = relationship("DeliveryStop", back_populates="dispatch_order", cascade="all, delete-orphan")
+    counter_offers = relationship("FreightCounterOffer", back_populates="order", cascade="all, delete-orphan")
     invoice = relationship("TaxInvoice", back_populates="freight_order", uselist=False)
 
 
@@ -470,6 +476,29 @@ class DeliveryStop(Base):
     completed_at = Column(DateTime, nullable=True)
 
     dispatch_order = relationship("DispatchOrder", back_populates="stops")
+
+
+class FreightCounterOffer(Base):
+    """
+    InDrive-style negotiation counter-offer submitted by Drivers / Fleet Partners.
+    """
+    __tablename__ = "freight_counter_offers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("dispatch_orders.id"), nullable=False)
+    fleet_partner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=True)
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
+
+    offered_fare_npr = Column(Float, nullable=False)
+    counter_note = Column(String(255), nullable=True) # e.g. "Includes helper for loading", "Ready in 10 mins"
+    status = Column(String(50), default="PENDING") # PENDING, ACCEPTED, REJECTED, WITHDRAWN
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("DispatchOrder", back_populates="counter_offers")
+    fleet_partner = relationship("User", foreign_keys=[fleet_partner_id])
+    driver = relationship("Driver", foreign_keys=[driver_id])
+    vehicle = relationship("Vehicle", foreign_keys=[vehicle_id])
 
 
 # ---------------------------------------------------------------------------
@@ -697,3 +726,41 @@ class IncidentReport(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     guard = relationship("GuardPersonnel", back_populates="incidents")
+
+
+# ---------------------------------------------------------------------------
+# Module 8: SuperAdmin Platform Configuration & Fare Tariff Engine
+# ---------------------------------------------------------------------------
+class PlatformConfig(Base):
+    """
+    Central Admin control for platform margins, vehicle base flag drops,
+    per-KM tariffs, and weight tiers.
+    """
+    __tablename__ = "platform_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    config_key = Column(String(100), unique=True, default="DEFAULT_CONFIG", nullable=False)
+
+    # 1. Platform Commission / Margin (Admin configurable, e.g. 10.0 for 10%)
+    platform_margin_percent = Column(Float, default=10.0)
+
+    # 2. Base Flag Drop by Vehicle Category (NPR)
+    flag_drop_van_pickup = Column(Float, default=1200.0)        # Pickup / Tata Ace / Bolero (< 1.5T)
+    flag_drop_mini_truck = Column(Float, default=1800.0)        # Mini Truck (1.5T - 3.5T)
+    flag_drop_heavy_truck = Column(Float, default=3200.0)       # Heavy Truck (3.5T - 10T)
+    flag_drop_container_trailer = Column(Float, default=5000.0) # Container / Trailer (> 10T)
+
+    # 3. Distance Rate (NPR per KM)
+    rate_per_km_van_pickup = Column(Float, default=65.0)
+    rate_per_km_mini_truck = Column(Float, default=85.0)
+    rate_per_km_heavy_truck = Column(Float, default=125.0)
+    rate_per_km_container_trailer = Column(Float, default=175.0)
+
+    # 4. Cargo Weight Surcharge (NPR per Metric Tonne)
+    weight_rate_per_tonne = Column(Float, default=150.0)
+
+    # 5. Tax & Adjustments
+    vat_rate_percent = Column(Float, default=13.0)
+    fuel_multiplier = Column(Float, default=1.0)
+
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

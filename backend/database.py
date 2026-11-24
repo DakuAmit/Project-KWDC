@@ -103,6 +103,18 @@ def ensure_db_schema_extensions():
                     conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN delivered_at TIMESTAMP;"))
                 except Exception:
                     pass
+                try:
+                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN benchmark_fare_npr FLOAT;"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN client_offered_fare_npr FLOAT;"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN cargo_weight_kg FLOAT DEFAULT 1000.0;"))
+                except Exception:
+                    pass
             else:
                 conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_category VARCHAR(50) DEFAULT 'Category B (Delivery Van / Pickup)';"))
                 conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_photo_front_url VARCHAR(500);"))
@@ -118,6 +130,9 @@ def ensure_db_schema_extensions():
                 conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS reassignment_reason VARCHAR(500);"))
                 conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS delivery_otp VARCHAR(6);"))
                 conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;"))
+                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS benchmark_fare_npr FLOAT;"))
+                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS client_offered_fare_npr FLOAT;"))
+                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS cargo_weight_kg FLOAT DEFAULT 1000.0;"))
     except Exception as e:
         print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
 
@@ -213,6 +228,26 @@ def init_db_if_needed():
                 kyc_status=models.KycStatus.VERIFIED
             )
             db.add(incharge_user)
+
+        # 6. Default Platform Configuration (Margin & Tariff Base Formula)
+        cfg = db.query(models.PlatformConfig).filter(models.PlatformConfig.config_key == "DEFAULT_CONFIG").first()
+        if not cfg:
+            cfg = models.PlatformConfig(
+                config_key="DEFAULT_CONFIG",
+                platform_margin_percent=10.0,
+                flag_drop_van_pickup=1200.0,
+                flag_drop_mini_truck=1800.0,
+                flag_drop_heavy_truck=3200.0,
+                flag_drop_container_trailer=5000.0,
+                rate_per_km_van_pickup=65.0,
+                rate_per_km_mini_truck=85.0,
+                rate_per_km_heavy_truck=125.0,
+                rate_per_km_container_trailer=175.0,
+                weight_rate_per_tonne=150.0,
+                vat_rate_percent=13.0,
+                fuel_multiplier=1.0
+            )
+            db.add(cfg)
 
         db.commit()
         db.close()

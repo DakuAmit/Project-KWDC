@@ -131,8 +131,20 @@ class ClientDispatchOrderCreate(BaseModel):
     dest_lat: Optional[float] = 27.7000
     dest_lng: Optional[float] = 85.3000
     estimated_distance_km: Optional[float] = 8.5
+    cargo_weight_kg: Optional[float] = 1000.0
+    benchmark_fare_npr: Optional[float] = None
+    client_offered_fare_npr: Optional[float] = None
     is_fragile: bool = False
     is_perishable: bool = False
+
+class CounterOfferCreate(BaseModel):
+    offered_fare_npr: float = Field(..., gt=0)
+    counter_note: Optional[str] = None
+    vehicle_id: Optional[int] = None
+    driver_id: Optional[int] = None
+
+class CounterOfferAcceptRequest(BaseModel):
+    counter_offer_id: int
 
 class MaintenanceHoldRequest(BaseModel):
     warehouse_id: Optional[int] = None
