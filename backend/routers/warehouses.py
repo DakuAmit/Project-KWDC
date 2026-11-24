@@ -352,3 +352,65 @@ def book_warehouse_space(
         "qr_data_uri": inv_data["qr_data_uri"],
         "status": "PENDING_ADMIN_ACTIVATION"
     }
+
+@router.get("/my-bookings")
+def get_client_bookings(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns all storage reservations and active leases for the authenticated commercial client.
+    """
+    bookings = db.query(WarehouseRequest).filter(WarehouseRequest.client_id == current_user.id).order_by(WarehouseRequest.created_at.desc()).all()
+    results = []
+    for b in bookings:
+        results.append({
+            "id": b.id,
+            "warehouse_id": b.warehouse_id,
+            "warehouse_title": b.warehouse.title if b.warehouse else "KTM Commercial Storage",
+            "neighborhood_landmark": b.warehouse.neighborhood_landmark if b.warehouse else "Kathmandu",
+            "district": b.warehouse.district if b.warehouse else "Kathmandu",
+            "requested_sqft": b.requested_sqft,
+            "allocated_billed_sqft": b.allocated_billed_sqft,
+            "monthly_base_rent": b.monthly_base_rent,
+            "kwdc_margin_amount": b.kwdc_margin_amount,
+            "vat_13_percent": b.vat_13_percent,
+            "total_monthly_bill": b.total_monthly_bill,
+            "status": b.status.value,
+            "lease_start_date": b.lease_start_date.strftime("%Y-%m-%d") if b.lease_start_date else None,
+            "lease_end_date": b.lease_end_date.strftime("%Y-%m-%d") if b.lease_end_date else None,
+            "invoice_number": b.invoice.invoice_number if b.invoice else f"KWDC-2083-{b.id:04d}",
+            "payment_status": b.invoice.payment_status.value if b.invoice else "unpaid",
+            "created_at": b.created_at.strftime("%Y-%m-%d %H:%M")
+        })
+    return results
+
+@router.get("/owner-leases")
+def get_owner_active_leases(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns active tenant leases across all properties owned by the authenticated owner.
+    """
+    warehouses = db.query(Warehouse).filter(Warehouse.owner_id == current_user.id).all()
+    warehouse_ids = [w.id for w in warehouses]
+    if not warehouse_ids:
+        return []
+    
+    leases = db.query(WarehouseRequest).filter(
+        WarehouseRequest.warehouse_id.in_(warehouse_ids)
+    ).order_by(WarehouseRequest.created_at.desc()).all()
+    
+    results = []
+    for l in leases:
+        results.append({
+            "booking_id": l.id,
+            "warehouse_title": l.warehouse.title if l.warehouse else "Storage Facility",
+            "allocated_sqft": l.allocated_billed_sqft,
+            "monthly_rent_disbursement": l.monthly_base_rent,
+            "lease_start_date": l.lease_start_date.strftime("%Y-%m-%d") if l.lease_start_date else "Pending Activation",
+            "lease_end_date": l.lease_end_date.strftime("%Y-%m-%d") if l.lease_end_date else "-",
+            "status": l.status.value
+        })
+    return results

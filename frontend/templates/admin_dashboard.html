@@ -70,22 +70,10 @@
           <span class="flex items-center gap-3"><i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> IRD VAT Invoices</span>
         </button>
 
-        <!-- Role Jump Sandbox -->
-        <div class="pt-5 mt-5 border-t border-white/10">
-          <p class="px-3.5 text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-2">Test Role Cockpits</p>
-          <a href="/owner" class="flex items-center gap-2.5 px-3.5 py-2 text-xs rounded-lg text-slate-400 hover:text-white hover:bg-white/5">
-            <i data-lucide="home" class="w-3.5 h-3.5 text-amber-400"></i> Property Owner Cockpit
-          </a>
-          <a href="/client" class="flex items-center gap-2.5 px-3.5 py-2 text-xs rounded-lg text-slate-400 hover:text-white hover:bg-white/5">
-            <i data-lucide="shopping-cart" class="w-3.5 h-3.5 text-emerald-400"></i> Commercial Client Hub
-          </a>
-          <a href="/fleet" class="flex items-center gap-2.5 px-3.5 py-2 text-xs rounded-lg text-slate-400 hover:text-white hover:bg-white/5">
-            <i data-lucide="truck" class="w-3.5 h-3.5 text-sky-400"></i> Fleet Partner Cockpit
-          </a>
-          <a href="/incharge" class="flex items-center gap-2.5 px-3.5 py-2 text-xs rounded-lg text-slate-400 hover:text-white hover:bg-white/5">
-            <i data-lucide="user-check" class="w-3.5 h-3.5 text-indigo-400"></i> Warehouse Incharge
-          </a>
-        </div>
+        <button type="button" onclick="switchTab('users')" id="nav-users" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4 text-purple-400"></i> User Directory & RBAC</span>
+          <span id="badgeUserCount" class="text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">0</span>
+        </button>
       </nav>
 
       <!-- Drawer Footer: User Profile & Sign Out -->
@@ -314,6 +302,41 @@
           </div>
         </section>
 
+        <!-- View 6: Platform Users & RBAC Directory -->
+        <section id="view-users" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base">Platform User Directory & Role-Based Access</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Manage registered Property Owners, Commercial Clients, Fleet Partners, and Incharges.</p>
+              </div>
+              <button onclick="loadUsers()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Full Name</th>
+                    <th class="px-5 py-3">Email & Phone</th>
+                    <th class="px-5 py-3">Role</th>
+                    <th class="px-5 py-3">Location</th>
+                    <th class="px-5 py-3">KYC Status</th>
+                    <th class="px-5 py-3 text-right">Joined</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading user directory...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -321,7 +344,7 @@
   <script>
     // Tab switching with Left Drawer
     function switchTab(tabId) {
-      ['overview', 'pending', 'bookings', 'logs', 'invoices'].forEach(id => {
+      ['overview', 'pending', 'bookings', 'logs', 'invoices', 'users'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const nav = document.getElementById('nav-' + id);
         if (view) view.classList.toggle('hidden', id !== tabId);
@@ -544,10 +567,58 @@
       }
     }
 
+    async function loadUsers() {
+      const tbody = document.getElementById('usersTableBody');
+      try {
+        const res = await fetch('/api/admin/users', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load users');
+        const data = await res.json();
+        document.getElementById('badgeUserCount').textContent = data.length;
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No users found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(u => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3">
+              <p class="font-bold text-navy">${u.full_name}</p>
+              <p class="text-[11px] text-slate-500">${u.operating_location || 'Kathmandu'}</p>
+            </td>
+            <td class="px-5 py-3 text-slate-700">
+              <p>${u.email}</p>
+              <p class="text-[11px] text-slate-500 font-mono">${u.phone_number}</p>
+            </td>
+            <td class="px-5 py-3">
+              <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${
+                u.role === 'superadmin' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                u.role === 'property_owner' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                u.role === 'fleet_partner' ? 'bg-sky-50 text-sky-700 border border-sky-200' :
+                u.role === 'warehouse_incharge' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              }">${u.role.replace('_', ' ')}</span>
+            </td>
+            <td class="px-5 py-3 text-slate-600">${u.operating_location || 'Nepal'}</td>
+            <td class="px-5 py-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.is_verified ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
+                ${u.is_verified ? 'Verified Active' : 'Pending OTP'}
+              </span>
+            </td>
+            <td class="px-5 py-3 font-mono text-[11px] text-slate-500 text-right">${u.created_at}</td>
+          </tr>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">Error loading users: ${err.message}</td></tr>`;
+      }
+    }
+
     function refreshData() {
       loadPendingWarehouses();
       loadBookings();
       loadInchargeLogs();
+      loadUsers();
     }
 
     function handleLogout() {

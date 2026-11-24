@@ -125,3 +125,25 @@ def process_gate_pass(
         "gate_pass_id": gate_pass.id,
         "scanned_units": gate_pass.scanned_units_count
     }
+
+@router.get("/gate-passes")
+def get_gate_passes(
+    current_user: User = Depends(require_roles([UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Retrieves all digital gate passes issued across facilities."""
+    passes = db.query(GatePass).order_by(GatePass.issued_at.desc()).limit(50).all()
+    results = []
+    for g in passes:
+        results.append({
+            "id": g.id,
+            "warehouse_title": g.warehouse.title if g.warehouse else "Facility",
+            "pass_type": g.pass_type,
+            "vehicle_plate": g.vehicle_plate,
+            "driver_name": g.driver_name,
+            "unit_type": g.unit_type.value if hasattr(g.unit_type, 'value') else str(g.unit_type),
+            "scanned_units_count": g.scanned_units_count,
+            "remarks": g.remarks,
+            "issued_at": g.issued_at.strftime("%Y-%m-%d %H:%M") if g.issued_at else ""
+        })
+    return results

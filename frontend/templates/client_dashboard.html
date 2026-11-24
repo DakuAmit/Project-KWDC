@@ -522,6 +522,61 @@
       document.getElementById('resTotal').textContent = 'Rs. ' + total.toLocaleString('en-IN');
     }
 
+    async function loadMyBookings() {
+      const list = document.getElementById('clientBookingsList');
+      const invList = document.getElementById('invoicesList');
+      try {
+        const res = await fetch('/api/warehouses/my-bookings', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load bookings');
+        const data = await res.json();
+
+        document.getElementById('badgeActiveLeaseCount').textContent = data.length;
+
+        if (data.length === 0) {
+          list.innerHTML = '<p class="text-slate-400 text-center py-8 text-xs">No active bookings yet. Browse the catalog to contract space in exact square feet.</p>';
+          invList.innerHTML = '<p class="text-slate-400 py-6 text-center text-xs">No invoices generated yet.</p>';
+          return;
+        }
+
+        list.innerHTML = data.map(b => `
+          <div class="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-navy text-sm sm:text-base">${b.warehouse_title}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                  b.status === 'active_leased' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }">${b.status.replace('_', ' ').toUpperCase()}</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">${b.neighborhood_landmark}, ${b.district} &bull; Contracted: <strong class="text-navy font-mono">${Number(b.allocated_billed_sqft).toLocaleString('en-IN')} sq ft</strong></p>
+              <p class="text-[11px] text-slate-400 mt-0.5 font-mono">Invoice: ${b.invoice_number} &bull; ${b.created_at}</p>
+            </div>
+            <div class="text-left sm:text-right shrink-0">
+              <p class="font-mono text-sm sm:text-base font-bold text-emerald-700">Rs. ${Number(b.total_monthly_bill).toLocaleString('en-IN')}<span class="text-xs font-normal text-slate-500">/mo</span></p>
+              <p class="text-[11px] text-slate-400">13% IRD VAT Included</p>
+            </div>
+          </div>
+        `).join('');
+
+        invList.innerHTML = data.map(b => `
+          <div class="py-3 flex items-center justify-between">
+            <div>
+              <p class="font-mono font-bold text-navy">${b.invoice_number}</p>
+              <p class="text-[11px] text-slate-500">${b.warehouse_title} &bull; ${Number(b.allocated_billed_sqft).toLocaleString('en-IN')} sq ft</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="font-mono font-bold text-slate-700">Rs. ${Number(b.total_monthly_bill).toLocaleString('en-IN')}</span>
+              <a href="/invoice" target="_blank" class="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-navy transition flex items-center gap-1">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i> View
+              </a>
+            </div>
+          </div>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        list.innerHTML = `<p class="text-red-500 text-center py-4 text-xs">Error loading bookings: ${err.message}. Please sign in.</p>`;
+      }
+    }
+
     function handleLogout() {
       localStorage.removeItem('kwdc_token');
       localStorage.removeItem('kwdc_user');
@@ -536,6 +591,7 @@
         document.getElementById('clientAvatar').textContent = (user.full_name || 'CC').substring(0, 2).toUpperCase();
       }
       loadCatalog();
+      loadMyBookings();
       runQuickCalc();
       lucide.createIcons();
     });

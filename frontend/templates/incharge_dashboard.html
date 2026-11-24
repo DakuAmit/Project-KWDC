@@ -337,8 +337,34 @@
 
     async function handleGatePassSubmit(e) {
       e.preventDefault();
-      showToast(`Gate Pass issued for Truck ${document.getElementById('gpPlate').value}! Inward clearance granted.`);
-      document.getElementById('gatePassModal').close();
+      const payload = {
+        warehouse_id: defaultWarehouseId,
+        client_id: 1,
+        pass_type: document.getElementById('gpType').value,
+        vehicle_plate: document.getElementById('gpPlate').value,
+        driver_name: document.getElementById('gpDriver').value,
+        unit_type: 'pallet',
+        scanned_units_count: parseInt(document.getElementById('gpCount').value) || 1,
+        remarks: document.getElementById('gpCargo').value
+      };
+
+      try {
+        const res = await fetch('/api/incharge/gate-pass', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || `Gate Pass issued for Truck ${payload.vehicle_plate}!`);
+          document.getElementById('gatePassModal').close();
+          document.getElementById('gatePassForm').reset();
+        } else {
+          showToast(data.detail || 'Failed to issue gate pass.', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      }
     }
 
     async function handleActivitySubmit(e) {

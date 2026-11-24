@@ -544,6 +544,42 @@
       }
     }
 
+    async function loadActiveLeases() {
+      const list = document.getElementById('activeLeasesList');
+      try {
+        const res = await fetch('/api/warehouses/owner-leases', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load owner leases');
+        const data = await res.json();
+        document.getElementById('badgeLeaseCount').textContent = data.length;
+
+        if (data.length === 0) {
+          list.innerHTML = '<p class="text-slate-400 text-center py-8 text-xs">No active tenant contracts currently running. Newly approved spaces will appear in the public catalog.</p>';
+          return;
+        }
+
+        list.innerHTML = data.map(l => `
+          <div class="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-navy text-sm sm:text-base">${l.warehouse_title}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                  l.status === 'active_leased' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }">${l.status.replace('_', ' ').toUpperCase()}</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Leased Space: <strong class="text-navy font-mono">${Number(l.allocated_sqft).toLocaleString('en-IN')} sq ft</strong> &bull; Start: ${l.lease_start_date}</p>
+            </div>
+            <div class="text-left sm:text-right shrink-0">
+              <p class="font-mono text-sm sm:text-base font-bold text-emerald-700">Rs. ${Number(l.monthly_rent_disbursement).toLocaleString('en-IN')}<span class="text-xs font-normal text-slate-500">/mo payout</span></p>
+              <p class="text-[11px] text-slate-400">Direct Bank Transfer</p>
+            </div>
+          </div>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        console.log('Owner leases notice:', err.message);
+      }
+    }
+
     function handleLogout() {
       localStorage.removeItem('kwdc_token');
       localStorage.removeItem('kwdc_user');
@@ -558,6 +594,7 @@
         document.getElementById('ownerAvatar').textContent = (user.full_name || 'PO').substring(0, 2).toUpperCase();
       }
       loadMyListings();
+      loadActiveLeases();
       lucide.createIcons();
     });
   </script>

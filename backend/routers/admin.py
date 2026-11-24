@@ -214,3 +214,25 @@ def submit_admin_feedback(
     log.admin_feedback = feedback
     db.commit()
     return {"message": "Feedback submitted to Warehouse Incharge."}
+
+@router.get("/users")
+def get_all_users(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Lists all registered platform users with verification and KYC status."""
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    results = []
+    for u in users:
+        results.append({
+            "id": u.id,
+            "full_name": u.full_name,
+            "email": u.email,
+            "phone_number": u.phone_number,
+            "role": u.role.value,
+            "operating_location": u.operating_location,
+            "is_verified": u.is_verified,
+            "kyc_status": u.kyc_status.value,
+            "created_at": u.created_at.strftime("%Y-%m-%d %H:%M")
+        })
+    return results
