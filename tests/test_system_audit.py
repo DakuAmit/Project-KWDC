@@ -9,9 +9,13 @@ Simulates all actions from all 5 roles:
 5. Fleet Partner
 """
 
+import os
 import sys
 import json
 import random
+
+# Add project root to sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from fastapi.testclient import TestClient
 
 def run_audit():
