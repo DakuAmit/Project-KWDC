@@ -19,17 +19,18 @@ from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseRequest, WarehousePhoto, User, UserRole,
     BookingStatus, SpaceType, AreaUnit, TaxInvoice, PaymentStatus,
-    StockItem, InventoryUnit, InventoryUnitType, ClientSavedAddress, LienNotificationLog
+    StockItem, InventoryUnit, InventoryUnitType, ClientSavedAddress, LienNotificationLog,
+    WarehouseChangeRequest, WarehouseActivityLog, IncidentReport
 )
 from backend.schemas import (
     WarehouseCreate, MaintenanceHoldRequest, BookingRequestCreate,
-    BookingModifyRequest, StockItemCreate, SavedAddressCreate
+    BookingModifyRequest, StockItemCreate, SavedAddressCreate, OwnerChangeRequestCreate
 )
 from backend.auth_utils import require_user, get_current_user
 from backend.services.unit_converter import to_sqft, from_sqft_to_all, get_warehouse_usable_capacity
 from backend.services.vat_service import generate_ird_tax_invoice
 from backend.services.overdue_monitor import calculate_flexible_storage_cost
-from backend.services.contract_service import generate_client_storage_contract
+from backend.services.contract_service import generate_client_storage_contract, generate_master_lease_contract
 from backend.config import settings
 
 router = APIRouter(prefix="/api/warehouses", tags=["Warehouses & Storage"])
@@ -121,6 +122,18 @@ def list_warehouse_space(
     db.add(new_warehouse)
     db.commit()
     db.refresh(new_warehouse)
+
+    # Save property gallery photos if provided
+    if payload.photo_urls:
+        for idx, p_url in enumerate(payload.photo_urls):
+            clean_url = (p_url or "").strip()
+            if clean_url:
+                db.add(WarehousePhoto(
+                    warehouse_id=new_warehouse.id,
+                    photo_url=clean_url,
+                    caption=f"Facility View #{idx + 1}"
+                ))
+        db.commit()
 
     return {
         "message": "Property submitted for verification! Our team will audit the specs and dispatch your Master Commercial Agreement.",
@@ -230,14 +243,43 @@ def get_my_listings(
     results = []
     for w in warehouses:
         units = from_sqft_to_all(w.total_sqft, w.clear_ceiling_height_ft)
+        tot = float(w.total_sqft or 0.0)
+        avail = float(w.available_sqft or 0.0)
+        occupied = round(max(0.0, tot - avail), 2)
+        occ_pct = round((occupied / tot) * 100.0, 1) if tot > 0 else 0.0
+        rate = float(w.monthly_rate_per_sqft or 45.0)
+        potential_yield = round(tot * rate * 0.90, 2)
+        realized_yield = round(occupied * rate * 0.90, 2)
+
+        photos_list = [
+            {"id": p.id, "url": p.photo_url, "caption": p.caption or "Facility Photo"}
+            for p in (w.photos or [])
+        ]
+        cr_list = [
+            {
+                "id": cr.id,
+                "request_type": cr.request_type,
+                "requested_rate_per_sqft": cr.requested_rate_per_sqft,
+                "reason_note": cr.reason_note,
+                "status": cr.status,
+                "admin_notes": cr.admin_notes,
+                "created_at": cr.created_at.strftime("%Y-%m-%d") if cr.created_at else ""
+            }
+            for cr in (w.change_requests or [])
+        ]
+
         results.append({
             "id": w.id,
             "title": w.title,
             "space_type": w.space_type.value,
-            "total_sqft": w.total_sqft,
-            "available_sqft": w.available_sqft,
-            "monthly_rate_per_sqft": w.monthly_rate_per_sqft,
-            "base_rate_per_sqft": w.monthly_rate_per_sqft,
+            "total_sqft": tot,
+            "available_sqft": avail,
+            "occupied_sqft": occupied,
+            "occupancy_percent": occ_pct,
+            "potential_monthly_yield_npr": potential_yield,
+            "realized_monthly_yield_npr": realized_yield,
+            "monthly_rate_per_sqft": rate,
+            "base_rate_per_sqft": rate,
             "clear_ceiling_height_ft": w.clear_ceiling_height_ft,
             "road_access_width_ft": w.road_access_ft,
             "municipality": w.municipality,
@@ -250,7 +292,9 @@ def get_my_listings(
             "latitude": w.latitude,
             "longitude": w.longitude,
             "units": units,
-            "contract_executed": bool(w.lease_contract_url)
+            "photos": photos_list,
+            "change_requests": cr_list,
+            "contract_executed": bool(w.lease_contract_url or w.is_approved)
         })
     return results
 
@@ -372,6 +416,7 @@ def get_public_catalog(
             "has_cctv": w.has_cctv,
             "has_cold_storage": w.has_cold_storage,
             "units": units,
+            "photos": [p.photo_url for p in (w.photos or [])],
             "privacy_shield_note": "Direct owner contact is protected. KTM-WDC acts as your verified corporate counterparty."
         })
 
@@ -872,6 +917,7 @@ def get_owner_active_leases(
 ):
     """
     Returns active tenant leases across all properties owned by the authenticated owner.
+    Privacy Shield: Client personal details are never exposed to the Property Owner.
     """
     warehouses = db.query(Warehouse).filter(Warehouse.owner_id == current_user.id).all()
     warehouse_ids = [w.id for w in warehouses]
@@ -886,8 +932,12 @@ def get_owner_active_leases(
     for l in leases:
         results.append({
             "booking_id": l.id,
+            "lease_ref": f"KWDC-LEASE-{l.id:04d}",
             "warehouse_title": l.warehouse.title if l.warehouse else "Storage Facility",
             "allocated_sqft": l.allocated_billed_sqft,
+            "rate_per_sqft": l.warehouse.monthly_rate_per_sqft if l.warehouse else 45.0,
+            "booking_duration_type": getattr(l, "booking_duration_type", "MONTHLY") or "MONTHLY",
+            "duration_value": getattr(l, "duration_value", 3) or 3,
             "monthly_rent_disbursement": l.monthly_base_rent,
             "lease_start_date": l.lease_start_date.strftime("%Y-%m-%d") if l.lease_start_date else "Pending Activation",
             "lease_end_date": l.lease_end_date.strftime("%Y-%m-%d") if l.lease_end_date else "-",
@@ -901,8 +951,11 @@ def get_owner_payout_statements(
     db: Session = Depends(get_db)
 ):
     """
-    Returns monthly rental payout statements for the authenticated property owner.
-    90% Net disbursement after deducting 10% KWDC platform margin.
+    Returns rental payout statements for the authenticated property owner across DAILY, WEEKLY & MONTHLY leases:
+    - Gross Base Rent
+    - 10% KWDC Platform Commission
+    - 10% Nepal House Rent TDS (Bahal Kar per Income Tax Act 2058)
+    - Net Direct Bank Deposit
     """
     warehouses = db.query(Warehouse).filter(Warehouse.owner_id == current_user.id).all()
     warehouse_ids = [w.id for w in warehouses]
@@ -915,19 +968,133 @@ def get_owner_payout_statements(
 
     results = []
     for l in leases:
-        gross_rent = l.monthly_base_rent or 0.0
+        gross_rent = round(float(l.monthly_base_rent or 0.0), 2)
         margin_fee = round(gross_rent * 0.10, 2)
-        net_owner_payout = round(gross_rent - margin_fee, 2)
+        owner_share_90pct = round(gross_rent - margin_fee, 2)
+        tds_10pct = round(gross_rent * 0.10, 2)
+        net_bank_deposit = round(owner_share_90pct - tds_10pct, 2)
         is_paid = l.invoice and l.invoice.payment_status == PaymentStatus.PAID
         results.append({
             "lease_number": f"KWDC-LEASE-{l.id:04d}",
+            "tds_certificate_number": f"TDS-2083-{l.id:04d}",
             "warehouse_title": l.warehouse.title if l.warehouse else "Storage Facility",
+            "booking_duration_type": getattr(l, "booking_duration_type", "MONTHLY") or "MONTHLY",
             "allocated_sqft": l.allocated_billed_sqft,
             "monthly_gross_rent": gross_rent,
             "platform_fee_10pct": margin_fee,
-            "net_payout_90pct": net_owner_payout,
+            "net_payout_90pct": owner_share_90pct,
+            "tds_10pct": tds_10pct,
+            "net_bank_deposit_npr": net_bank_deposit,
             "payout_status": "DISBURSED" if is_paid else "SCHEDULED_EOM",
-            "settlement_channel": "ConnectIPS / Direct Bank",
+            "settlement_channel": "ConnectIPS / NCHL Bank Wire",
             "created_at": l.created_at.strftime("%Y-%m-%d")
         })
     return results
+
+
+@router.get("/{warehouse_id}/owner-contract")
+def get_owner_executed_contract(
+    warehouse_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """Returns the digitally executed Master Commercial Real Estate Agreement (KWDC-MLA-2083-XXXX)."""
+    warehouse = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found.")
+    if warehouse.owner_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    return generate_master_lease_contract(warehouse=warehouse, owner=warehouse.owner or current_user)
+
+
+@router.post("/{warehouse_id}/change-request")
+def submit_owner_change_request(
+    warehouse_id: int,
+    payload: OwnerChangeRequestCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Sanctioned workflow for approved properties locked by Admin Governance:
+    - DELISTING_15_DAYS: Formal 15-day notice to delist unleased space.
+    - RATE_REVISION: Request tariff adjustment for Admin review.
+    """
+    warehouse = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found.")
+    if warehouse.owner_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    rtype = payload.request_type.upper()
+    if rtype not in ("DELISTING_15_DAYS", "RATE_REVISION"):
+        raise HTTPException(status_code=400, detail="request_type must be 'DELISTING_15_DAYS' or 'RATE_REVISION'.")
+
+    if rtype == "DELISTING_15_DAYS" and (warehouse.total_sqft - warehouse.available_sqft) > 0:
+        raise HTTPException(status_code=400, detail="Cannot delist facility while commercial tenant leases are active.")
+
+    req = WarehouseChangeRequest(
+        warehouse_id=warehouse.id,
+        owner_id=current_user.id,
+        request_type=rtype,
+        requested_rate_per_sqft=payload.requested_rate_per_sqft,
+        reason_note=payload.reason_note.strip(),
+        status="PENDING_REVIEW"
+    )
+    db.add(req)
+    db.commit()
+    db.refresh(req)
+
+    return {
+        "message": f"Formal {rtype.replace('_', ' ')} request #{req.id} submitted to SuperAdmin for review.",
+        "request_id": req.id,
+        "status": req.status
+    }
+
+
+@router.get("/owner-facility-health")
+def get_owner_facility_health_feed(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Anonymized Incharge Shift Logs & Incident Reports for the Property Owner's facilities.
+    Privacy Shield: Exposes structural health & safety audits without leaking tenant identities.
+    """
+    warehouses = db.query(Warehouse).filter(Warehouse.owner_id == current_user.id).all()
+    warehouse_ids = [w.id for w in warehouses]
+    if not warehouse_ids:
+        return {"activity_logs": [], "incidents": []}
+
+    logs = db.query(WarehouseActivityLog).filter(
+        WarehouseActivityLog.warehouse_id.in_(warehouse_ids)
+    ).order_by(WarehouseActivityLog.created_at.desc()).limit(30).all()
+
+    incidents = db.query(IncidentReport).filter(
+        IncidentReport.warehouse_id.in_(warehouse_ids)
+    ).order_by(IncidentReport.created_at.desc()).limit(30).all()
+
+    return {
+        "activity_logs": [
+            {
+                "id": l.id,
+                "warehouse_title": l.warehouse.title if l.warehouse else f"Warehouse #{l.warehouse_id}",
+                "log_type": l.log_type,
+                "summary": l.summary,
+                "detailed_notes": l.detailed_notes,
+                "created_at": l.created_at.strftime("%Y-%m-%d %H:%M") if l.created_at else ""
+            }
+            for l in logs
+        ],
+        "incidents": [
+            {
+                "id": i.id,
+                "warehouse_title": i.warehouse.title if i.warehouse else f"Warehouse #{i.warehouse_id}",
+                "category": i.incident_category,
+                "severity": i.severity.value if hasattr(i.severity, "value") else str(i.severity),
+                "description": i.description,
+                "action_taken": i.action_taken or "Audited by Facility Incharge",
+                "created_at": i.created_at.strftime("%Y-%m-%d %H:%M") if i.created_at else ""
+            }
+            for i in incidents
+        ]
+    }

@@ -112,6 +112,12 @@ class WarehouseCreate(BaseModel):
     has_fire_safety: bool = False
     temp_min_c: Optional[float] = None
     temp_max_c: Optional[float] = None
+    photo_urls: Optional[List[str]] = None
+
+class OwnerChangeRequestCreate(BaseModel):
+    request_type: str # DELISTING_15_DAYS, RATE_REVISION
+    requested_rate_per_sqft: Optional[float] = None
+    reason_note: str = Field(..., min_length=10)
 
 class ClientDispatchOrderCreate(BaseModel):
     movement_type: str = "DIRECT_HAUL" # WAREHOUSE_DISPATCH or DIRECT_HAUL

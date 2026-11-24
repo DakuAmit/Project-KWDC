@@ -113,73 +113,75 @@ def init_db_if_needed():
             db.add(admin)
             print("[DATABASE INIT] Master Admin created: admin@kwdc.com.np / Admin@123")
 
-        # 2. Seed Property Owner for Audit
-        owner = db.query(models.User).filter(models.User.email == "owner_audit@kwdc.com.np").first()
-        if not owner:
-            hashed = bcrypt.hashpw(b"Owner@123", bcrypt.gensalt()).decode("utf-8")
-            owner = models.User(
-                email="owner_audit@kwdc.com.np",
-                phone_number="+977-9841223344",
-                full_name="Ram Bahadur Shrestha",
-                hashed_password=hashed,
-                role=models.UserRole.PROPERTY_OWNER,
-                operating_location="Kathmandu Valley",
-                is_active=True,
-                is_verified=True,
-                kyc_status=models.KycStatus.VERIFIED
-            )
-            db.add(owner)
+        # Optional Demo/Audit Users (only seeded if SEED_AUDIT_USERS=true)
+        if os.getenv("SEED_AUDIT_USERS", "false").lower() == "true":
+            # 2. Seed Property Owner for Audit
+            owner = db.query(models.User).filter(models.User.email == "owner_audit@kwdc.com.np").first()
+            if not owner:
+                hashed = bcrypt.hashpw(b"Owner@123", bcrypt.gensalt()).decode("utf-8")
+                owner = models.User(
+                    email="owner_audit@kwdc.com.np",
+                    phone_number="+977-9841223344",
+                    full_name="Ram Bahadur Shrestha",
+                    hashed_password=hashed,
+                    role=models.UserRole.PROPERTY_OWNER,
+                    operating_location="Kathmandu Valley",
+                    is_active=True,
+                    is_verified=True,
+                    kyc_status=models.KycStatus.VERIFIED
+                )
+                db.add(owner)
 
-        # 3. Seed Commercial Client for Audit
-        client = db.query(models.User).filter(models.User.email == "client_audit@kwdc.com.np").first()
-        if not client:
-            hashed = bcrypt.hashpw(b"Client@123", bcrypt.gensalt()).decode("utf-8")
-            client = models.User(
-                email="client_audit@kwdc.com.np",
-                phone_number="+977-9851098765",
-                full_name="Kathmandu FMCG Distributors",
-                hashed_password=hashed,
-                role=models.UserRole.COMMERCIAL_CLIENT,
-                operating_location="Kathmandu Valley",
-                is_active=True,
-                is_verified=True,
-                kyc_status=models.KycStatus.PENDING_SUBMISSION
-            )
-            db.add(client)
+            # 3. Seed Commercial Client for Audit
+            client = db.query(models.User).filter(models.User.email == "client_audit@kwdc.com.np").first()
+            if not client:
+                hashed = bcrypt.hashpw(b"Client@123", bcrypt.gensalt()).decode("utf-8")
+                client = models.User(
+                    email="client_audit@kwdc.com.np",
+                    phone_number="+977-9851098765",
+                    full_name="Kathmandu FMCG Distributors",
+                    hashed_password=hashed,
+                    role=models.UserRole.COMMERCIAL_CLIENT,
+                    operating_location="Kathmandu Valley",
+                    is_active=True,
+                    is_verified=True,
+                    kyc_status=models.KycStatus.PENDING_SUBMISSION
+                )
+                db.add(client)
 
-        # 4. Seed Fleet Partner for Audit
-        fleet_user = db.query(models.User).filter(models.User.email == "fleet_audit@kwdc.com.np").first()
-        if not fleet_user:
-            hashed = bcrypt.hashpw(b"Fleet@123", bcrypt.gensalt()).decode("utf-8")
-            fleet_user = models.User(
-                email="fleet_audit@kwdc.com.np",
-                phone_number="+977-9811223344",
-                full_name="Nepal Freight Logistics",
-                hashed_password=hashed,
-                role=models.UserRole.FLEET_PARTNER,
-                operating_location="Kathmandu Valley",
-                is_active=True,
-                is_verified=True,
-                kyc_status=models.KycStatus.PENDING_SUBMISSION
-            )
-            db.add(fleet_user)
+            # 4. Seed Fleet Partner for Audit
+            fleet_user = db.query(models.User).filter(models.User.email == "fleet_audit@kwdc.com.np").first()
+            if not fleet_user:
+                hashed = bcrypt.hashpw(b"Fleet@123", bcrypt.gensalt()).decode("utf-8")
+                fleet_user = models.User(
+                    email="fleet_audit@kwdc.com.np",
+                    phone_number="+977-9811223344",
+                    full_name="Nepal Freight Logistics",
+                    hashed_password=hashed,
+                    role=models.UserRole.FLEET_PARTNER,
+                    operating_location="Kathmandu Valley",
+                    is_active=True,
+                    is_verified=True,
+                    kyc_status=models.KycStatus.PENDING_SUBMISSION
+                )
+                db.add(fleet_user)
 
-        # 5. Seed Warehouse Incharge for Audit
-        incharge_user = db.query(models.User).filter(models.User.email == "incharge_audit@kwdc.com.np").first()
-        if not incharge_user:
-            hashed = bcrypt.hashpw(b"Incharge@123", bcrypt.gensalt()).decode("utf-8")
-            incharge_user = models.User(
-                email="incharge_audit@kwdc.com.np",
-                phone_number="+977-9801122334",
-                full_name="Bikram Karki (On-Site Incharge)",
-                hashed_password=hashed,
-                role=models.UserRole.WAREHOUSE_INCHARGE,
-                operating_location="Kathmandu",
-                is_active=True,
-                is_verified=True,
-                kyc_status=models.KycStatus.VERIFIED
-            )
-            db.add(incharge_user)
+            # 5. Seed Warehouse Incharge for Audit
+            incharge_user = db.query(models.User).filter(models.User.email == "incharge_audit@kwdc.com.np").first()
+            if not incharge_user:
+                hashed = bcrypt.hashpw(b"Incharge@123", bcrypt.gensalt()).decode("utf-8")
+                incharge_user = models.User(
+                    email="incharge_audit@kwdc.com.np",
+                    phone_number="+977-9801122334",
+                    full_name="Bikram Karki (On-Site Incharge)",
+                    hashed_password=hashed,
+                    role=models.UserRole.WAREHOUSE_INCHARGE,
+                    operating_location="Kathmandu",
+                    is_active=True,
+                    is_verified=True,
+                    kyc_status=models.KycStatus.VERIFIED
+                )
+                db.add(incharge_user)
 
         # 6. Default Platform Configuration (Margin & Tariff Base Formula)
         cfg = db.query(models.PlatformConfig).filter(models.PlatformConfig.config_key == "DEFAULT_CONFIG").first()

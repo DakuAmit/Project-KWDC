@@ -254,6 +254,7 @@ class Warehouse(Base):
     stock_items = relationship("StockItem", back_populates="warehouse")
     incharge_assignments = relationship("WarehouseInchargeAssignment", back_populates="warehouse")
     activity_logs = relationship("WarehouseActivityLog", back_populates="warehouse")
+    change_requests = relationship("WarehouseChangeRequest", back_populates="warehouse", cascade="all, delete-orphan")
 
 
 class WarehousePhoto(Base):
@@ -861,3 +862,26 @@ class ClientSavedAddress(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     client = relationship("User")
+
+
+class WarehouseChangeRequest(Base):
+    """
+    Sanctioned change workflow for Property Owners after Admin lockout:
+    - 15-Day Notice Unleased Delisting Request
+    - Annual Tariff / Rate Revision Request
+    """
+    __tablename__ = "warehouse_change_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    request_type = Column(String(50), nullable=False) # DELISTING_15_DAYS, RATE_REVISION
+    requested_rate_per_sqft = Column(Float, nullable=True)
+    reason_note = Column(Text, nullable=False)
+    status = Column(String(50), default="PENDING_REVIEW") # PENDING_REVIEW, APPROVED, REJECTED
+    admin_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+
+    warehouse = relationship("Warehouse", back_populates="change_requests")
+    owner = relationship("User")

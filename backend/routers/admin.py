@@ -25,7 +25,7 @@ from backend.models import (
     Warehouse, WarehouseRequest, User, UserRole,
     BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog,
     WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport, UserKycProfile,
-    PlatformConfig, StockAuctionItem, LienNotificationLog
+    PlatformConfig, StockAuctionItem, LienNotificationLog, WarehouseChangeRequest
 )
 from backend.auth_utils import require_user, require_roles, get_password_hash
 from backend.services.contract_service import generate_master_lease_contract
@@ -1143,4 +1143,67 @@ def update_auction_lot(
     return {
         "message": f"Auction Lot {lot.lot_number} updated to {lot.auction_status}.",
         "auction_status": lot.auction_status
+    }
+
+
+# ---------------------------------------------------------------------------
+# 13. OWNER CHANGE REQUESTS (15-DAY DELISTING & RATE REVISIONS)
+# ---------------------------------------------------------------------------
+class AdminChangeProcessRequest(BaseModel):
+    status: str # APPROVED or REJECTED
+    admin_notes: Optional[str] = None
+
+@router.get("/change-requests")
+def get_owner_change_requests(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    reqs = db.query(WarehouseChangeRequest).order_by(WarehouseChangeRequest.created_at.desc()).all()
+    return [
+        {
+            "id": r.id,
+            "warehouse_id": r.warehouse_id,
+            "warehouse_title": r.warehouse.title if r.warehouse else f"Warehouse #{r.warehouse_id}",
+            "owner_name": r.owner.full_name if r.owner else "Owner",
+            "request_type": r.request_type,
+            "requested_rate_per_sqft": r.requested_rate_per_sqft,
+            "reason_note": r.reason_note,
+            "status": r.status,
+            "admin_notes": r.admin_notes,
+            "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else ""
+        }
+        for r in reqs
+    ]
+
+@router.post("/change-requests/{req_id}/process")
+def process_owner_change_request(
+    req_id: int,
+    payload: AdminChangeProcessRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    req = db.query(WarehouseChangeRequest).filter(WarehouseChangeRequest.id == req_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Change request not found.")
+
+    decision = payload.status.upper()
+    if decision not in ("APPROVED", "REJECTED"):
+        raise HTTPException(status_code=400, detail="Status must be APPROVED or REJECTED.")
+
+    req.status = decision
+    req.admin_notes = payload.admin_notes
+    req.processed_at = datetime.now(timezone.utc)
+
+    wh = req.warehouse
+    if decision == "APPROVED" and wh:
+        if req.request_type == "DELISTING_15_DAYS":
+            wh.is_available = False
+            wh.hold_reason_note = f"Owner Delisting Approved: {req.reason_note}"
+        elif req.request_type == "RATE_REVISION" and req.requested_rate_per_sqft and req.requested_rate_per_sqft > 0:
+            wh.monthly_rate_per_sqft = float(req.requested_rate_per_sqft)
+
+    db.commit()
+    return {
+        "message": f"Owner change request #{req.id} ({req.request_type}) marked {decision}.",
+        "status": decision
     }
