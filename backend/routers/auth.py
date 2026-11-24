@@ -66,7 +66,8 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
         is_verified=False,
         otp_code=otp_code,
         otp_expires_at=expires_at,
-        kyc_status=KycStatus.PENDING_SUBMISSION
+        kyc_status=KycStatus.PENDING_SUBMISSION,
+        fleet_operator_type=None if payload.role == UserRole.FLEET_PARTNER else "COMMERCIAL_3PL"
     )
     db.add(new_user)
     db.commit()
@@ -110,16 +111,30 @@ def verify_otp(payload: VerifyOtpRequest, response: Response, db: Session = Depe
     if not user:
         raise HTTPException(status_code=404, detail="User account not found.")
 
+    def build_user_token(u: User) -> str:
+        return create_access_token(data={
+            "sub": str(u.id),
+            "email": u.email,
+            "role": u.role.value,
+            "full_name": u.full_name,
+            "company_name": u.company_name or u.full_name,
+            "phone_number": u.phone_number,
+            "operating_location": u.operating_location or "Kathmandu Valley",
+            "fleet_operator_type": u.fleet_operator_type
+        })
+
     if user.is_verified:
-        token = create_access_token(data={"sub": str(user.id), "role": user.role.value})
+        token = build_user_token(user)
         response.set_cookie(key="access_token", value=f"Bearer {token}", httponly=True, max_age=86400, samesite="lax")
         return TokenResponse(
             access_token=token,
             user_role=user.role.value,
             full_name=user.full_name,
+            email=user.email,
             user_id=user.id,
             is_verified=True,
-            kyc_status=user.kyc_status.value
+            kyc_status=user.kyc_status.value,
+            fleet_operator_type=user.fleet_operator_type
         )
 
     # Check OTP match
@@ -131,7 +146,7 @@ def verify_otp(payload: VerifyOtpRequest, response: Response, db: Session = Depe
     user.otp_code = None
     db.commit()
 
-    token = create_access_token(data={"sub": str(user.id), "role": user.role.value})
+    token = build_user_token(user)
     response.set_cookie(key="access_token", value=f"Bearer {token}", httponly=True, max_age=86400, samesite="lax")
 
     return TokenResponse(
@@ -141,7 +156,8 @@ def verify_otp(payload: VerifyOtpRequest, response: Response, db: Session = Depe
         email=user.email,
         user_id=user.id,
         is_verified=True,
-        kyc_status=user.kyc_status.value
+        kyc_status=user.kyc_status.value,
+        fleet_operator_type=user.fleet_operator_type
     )
 
 @router.post("/login", response_model=TokenResponse)
@@ -153,7 +169,16 @@ def login_user(payload: UserLogin, response: Response, db: Session = Depends(get
             detail="Invalid email address or password."
         )
 
-    token = create_access_token(data={"sub": str(user.id), "role": user.role.value})
+    token = create_access_token(data={
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role.value,
+        "full_name": user.full_name,
+        "company_name": user.company_name or user.full_name,
+        "phone_number": user.phone_number,
+        "operating_location": user.operating_location or "Kathmandu Valley",
+        "fleet_operator_type": user.fleet_operator_type
+    })
     response.set_cookie(key="access_token", value=f"Bearer {token}", httponly=True, max_age=86400, samesite="lax")
 
     return TokenResponse(
@@ -163,7 +188,8 @@ def login_user(payload: UserLogin, response: Response, db: Session = Depends(get
         email=user.email,
         user_id=user.id,
         is_verified=user.is_verified,
-        kyc_status=user.kyc_status.value
+        kyc_status=user.kyc_status.value,
+        fleet_operator_type=user.fleet_operator_type
     )
 
 @router.get("/kyc-profile")

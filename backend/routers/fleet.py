@@ -81,11 +81,13 @@ def register_vehicle(
 
 @router.get("/operator-profile")
 def get_operator_profile(
-    current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
+    current_user: User = Depends(require_user),
     db: Session = Depends(get_db)
 ):
     """Returns fleet operator settings and whether mode is INDEPENDENT_OWNER or COMMERCIAL_3PL."""
-    op_type = getattr(current_user, 'fleet_operator_type', 'COMMERCIAL_3PL') or 'COMMERCIAL_3PL'
+    raw_op_type = getattr(current_user, 'fleet_operator_type', None)
+    needs_onboarding = (raw_op_type is None or raw_op_type == "UNCONFIGURED" or raw_op_type == "")
+    op_type = raw_op_type if (raw_op_type in ("INDEPENDENT_OWNER", "COMMERCIAL_3PL")) else "COMMERCIAL_3PL"
     vehicles_count = db.query(Vehicle).filter(Vehicle.fleet_partner_id == current_user.id).count()
     drivers_count = db.query(Driver).filter(Driver.fleet_partner_id == current_user.id).count()
     return {
@@ -94,7 +96,10 @@ def get_operator_profile(
         "company_name": current_user.company_name or current_user.full_name,
         "email": current_user.email,
         "phone_number": current_user.phone_number,
+        "role": current_user.role.value,
         "operator_type": op_type,
+        "needs_onboarding": bool(needs_onboarding),
+        "is_configured": not bool(needs_onboarding),
         "vehicles_count": vehicles_count,
         "drivers_count": drivers_count
     }
@@ -102,7 +107,7 @@ def get_operator_profile(
 @router.post("/operator-type")
 def update_operator_type(
     payload: OperatorTypeUpdateRequest,
-    current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
+    current_user: User = Depends(require_user),
     db: Session = Depends(get_db)
 ):
     """Switches Fleet Partner between INDEPENDENT_OWNER and COMMERCIAL_3PL."""
@@ -110,9 +115,14 @@ def update_operator_type(
     if payload.operator_type not in valid_types:
         raise HTTPException(status_code=400, detail="Operator type must be 'INDEPENDENT_OWNER' or 'COMMERCIAL_3PL'.")
 
+    # If user is updating fleet classification, ensure fleet partner privileges
+    if current_user.role not in (UserRole.FLEET_PARTNER, UserRole.SUPERADMIN):
+        current_user.role = UserRole.FLEET_PARTNER
+
     current_user.fleet_operator_type = payload.operator_type
 
     # If switching to Independent Owner-Driver, ensure a self-driver profile exists
+    self_driver_pin = "1234"
     if payload.operator_type == "INDEPENDENT_OWNER":
         existing_driver = db.query(Driver).filter(
             Driver.fleet_partner_id == current_user.id,
@@ -137,11 +147,18 @@ def update_operator_type(
                 is_active=True
             )
             db.add(self_driver)
+            db.commit()
+            db.refresh(self_driver)
+            self_driver_pin = self_driver.login_pin or "1234"
+        else:
+            self_driver_pin = existing_driver.login_pin or "1234"
 
     db.commit()
     return {
         "message": f"Operator mode updated to {payload.operator_type}.",
-        "operator_type": payload.operator_type
+        "operator_type": payload.operator_type,
+        "needs_onboarding": False,
+        "driver_pin": self_driver_pin
     }
 
 @router.get("/my-fleet")

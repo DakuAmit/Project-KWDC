@@ -1075,6 +1075,11 @@
           headers: getAuthHeaders(),
           body: JSON.stringify(payload)
         });
+        if (res.status === 401) {
+          showToast("Session expired or authentication required. Please sign in.", true);
+          openOwnerAuthModal('signin');
+          return;
+        }
         const data = await res.json();
         if (res.ok) {
           showToast("Space owner verification submitted! Under SuperAdmin review.");
@@ -1159,7 +1164,7 @@
     }
 
     function getAuthHeaders() {
-      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token') || localStorage.getItem('kwdc_admin_token');
       return {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})

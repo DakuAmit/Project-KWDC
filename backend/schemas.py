@@ -43,6 +43,7 @@ class TokenResponse(BaseModel):
     is_verified: bool
     kyc_status: str
     email: Optional[str] = None
+    fleet_operator_type: Optional[str] = None
 
 class SubmitKycRequest(BaseModel):
     # Backward compatibility

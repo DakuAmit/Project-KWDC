@@ -90,12 +90,12 @@
         </button>
 
         <button type="button" onclick="switchTab('vehicles')" id="nav-vehicles" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="truck" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_vehicles">Commercial Fleet</span></span>
+          <span class="flex items-center gap-3"><i data-lucide="truck" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_vehicles" id="navFleetText">Commercial Fleet</span></span>
           <span id="badgeVehicleCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
         </button>
 
         <button type="button" onclick="switchTab('drivers')" id="nav-drivers" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_drivers">Driver Crew Roster</span></span>
+          <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_drivers" id="navDriversText">Driver Crew Roster</span></span>
           <span id="badgeDriverCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
         </button>
 
@@ -107,7 +107,7 @@
       <!-- Drawer Footer: User Profile & Sign Out -->
       <div class="p-4 border-t border-white/10 bg-black/20">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3 overflow-hidden">
+          <div class="flex items-center gap-3 overflow-hidden cursor-pointer hover:opacity-90 transition" onclick="if(!localStorage.getItem('kwdc_token')) openFleetAuthModal('signin')" title="Click to Sign In or View Profile">
             <div class="w-9 h-9 rounded-full bg-slate-700 text-white font-bold grid place-items-center text-sm shrink-0" id="fleetAvatar">
               FP
             </div>
@@ -151,6 +151,11 @@
           <!-- Bilingual Switcher Pill -->
           <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
             <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
+          </button>
+
+          <!-- Guest / Sign In Trigger Button -->
+          <button id="fleetAuthTriggerBtn" onclick="openFleetAuthModal('signin')" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-300 bg-amber-50 text-navy hover:bg-amber-100 text-xs font-bold transition shadow-sm" title="Sign In or Register Fleet">
+            <i data-lucide="log-in" class="w-3.5 h-3.5 text-amber-600"></i> <span id="fleetAuthTriggerText">Sign In</span>
           </button>
 
           <button onclick="openVehicleModal()" class="inline-flex items-center gap-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold px-3.5 py-2 text-xs shadow transition">
@@ -641,7 +646,7 @@
     </form>
   </dialog>
 
-  <!-- Modal: Fleet Operator Type Switcher -->
+  <!-- Modal: Fleet Operator Type Switcher & Onboarding -->
   <dialog id="operatorTypeModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
       <div class="flex items-center gap-2.5">
@@ -649,16 +654,16 @@
           <i data-lucide="shield" class="w-5 h-5"></i>
         </span>
         <div>
-          <h3 class="font-bold text-base text-white">Fleet Business Classification</h3>
-          <p class="text-xs text-slate-400">Choose between Independent Owner vs Commercial 3PL</p>
+          <h3 class="font-bold text-base text-white" id="operatorModalTitle">Fleet Business Classification</h3>
+          <p class="text-xs text-slate-400" id="operatorModalSub">Choose between Independent Owner vs Commercial 3PL</p>
         </div>
       </div>
-      <button onclick="document.getElementById('operatorTypeModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+      <button id="operatorModalCloseBtn" onclick="document.getElementById('operatorTypeModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
     <div class="p-6 space-y-4 text-xs">
-      <p class="text-slate-600 leading-relaxed">
+      <p class="text-slate-600 leading-relaxed" id="operatorModalIntro">
         Select the operating mode matching your logistics business structure in Nepal:
       </p>
 
@@ -674,7 +679,7 @@
         </label>
 
         <label class="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-400 cursor-pointer bg-white transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/30">
-          <input type="radio" name="optTypeRadio" value="COMMERCIAL_3PL" id="radio3PL" class="mt-1 text-indigo-600 focus:ring-indigo-500">
+          <input type="radio" name="optTypeRadio" value="COMMERCIAL_3PL" id="radio3PL" checked class="mt-1 text-indigo-600 focus:ring-indigo-500">
           <div>
             <span class="font-bold text-navy text-sm block">2. Commercial Fleet Operator &amp; 3PL Transport</span>
             <p class="text-slate-500 text-[11px] mt-0.5">
@@ -685,9 +690,9 @@
       </div>
 
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
-        <button type="button" onclick="document.getElementById('operatorTypeModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs">Cancel</button>
-        <button type="button" onclick="saveOperatorType()" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center gap-1.5">
-          <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Update Business Profile
+        <button type="button" id="operatorModalCancelBtn" onclick="document.getElementById('operatorTypeModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs">Cancel</button>
+        <button type="button" id="saveOperatorTypeBtn" onclick="saveOperatorType()" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center gap-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> <span id="saveOperatorBtnText">Update Business Profile</span>
         </button>
       </div>
     </div>
@@ -721,6 +726,99 @@
         <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow">Save PIN</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Modal: Fleet Partner Authentication & Registration -->
+  <dialog id="fleetAuthModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
+          <i data-lucide="key-round" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Fleet Partner Access</h3>
+          <p class="text-xs text-slate-400">Sign in or register your logistics transport fleet</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('fleetAuthModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="p-6 text-sm">
+      <!-- Tabs: Sign In / Register -->
+      <div class="flex border-b border-slate-200 mb-5">
+        <button type="button" onclick="switchFleetAuthTab('signin')" id="tabFleetSignIn" class="flex-1 py-2 text-center font-bold text-xs border-b-2 border-navy text-navy">
+          Sign In
+        </button>
+        <button type="button" onclick="switchFleetAuthTab('register')" id="tabFleetRegister" class="flex-1 py-2 text-center font-bold text-xs border-b-2 border-transparent text-slate-400 hover:text-navy">
+          Register Fleet
+        </button>
+      </div>
+
+      <!-- Tab 1: Sign In -->
+      <form id="fleetSignInForm" onsubmit="handleFleetSignIn(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+          <input type="email" id="fleetLoginEmail" required placeholder="fleet@example.com.np" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+          <input type="password" id="fleetLoginPassword" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+        </div>
+        <button type="submit" id="btnFleetSignInSubmit" class="w-full py-2.5 bg-navy text-white font-bold rounded-xl hover:bg-slate-800 transition text-xs shadow flex items-center justify-center gap-1.5">
+          <i data-lucide="log-in" class="w-4 h-4 text-amber-400"></i> Sign In to Fleet Cockpit
+        </button>
+
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-[11px] text-slate-400">Quick Testing:</span>
+          <button type="button" onclick="demoFleetLogin()" class="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> One-Click Demo Fleet Login
+          </button>
+        </div>
+      </form>
+
+      <!-- Tab 2: Register Fleet Partner -->
+      <div id="fleetRegisterSection" class="hidden space-y-4">
+        <form id="fleetRegForm" onsubmit="handleFleetRegister(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fleet / Owner Full Name *</label>
+            <input type="text" id="fleetRegName" required placeholder="e.g. Ramesh Thapa" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Transport Company Name</label>
+            <input type="text" id="fleetRegCompany" placeholder="e.g. Bagmati Freight Solutions (or leave empty if Owner-Driver)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Email *</label>
+              <input type="email" id="fleetRegEmail" required placeholder="partner@gmail.com" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Mobile Contact *</label>
+              <input type="tel" id="fleetRegPhone" required placeholder="98XXXXXXXX" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Password *</label>
+            <input type="password" id="fleetRegPassword" required minlength="6" placeholder="Create strong password" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+          </div>
+          <button type="submit" id="btnFleetRegSubmit" class="w-full py-2.5 bg-amber hover:bg-amber-400 text-navy font-bold rounded-xl transition text-xs shadow flex items-center justify-center gap-1.5">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Create Fleet Partner Account
+          </button>
+        </form>
+
+        <!-- OTP Step -->
+        <div id="fleetOtpSection" class="hidden space-y-3 bg-amber-50/50 p-4 rounded-xl border border-amber-200">
+          <p class="text-xs text-navy font-semibold">Enter 6-Digit Email Verification Code</p>
+          <p class="text-[11px] text-slate-500">A verification code has been dispatched to your email address (or use test code 123456).</p>
+          <input type="text" id="fleetOtpCode" maxlength="6" placeholder="123456" class="w-full px-3 py-2 rounded-xl border border-amber-300 font-mono text-center tracking-widest text-base font-bold">
+          <button type="button" onclick="verifyFleetOtp()" id="btnFleetVerifyOtp" class="w-full py-2 bg-navy text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Verify &amp; Activate Fleet
+          </button>
+        </div>
+      </div>
+    </div>
   </dialog>
 
   <!-- Application Logic & Bilingual Engine -->
@@ -1027,11 +1125,20 @@
     }
 
     function getAuthHeaders() {
-      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token') || localStorage.getItem('kwdc_admin_token');
       return {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
+    }
+
+    function handleApiAuthError(res) {
+      if (res && res.status === 401) {
+        showToast("Authentication required or session expired. Please sign in.", true);
+        openFleetAuthModal('signin');
+        return true;
+      }
+      return false;
     }
 
     // Leaflet GPS Radar Engine
@@ -1101,6 +1208,7 @@
     async function loadDispatchOrders() {
       try {
         const res = await fetch('/api/fleet/dispatch-orders', { headers: getAuthHeaders() });
+        if (handleApiAuthError(res)) return;
         const list = document.getElementById('dispatchJobsList');
         let jobs = [];
         if (res.ok) jobs = await res.json();
@@ -1200,6 +1308,7 @@
           method: 'POST',
           headers: getAuthHeaders()
         });
+        if (handleApiAuthError(res)) return;
         const data = await res.json();
         cachedVehicles = data.vehicles || [];
         showToast(data.message || "Dispatch order accepted! Dispatched to fleet driver.");
@@ -1215,6 +1324,7 @@
           method: 'POST',
           headers: getAuthHeaders()
         });
+        if (handleApiAuthError(res)) return;
         const data = await res.json();
         cachedVehicles = data.vehicles || [];
         showToast(data.message || "Status updated.");
@@ -1230,6 +1340,7 @@
     async function loadMyFleet() {
       try {
         const res = await fetch('/api/fleet/my-fleet', { headers: getAuthHeaders() });
+        if (handleApiAuthError(res)) return;
         if (!res.ok) return;
         const data = await res.json();
         cachedVehicles = data.vehicles || [];
@@ -1338,6 +1449,7 @@
     async function loadFleetEarnings() {
       try {
         const res = await fetch('/api/fleet/earnings', { headers: getAuthHeaders() });
+        if (handleApiAuthError(res)) return;
         const tbody = document.getElementById('settlementTableBody');
         let data = {};
         if (res.ok) data = await res.json();
@@ -1416,6 +1528,7 @@
           headers: getAuthHeaders(),
           body: JSON.stringify(payload)
         });
+        if (handleApiAuthError(res)) return;
         const data = await res.json();
         if (res.ok) {
           showToast("Vehicle registered with verified Bluebook!");
@@ -1460,6 +1573,7 @@
           headers: getAuthHeaders(),
           body: JSON.stringify(payload)
         });
+        if (handleApiAuthError(res)) return;
         const data = await res.json();
         if (res.ok) {
           showToast(`Driver ${data.full_name || ''} registered with PIN ${payload.login_pin}!`);
@@ -1481,10 +1595,17 @@
     async function loadOperatorProfile() {
       try {
         const res = await fetch('/api/fleet/operator-profile', { headers: getAuthHeaders() });
+        if (handleApiAuthError(res)) return;
         if (!res.ok) return;
         const data = await res.json();
         currentOperatorType = data.operator_type || 'COMMERCIAL_3PL';
         updateOperatorTypeUI();
+
+        // 1st login post-registration onboarding check!
+        const alreadyClassified = localStorage.getItem('kwdc_fleet_classified') === 'true';
+        if (data.needs_onboarding && !alreadyClassified) {
+          openOperatorTypeModal(true); // true = 1st login onboarding mode
+        }
       } catch (err) {
         console.error("loadOperatorProfile error:", err);
       }
@@ -1500,11 +1621,43 @@
       if (banner) {
         banner.classList.toggle('hidden', !isOwner);
       }
+
+      const navVehicles = document.getElementById('navFleetText');
+      const navDrivers = document.getElementById('navDriversText');
+      if (navVehicles) {
+        navVehicles.textContent = isOwner ? 'My Single Vehicle' : 'Commercial Fleet';
+      }
+      if (navDrivers) {
+        navDrivers.textContent = isOwner ? 'My Driver PIN & Cab' : 'Driver Crew Roster';
+      }
     }
 
-    function openOperatorTypeModal() {
+    function openOperatorTypeModal(isOnboarding = false) {
       const modal = document.getElementById('operatorTypeModal');
       if (!modal) return;
+      const title = document.getElementById('operatorModalTitle');
+      const sub = document.getElementById('operatorModalSub');
+      const intro = document.getElementById('operatorModalIntro');
+      const cancelBtn = document.getElementById('operatorModalCancelBtn');
+      const closeBtn = document.getElementById('operatorModalCloseBtn');
+      const btnText = document.getElementById('saveOperatorBtnText');
+
+      if (isOnboarding) {
+        if (title) title.textContent = "Welcome to KTM-WDC Fleet Setup!";
+        if (sub) sub.textContent = "Select your operating model to configure your cockpit";
+        if (intro) intro.textContent = "Welcome to KTM-WDC Logistics! Please select your transport business model. Your dashboard and cab tools will be customized accordingly (you can change this anytime from the top bar):";
+        if (cancelBtn) cancelBtn.classList.add('hidden');
+        if (closeBtn) closeBtn.classList.add('hidden');
+        if (btnText) btnText.textContent = "Confirm & Enter Cockpit";
+      } else {
+        if (title) title.textContent = "Fleet Business Classification";
+        if (sub) sub.textContent = "Choose between Independent Owner vs Commercial 3PL";
+        if (intro) intro.textContent = "Select the operating mode matching your logistics business structure in Nepal:";
+        if (cancelBtn) cancelBtn.classList.remove('hidden');
+        if (closeBtn) closeBtn.classList.remove('hidden');
+        if (btnText) btnText.textContent = "Update Business Profile";
+      }
+
       const radioInd = document.getElementById('radioIndependent');
       const radio3pl = document.getElementById('radio3PL');
       if (currentOperatorType === 'INDEPENDENT_OWNER') {
@@ -1513,19 +1666,31 @@
         if (radio3pl) radio3pl.checked = true;
       }
       modal.showModal();
+      lucide.createIcons();
     }
 
     async function saveOperatorType() {
       const selected = document.querySelector('input[name="optTypeRadio"]:checked')?.value || 'COMMERCIAL_3PL';
+      const saveBtn = document.getElementById('saveOperatorTypeBtn');
+      const btnText = document.getElementById('saveOperatorBtnText');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="inline-block animate-spin mr-1">↻</span> Saving...';
+      }
       try {
         const res = await fetch('/api/fleet/operator-type', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ operator_type: selected })
         });
+        if (handleApiAuthError(res)) return;
         const data = await res.json();
         if (res.ok) {
           currentOperatorType = selected;
+          localStorage.setItem('kwdc_fleet_classified', 'true');
+          const user = JSON.parse(localStorage.getItem('kwdc_user') || '{}');
+          user.fleet_operator_type = selected;
+          localStorage.setItem('kwdc_user', JSON.stringify(user));
           updateOperatorTypeUI();
           showToast(data.message || "Operating classification updated!");
           document.getElementById('operatorTypeModal').close();
@@ -1535,6 +1700,12 @@
         }
       } catch (err) {
         showToast("Network error: " + err.message, true);
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> <span id="saveOperatorBtnText">${btnText ? btnText.textContent : 'Update Business Profile'}</span>`;
+          lucide.createIcons();
+        }
       }
     }
 
@@ -1614,6 +1785,7 @@
             breakdown_reason: reason
           })
         });
+        if (handleApiAuthError(res)) return;
         const data = await res.json();
         if (res.ok) {
           showToast(data.message || "Rescue crew dispatched! Breakdown registered.");
@@ -1656,6 +1828,7 @@
           headers: getAuthHeaders(),
           body: JSON.stringify({ new_pin: newPin })
         });
+        if (handleApiAuthError(res)) return;
         const data = await res.json();
         if (res.ok) {
           showToast(data.message || `PIN successfully updated to ${newPin}!`);
@@ -1669,21 +1842,231 @@
       }
     }
 
+    // -------------------------------------------------------------
+    // Fleet Partner Authentication & Dynamic Session Management
+    // -------------------------------------------------------------
+    let pendingFleetRegEmail = '';
+
+    function openFleetAuthModal(tab = 'signin') {
+      switchFleetAuthTab(tab);
+      const modal = document.getElementById('fleetAuthModal');
+      if (modal) {
+        modal.showModal();
+        lucide.createIcons();
+      }
+    }
+
+    function switchFleetAuthTab(tab) {
+      const isSignIn = (tab === 'signin');
+      const tabIn = document.getElementById('tabFleetSignIn');
+      const tabReg = document.getElementById('tabFleetRegister');
+      const secIn = document.getElementById('fleetSignInForm');
+      const secReg = document.getElementById('fleetRegisterSection');
+
+      if (tabIn && tabReg && secIn && secReg) {
+        if (isSignIn) {
+          tabIn.className = "flex-1 py-2 text-center font-bold text-xs border-b-2 border-navy text-navy";
+          tabReg.className = "flex-1 py-2 text-center font-bold text-xs border-b-2 border-transparent text-slate-400 hover:text-navy";
+          secIn.classList.remove('hidden');
+          secReg.classList.add('hidden');
+        } else {
+          tabReg.className = "flex-1 py-2 text-center font-bold text-xs border-b-2 border-amber-500 text-navy";
+          tabIn.className = "flex-1 py-2 text-center font-bold text-xs border-b-2 border-transparent text-slate-400 hover:text-navy";
+          secReg.classList.remove('hidden');
+          secIn.classList.add('hidden');
+        }
+      }
+    }
+
+    async function handleFleetSignIn(e) {
+      e.preventDefault();
+      const email = document.getElementById('fleetLoginEmail').value.trim();
+      const password = document.getElementById('fleetLoginPassword').value;
+      const btn = document.getElementById('btnFleetSignInSubmit');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="inline-block animate-spin mr-1">↻</span> Signing In...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="log-in" class="w-4 h-4 text-amber-400"></i> Sign In to Fleet Cockpit';
+        lucide.createIcons();
+
+        if (res.ok) {
+          localStorage.setItem('kwdc_token', data.access_token);
+          localStorage.setItem('kwdc_user', JSON.stringify(data));
+          document.getElementById('fleetAuthModal').close();
+          updateFleetUiAuth(data, data.access_token);
+          showToast(`Welcome back, ${data.full_name}!`);
+          loadOperatorProfile();
+          loadMyFleet();
+          loadDispatchOrders();
+          loadFleetEarnings();
+          if (!data.fleet_operator_type && !localStorage.getItem('kwdc_fleet_classified')) {
+            openOperatorTypeModal(true);
+          }
+        } else {
+          showToast(data.detail || "Invalid email or password.", true);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="log-in" class="w-4 h-4 text-amber-400"></i> Sign In to Fleet Cockpit';
+        lucide.createIcons();
+        showToast("Connection error: " + err.message, true);
+      }
+    }
+
+    async function handleFleetRegister(e) {
+      e.preventDefault();
+      const full_name = document.getElementById('fleetRegName').value.trim();
+      const company_name = document.getElementById('fleetRegCompany').value.trim() || full_name;
+      const email = document.getElementById('fleetRegEmail').value.trim();
+      const phone_number = document.getElementById('fleetRegPhone').value.trim();
+      const password = document.getElementById('fleetRegPassword').value;
+      const btn = document.getElementById('btnFleetRegSubmit');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="inline-block animate-spin mr-1">↻</span> Registering...';
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            full_name,
+            company_name,
+            email,
+            phone_number,
+            password,
+            confirm_password: password,
+            operating_location: "Kathmandu Valley",
+            role: "fleet_partner"
+          })
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i> Create Fleet Partner Account';
+        lucide.createIcons();
+
+        if (res.ok) {
+          pendingFleetRegEmail = email;
+          document.getElementById('fleetRegForm').classList.add('hidden');
+          document.getElementById('fleetOtpSection').classList.remove('hidden');
+          showToast(data.message || "OTP code sent to email!");
+        } else {
+          showToast(formatToastMessage(data.detail) || "Registration failed.", true);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i> Create Fleet Partner Account';
+        lucide.createIcons();
+        showToast("Connection error: " + err.message, true);
+      }
+    }
+
+    async function verifyFleetOtp() {
+      const code = document.getElementById('fleetOtpCode').value.trim();
+      const btn = document.getElementById('btnFleetVerifyOtp');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="inline-block animate-spin mr-1">↻</span> Verifying...';
+
+      try {
+        const res = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ email: pendingFleetRegEmail, otp_code: code })
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Verify &amp; Activate Fleet';
+        lucide.createIcons();
+
+        if (res.ok) {
+          localStorage.setItem('kwdc_token', data.access_token);
+          localStorage.setItem('kwdc_user', JSON.stringify(data));
+          document.getElementById('fleetAuthModal').close();
+          updateFleetUiAuth(data, data.access_token);
+          showToast(`Account activated! Welcome, ${data.full_name}.`);
+          loadOperatorProfile();
+          loadMyFleet();
+          loadDispatchOrders();
+          loadFleetEarnings();
+          // Prompt for 1st login classification selection right after registration!
+          openOperatorTypeModal(true);
+        } else {
+          showToast(data.detail || "Invalid OTP code.", true);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Verify &amp; Activate Fleet';
+        lucide.createIcons();
+        showToast("Connection error: " + err.message, true);
+      }
+    }
+
+    async function demoFleetLogin() {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ email: 'fleet_audit@kwdc.com.np', password: 'Fleet@123' })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('kwdc_token', data.access_token);
+          localStorage.setItem('kwdc_user', JSON.stringify(data));
+          const modal = document.getElementById('fleetAuthModal');
+          if (modal && modal.open) modal.close();
+          updateFleetUiAuth(data, data.access_token);
+          showToast(`Signed in as verified Fleet Partner (${data.full_name})!`);
+          loadOperatorProfile();
+          loadMyFleet();
+          loadDispatchOrders();
+          loadFleetEarnings();
+        } else {
+          showToast('Demo login failed: ' + (data.detail || 'Error'), true);
+        }
+      } catch (err) {
+        showToast('Network error: ' + err.message, true);
+      }
+    }
+
+    function updateFleetUiAuth(user, token) {
+      const authTrigger = document.getElementById('fleetAuthTriggerBtn');
+      if (user && token) {
+        document.getElementById('fleetName').textContent = user.full_name || 'Fleet Partner';
+        document.getElementById('fleetEmail').textContent = user.email || 'fleet@kwdc.com.np';
+        const initials = (user.full_name || 'FP').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        document.getElementById('fleetAvatar').textContent = initials;
+        if (authTrigger) authTrigger.classList.add('hidden');
+      } else {
+        document.getElementById('fleetName').textContent = 'Guest Fleet Partner';
+        document.getElementById('fleetEmail').textContent = 'Click to Sign In';
+        document.getElementById('fleetAvatar').textContent = '??';
+        if (authTrigger) authTrigger.classList.remove('hidden');
+      }
+    }
+
     function handleLogout() {
       localStorage.removeItem('kwdc_token');
       localStorage.removeItem('kwdc_user');
+      localStorage.removeItem('kwdc_fleet_classified');
       sessionStorage.clear();
-      window.location.href = '/login';
+      updateFleetUiAuth(null, null);
+      showToast('Signed out of Fleet Cockpit.');
+      openFleetAuthModal('signin');
     }
 
     // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
-      if (user) {
-        document.getElementById('fleetName').textContent = user.full_name || 'Fleet Partner';
-        document.getElementById('fleetEmail').textContent = user.email || 'fleet@kwdc.com.np';
-        document.getElementById('fleetAvatar').textContent = (user.full_name || 'FP').substring(0, 2).toUpperCase();
-      }
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token') || localStorage.getItem('kwdc_admin_token');
+      updateFleetUiAuth(user, token);
 
       const savedLang = localStorage.getItem('kwdc_lang') || 'en';
       applyTranslations(savedLang);

@@ -117,7 +117,7 @@ class User(Base):
     operating_location = Column(String(100), default="Kathmandu Valley")
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), default=UserRole.COMMERCIAL_CLIENT, nullable=False)
-    fleet_operator_type = Column(String(50), default="COMMERCIAL_3PL") # "INDEPENDENT_OWNER" or "COMMERCIAL_3PL"
+    fleet_operator_type = Column(String(50), nullable=True, default=None) # "INDEPENDENT_OWNER", "COMMERCIAL_3PL", or None (unconfigured)
     
     # Verification & Security
     is_active = Column(Boolean, default=True)
