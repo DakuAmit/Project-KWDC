@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseInchargeAssignment, WarehouseActivityLog,
-    IncidentReport, IncidentSeverity, GatePass, User, UserRole, StockItem, InventoryUnit
+    IncidentReport, IncidentSeverity, GatePass, User, UserRole, StockItem, InventoryUnit,
+    WarehouseRequest
 )
 from backend.schemas import InchargeReportCreate, IncidentReportCreate, GatePassCreate
 from backend.auth_utils import require_user, require_roles
@@ -126,6 +127,22 @@ def process_gate_pass(
     if not c_id:
         c_id = current_user.id
 
+    # Gate Freeze Enforcement: Block OUTWARD cargo exits if client's lease is frozen (55+ days overdue / forfeited)
+    if p_type in ("OUTWARD", "OUTBOUND"):
+        frozen_booking = db.query(WarehouseRequest).filter(
+            WarehouseRequest.client_id == c_id,
+            WarehouseRequest.warehouse_id == payload.warehouse_id,
+            WarehouseRequest.is_gate_frozen == True
+        ).first()
+        if frozen_booking:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"GATE FROZEN (LIEN LOCK): Outbound stock dispatch blocked for Booking #{frozen_booking.id} "
+                    f"({frozen_booking.advance_payment_status}). Please settle overdue rent in full to unlock gate exit."
+                )
+            )
+
     units = payload.pallet_count or payload.scanned_units_count or 1
     manifest = payload.cargo_manifest or payload.remarks or "Commercial Cargo"
 
@@ -157,6 +174,29 @@ def process_gate_pass(
         "gate_pass_id": gate_pass.id,
         "scanned_units": gate_pass.scanned_units_count
     }
+
+@router.get("/my-gate-passes")
+def get_my_gate_passes(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """Returns digital gate passes issued for the authenticated client."""
+    passes = db.query(GatePass).filter(GatePass.client_id == current_user.id).order_by(GatePass.created_at.desc()).limit(50).all()
+    return [
+        {
+            "id": g.id,
+            "pass_token": f"GP-2083-{g.id:04d}",
+            "warehouse_title": g.warehouse.title if getattr(g, 'warehouse', None) else f"Warehouse #{g.warehouse_id}",
+            "pass_type": g.pass_type,
+            "vehicle_plate": g.vehicle_plate,
+            "driver_name": g.driver_name,
+            "unit_type": g.unit_type.value if hasattr(g.unit_type, 'value') else str(g.unit_type),
+            "scanned_units_count": g.scanned_units_count,
+            "remarks": g.remarks,
+            "created_at": g.created_at.strftime("%Y-%m-%d %H:%M") if g.created_at else ""
+        }
+        for g in passes
+    ]
 
 @router.get("/gate-passes")
 def get_gate_passes(

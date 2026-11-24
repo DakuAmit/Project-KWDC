@@ -155,10 +155,36 @@ class MaintenanceHoldRequest(BaseModel):
 class BookingRequestCreate(BaseModel):
     warehouse_id: int
     requested_sqft: float = Field(..., gt=0)
-    duration_months: int = Field(default=3, ge=1)
+    booking_duration_type: Optional[str] = "MONTHLY" # DAILY, WEEKLY, MONTHLY
+    duration_value: Optional[int] = None
+    duration_months: Optional[int] = Field(default=3, ge=1)
     client_intended_use: Optional[str] = "Commercial Freight"
     client_pan_vat: Optional[str] = None
     buyer_pan: Optional[str] = None
+
+class BookingModifyRequest(BaseModel):
+    action: str # EXPAND, DOWNSIZE, RENEW
+    delta_sqft: Optional[float] = 0.0
+    extra_duration_value: Optional[int] = 1
+    duration_type: Optional[str] = "MONTHLY"
+
+class StockItemCreate(BaseModel):
+    warehouse_id: int
+    sku_code: Optional[str] = None
+    item_name: str
+    category: Optional[str] = "General Merchandise"
+    unit_type: InventoryUnitType = InventoryUnitType.CARTOON
+    quantity: int = Field(..., gt=0)
+    gross_weight_kg: Optional[float] = 25.0
+    bay_rack_location: Optional[str] = "Zone A / Bay-1"
+
+class SavedAddressCreate(BaseModel):
+    label: str
+    address: str
+    contact_name: str
+    contact_phone: str
+    lat: Optional[float] = 27.7172
+    lng: Optional[float] = 85.3240
 
 class InchargeReportCreate(BaseModel):
     warehouse_id: int

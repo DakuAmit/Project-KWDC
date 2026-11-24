@@ -25,12 +25,13 @@ from backend.models import (
     Warehouse, WarehouseRequest, User, UserRole,
     BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog,
     WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport, UserKycProfile,
-    PlatformConfig
+    PlatformConfig, StockAuctionItem, LienNotificationLog
 )
 from backend.auth_utils import require_user, require_roles, get_password_hash
 from backend.services.contract_service import generate_master_lease_contract
 from backend.services.email_service import send_contract_approval_email, send_otp_email
 from backend.services.fare_service import get_platform_config, calculate_freight_benchmark
+from backend.services.overdue_monitor import push_lien_notification, execute_stock_forfeiture_and_auction, run_overdue_sweep
 
 router = APIRouter(prefix="/api/admin", tags=["SuperAdmin Governance"])
 
@@ -254,7 +255,9 @@ def activate_booking(
     booking.status = BookingStatus.ACTIVE_LEASED
     now = datetime.now(timezone.utc)
     booking.lease_start_date = now
-    booking.lease_end_date = now + timedelta(days=365)
+    booking.lease_end_date = now + timedelta(days=getattr(booking, "duration_days", 90) or 365)
+    booking.advance_payment_status = "PAID"
+    booking.is_gate_frozen = False
 
     if booking.invoice:
         booking.invoice.payment_status = PaymentStatus.PAID
@@ -986,4 +989,158 @@ def update_fare_tariff_config(
         "platform_margin_percent": cfg.platform_margin_percent,
         "fuel_multiplier": cfg.fuel_multiplier,
         "weight_rate_per_tonne": cfg.weight_rate_per_tonne
+    }
+
+
+# ---------------------------------------------------------------------------
+# 12. WAREHOUSEMAN'S LIEN (60-DAY RULE), REMINDER PUSH & AUCTION LEDGER
+# ---------------------------------------------------------------------------
+class LienReminderRequest(BaseModel):
+    stage: str # OVERDUE_MONTH_1, NOTICE_15_DAYS, NOTICE_7_DAYS, GATE_FROZEN_5_DAYS, FINAL_NOTICE_48_HOURS, FORFEITED_AUCTION
+    custom_message: Optional[str] = None
+
+class AuctionUpdateRequest(BaseModel):
+    auction_status: str # CATALOGUED, AUCTION_ACTIVE, SOLD, REDEEMED
+    reserve_price_npr: Optional[float] = None
+    winning_bid_npr: Optional[float] = None
+    buyer_name: Optional[str] = None
+    buyer_phone: Optional[str] = None
+    admin_notes: Optional[str] = None
+
+
+@router.get("/lien-overdue-leases")
+def get_lien_and_overdue_leases(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Lists all leases with their advance payment status, overdue countdowns, and notification logs."""
+    bookings = db.query(WarehouseRequest).order_by(WarehouseRequest.created_at.desc()).all()
+    now = datetime.now(timezone.utc)
+    results = []
+    for b in bookings:
+        days_left = None
+        if b.default_countdown_deadline:
+            dl = b.default_countdown_deadline
+            if dl.tzinfo is None:
+                dl = dl.replace(tzinfo=timezone.utc)
+            days_left = max(0, (dl - now).days)
+
+        results.append({
+            "id": b.id,
+            "lease_ref": f"KWDC-LEASE-{b.id:04d}",
+            "client_name": b.client.full_name if b.client else "Client",
+            "client_email": b.client.email if b.client else "-",
+            "warehouse_title": b.warehouse.title if b.warehouse else "Warehouse",
+            "allocated_billed_sqft": b.allocated_billed_sqft,
+            "booking_duration_type": getattr(b, "booking_duration_type", "MONTHLY"),
+            "duration_days": getattr(b, "duration_days", 90),
+            "total_monthly_bill": b.total_monthly_bill,
+            "status": b.status.value,
+            "advance_payment_status": getattr(b, "advance_payment_status", "PAYMENT_DUE"),
+            "is_gate_frozen": bool(getattr(b, "is_gate_frozen", False)),
+            "is_forfeited": bool(getattr(b, "is_forfeited", False)),
+            "days_to_forfeiture": days_left,
+            "last_reminder_stage": getattr(b, "last_reminder_stage", None),
+            "last_reminder_sent_at": b.last_reminder_sent_at.strftime("%Y-%m-%d %H:%M") if getattr(b, "last_reminder_sent_at", None) else None,
+            "notifications_count": len(b.lien_notifications) if getattr(b, "lien_notifications", None) else 0
+        })
+    return results
+
+
+@router.post("/bookings/{booking_id}/push-lien-reminder")
+def admin_push_lien_reminder(
+    booking_id: int,
+    payload: LienReminderRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    Admin dispatches an escalating overdue notice (Month 1, 15 Days, 7 Days, 5 Days Freeze,
+    48 Hours Final Notice, or Day 60 Stock Forfeiture & Auction).
+    """
+    booking = db.query(WarehouseRequest).filter(WarehouseRequest.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found.")
+
+    valid_stages = [
+        "OVERDUE_MONTH_1", "NOTICE_15_DAYS", "NOTICE_7_DAYS",
+        "GATE_FROZEN_5_DAYS", "FINAL_NOTICE_48_HOURS", "FORFEITED_AUCTION"
+    ]
+    if payload.stage not in valid_stages:
+        raise HTTPException(status_code=400, detail=f"Invalid stage. Choose one of {valid_stages}")
+
+    return push_lien_notification(db, booking, payload.stage, payload.custom_message)
+
+
+@router.post("/lien-sweep")
+def admin_trigger_lien_sweep(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Executes automated 60-day overdue escalation check across all unpaid leases."""
+    actions = run_overdue_sweep(db)
+    return {
+        "message": f"Overdue sweep completed. {len(actions)} lease alert(s) / action(s) triggered.",
+        "actions": actions
+    }
+
+
+@router.get("/auctions")
+def get_admin_auction_lots(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Lists all forfeited stock lots transferred to KTM-WDC for liquidation auction."""
+    lots = db.query(StockAuctionItem).order_by(StockAuctionItem.forfeited_at.desc()).all()
+    return [
+        {
+            "id": l.id,
+            "lot_number": l.lot_number,
+            "booking_id": l.booking_id,
+            "warehouse_title": l.warehouse.title if l.warehouse else f"Warehouse #{l.warehouse_id}",
+            "former_client_name": l.client.full_name if l.client else "Defaulted Tenant",
+            "item_summary": l.item_summary,
+            "estimated_valuation_npr": l.estimated_valuation_npr,
+            "arrears_owed_npr": l.arrears_owed_npr,
+            "reserve_price_npr": l.reserve_price_npr,
+            "winning_bid_npr": l.winning_bid_npr,
+            "auction_status": l.auction_status,
+            "buyer_name": l.buyer_name,
+            "forfeited_at": l.forfeited_at.strftime("%Y-%m-%d") if l.forfeited_at else "",
+            "auction_scheduled_at": l.auction_scheduled_at.strftime("%Y-%m-%d") if l.auction_scheduled_at else "",
+            "admin_notes": l.admin_notes
+        }
+        for l in lots
+    ]
+
+
+@router.post("/auctions/{auction_id}/update")
+def update_auction_lot(
+    auction_id: int,
+    payload: AuctionUpdateRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    lot = db.query(StockAuctionItem).filter(StockAuctionItem.id == auction_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Auction lot not found.")
+
+    lot.auction_status = payload.auction_status.upper()
+    if payload.reserve_price_npr is not None:
+        lot.reserve_price_npr = float(payload.reserve_price_npr)
+    if payload.winning_bid_npr is not None:
+        lot.winning_bid_npr = float(payload.winning_bid_npr)
+    if payload.buyer_name is not None:
+        lot.buyer_name = payload.buyer_name
+    if payload.buyer_phone is not None:
+        lot.buyer_phone = payload.buyer_phone
+    if payload.admin_notes is not None:
+        lot.admin_notes = payload.admin_notes
+    if lot.auction_status == "SOLD":
+        lot.sold_at = datetime.now(timezone.utc)
+
+    db.commit()
+    return {
+        "message": f"Auction Lot {lot.lot_number} updated to {lot.auction_status}.",
+        "auction_status": lot.auction_status
     }

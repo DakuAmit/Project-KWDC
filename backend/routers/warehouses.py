@@ -9,19 +9,27 @@ Enforces:
 6. Privacy Shield (Owner & Client identities masked)
 """
 import math
+import random
+import hashlib
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseRequest, WarehousePhoto, User, UserRole,
-    BookingStatus, SpaceType, AreaUnit, TaxInvoice, PaymentStatus
+    BookingStatus, SpaceType, AreaUnit, TaxInvoice, PaymentStatus,
+    StockItem, InventoryUnit, InventoryUnitType, ClientSavedAddress, LienNotificationLog
 )
-from backend.schemas import WarehouseCreate, MaintenanceHoldRequest, BookingRequestCreate
+from backend.schemas import (
+    WarehouseCreate, MaintenanceHoldRequest, BookingRequestCreate,
+    BookingModifyRequest, StockItemCreate, SavedAddressCreate
+)
 from backend.auth_utils import require_user, get_current_user
 from backend.services.unit_converter import to_sqft, from_sqft_to_all, get_warehouse_usable_capacity
 from backend.services.vat_service import generate_ird_tax_invoice
+from backend.services.overdue_monitor import calculate_flexible_storage_cost
+from backend.services.contract_service import generate_client_storage_contract
 from backend.config import settings
 
 router = APIRouter(prefix="/api/warehouses", tags=["Warehouses & Storage"])
@@ -380,6 +388,21 @@ def get_capacity_breakdown(warehouse_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Warehouse not found.")
     return get_warehouse_usable_capacity(warehouse.total_sqft)
 
+@router.get("/estimate-storage")
+def estimate_storage_tariff(
+    sqft: float = 2000.0,
+    monthly_rate_per_sqft: float = 45.0,
+    booking_duration_type: str = "MONTHLY",
+    duration_value: int = 3
+):
+    """Calculates 3-tier storage pricing for DAILY (1-6 days), WEEKLY (1-3 weeks), or MONTHLY."""
+    return calculate_flexible_storage_cost(
+        allocated_sqft=sqft,
+        monthly_rate_per_sqft=monthly_rate_per_sqft,
+        booking_duration_type=booking_duration_type,
+        duration_value=duration_value
+    )
+
 @router.post("/book")
 def book_warehouse_space(
     payload: BookingRequestCreate,
@@ -387,10 +410,10 @@ def book_warehouse_space(
     db: Session = Depends(get_db)
 ):
     """
-    Client books commercial storage:
-    - Billed directly on requested square footage.
-    - Generates IRD Schedule 13 Tax Invoice with 13% statutory VAT.
-    - Status set to PENDING_REVIEW for Admin approval.
+    Client books commercial storage (DAILY 1-6 days, WEEKLY 1-3 weeks, or MONTHLY 1+ months):
+    - Billed directly on continuous requested square footage.
+    - Enforces Advance Payment covenant (Pay First).
+    - Generates IRD Schedule 13 Tax Invoice with 13% statutory VAT & Storage Contract with Lien/Auction clause.
     """
     warehouse = db.query(Warehouse).filter(
         Warehouse.id == payload.warehouse_id,
@@ -404,25 +427,31 @@ def book_warehouse_space(
     if payload.requested_sqft > warehouse.available_sqft:
         raise HTTPException(status_code=400, detail=f"Requested space exceeds available capacity of {warehouse.available_sqft:,.2f} sq ft.")
 
-    # Direct Billed Allocation
     allocated_sqft = payload.requested_sqft
+    dtype = (payload.booking_duration_type or "MONTHLY").upper()
+    dval = payload.duration_value if payload.duration_value is not None else (payload.duration_months or 3)
 
-    # Base Rent + KWDC Margin (10%) + 13% IRD VAT
-    monthly_base_rent = round(allocated_sqft * warehouse.monthly_rate_per_sqft, 2)
-    kwdc_margin_amount = round(monthly_base_rent * 0.10, 2)
-    taxable_amount = monthly_base_rent + kwdc_margin_amount
-    vat_13_percent = round(taxable_amount * 0.13, 2)
-    total_monthly_bill = round(taxable_amount + vat_13_percent, 2)
+    calc = calculate_flexible_storage_cost(
+        allocated_sqft=allocated_sqft,
+        monthly_rate_per_sqft=warehouse.monthly_rate_per_sqft,
+        booking_duration_type=dtype,
+        duration_value=dval
+    )
 
     booking = WarehouseRequest(
         client_id=current_user.id,
         warehouse_id=warehouse.id,
         requested_sqft=payload.requested_sqft,
         allocated_billed_sqft=allocated_sqft,
-        monthly_base_rent=monthly_base_rent,
-        kwdc_margin_amount=kwdc_margin_amount,
-        vat_13_percent=vat_13_percent,
-        total_monthly_bill=total_monthly_bill,
+        monthly_base_rent=calc["base_rent"],
+        kwdc_margin_amount=calc["kwdc_margin_amount"],
+        vat_13_percent=calc["vat_13_percent"],
+        total_monthly_bill=calc["total_bill"],
+        booking_duration_type=calc["booking_duration_type"],
+        duration_value=calc["duration_value"],
+        duration_days=calc["duration_days"],
+        client_intended_use=payload.client_intended_use or "Commercial Freight",
+        advance_payment_status="PAYMENT_DUE",
         status=BookingStatus.PENDING_REVIEW
     )
     db.add(booking)
@@ -431,12 +460,13 @@ def book_warehouse_space(
 
     # Create IRD Schedule 13 Invoice
     inv_number = f"KWDC-2083-{booking.id:04d}"
+    pan_val = payload.buyer_pan or payload.client_pan_vat or current_user.kyc_pan_vat
     inv_data = generate_ird_tax_invoice(
         invoice_number=inv_number,
         buyer_name=current_user.full_name,
-        buyer_pan=payload.buyer_pan,
-        service_type="STORAGE_RESERVATION",
-        base_tariff=monthly_base_rent,
+        buyer_pan=pan_val,
+        service_type=f"STORAGE_{calc['booking_duration_type']}",
+        base_tariff=calc["base_rent"],
         margin_percent=0.10
     )
 
@@ -444,7 +474,7 @@ def book_warehouse_space(
         invoice_number=inv_number,
         storage_booking_id=booking.id,
         buyer_name=current_user.full_name,
-        buyer_pan_vat=payload.buyer_pan,
+        buyer_pan_vat=pan_val,
         taxable_base_amount=inv_data["taxable_amount"],
         kwdc_admin_margin=inv_data["kwdc_admin_margin"],
         vat_13_percent=inv_data["vat_13_percent"],
@@ -455,17 +485,25 @@ def book_warehouse_space(
     db.add(invoice)
     db.commit()
 
+    contract = generate_client_storage_contract(booking, current_user, warehouse)
+
     return {
-        "message": "Storage booking request submitted for Admin verification!",
+        "message": f"Storage booking ({calc['billing_label']}) submitted! Advance payment of Rs. {calc['total_bill']:,.2f} required to activate gate access.",
         "booking_id": booking.id,
         "requested_sqft": payload.requested_sqft,
         "allocated_billed_sqft": allocated_sqft,
-        "monthly_base_rent_npr": monthly_base_rent,
-        "kwdc_margin_npr": kwdc_margin_amount,
-        "vat_13_percent_npr": vat_13_percent,
-        "gross_monthly_total_npr": total_monthly_bill,
+        "booking_duration_type": calc["booking_duration_type"],
+        "duration_value": calc["duration_value"],
+        "duration_days": calc["duration_days"],
+        "billing_label": calc["billing_label"],
+        "monthly_base_rent_npr": calc["base_rent"],
+        "kwdc_margin_npr": calc["kwdc_margin_amount"],
+        "vat_13_percent_npr": calc["vat_13_percent"],
+        "gross_monthly_total_npr": calc["total_bill"],
         "invoice_number": inv_number,
         "qr_data_uri": inv_data["qr_data_uri"],
+        "contract_number": contract["contract_number"],
+        "contract_text": contract["contract_text"],
         "status": "PENDING_ADMIN_ACTIVATION"
     }
 
@@ -475,24 +513,54 @@ def get_client_bookings(
     db: Session = Depends(get_db)
 ):
     """
-    Returns all storage reservations and active leases for the authenticated commercial client.
+    Returns all storage reservations and active leases for the authenticated commercial client,
+    including 3-tier duration metadata, advance payment status, and 60-day lien countdowns.
     """
     bookings = db.query(WarehouseRequest).filter(WarehouseRequest.client_id == current_user.id).order_by(WarehouseRequest.created_at.desc()).all()
+    now = datetime.now(timezone.utc)
     results = []
     for b in bookings:
+        days_left = None
+        if b.default_countdown_deadline:
+            dl = b.default_countdown_deadline
+            if dl.tzinfo is None:
+                dl = dl.replace(tzinfo=timezone.utc)
+            days_left = max(0, (dl - now).days)
+
+        notifications = [
+            {
+                "stage": n.stage,
+                "message": n.message,
+                "sent_at": n.sent_at.strftime("%Y-%m-%d %H:%M") if n.sent_at else ""
+            }
+            for n in (b.lien_notifications or [])
+        ]
+
         results.append({
             "id": b.id,
             "warehouse_id": b.warehouse_id,
             "warehouse_title": b.warehouse.title if b.warehouse else "KTM Commercial Storage",
             "neighborhood_landmark": b.warehouse.neighborhood_landmark if b.warehouse else "Kathmandu",
             "district": b.warehouse.district if b.warehouse else "Kathmandu",
+            "warehouse_available_sqft": b.warehouse.available_sqft if b.warehouse else 0.0,
+            "monthly_rate_per_sqft": b.warehouse.monthly_rate_per_sqft if b.warehouse else 45.0,
             "requested_sqft": b.requested_sqft,
             "allocated_billed_sqft": b.allocated_billed_sqft,
+            "booking_duration_type": getattr(b, "booking_duration_type", "MONTHLY") or "MONTHLY",
+            "duration_value": getattr(b, "duration_value", 3) or 3,
+            "duration_days": getattr(b, "duration_days", 90) or 90,
+            "client_intended_use": getattr(b, "client_intended_use", "Commercial Freight"),
             "monthly_base_rent": b.monthly_base_rent,
             "kwdc_margin_amount": b.kwdc_margin_amount,
             "vat_13_percent": b.vat_13_percent,
             "total_monthly_bill": b.total_monthly_bill,
             "status": b.status.value,
+            "advance_payment_status": getattr(b, "advance_payment_status", "PAYMENT_DUE") or "PAYMENT_DUE",
+            "is_gate_frozen": bool(getattr(b, "is_gate_frozen", False)),
+            "is_forfeited": bool(getattr(b, "is_forfeited", False)),
+            "days_to_forfeiture": days_left,
+            "last_reminder_stage": getattr(b, "last_reminder_stage", None),
+            "lien_notifications": notifications,
             "lease_start_date": b.lease_start_date.strftime("%Y-%m-%d") if b.lease_start_date else None,
             "lease_end_date": b.lease_end_date.strftime("%Y-%m-%d") if b.lease_end_date else None,
             "invoice_number": b.invoice.invoice_number if b.invoice else f"KWDC-2083-{b.id:04d}",
@@ -500,6 +568,302 @@ def get_client_bookings(
             "created_at": b.created_at.strftime("%Y-%m-%d %H:%M")
         })
     return results
+
+@router.post("/bookings/{booking_id}/pay-advance")
+def pay_booking_advance(
+    booking_id: int,
+    payment_method: Optional[str] = "CONNECT_IPS",
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Client pays advance rent or clears overdue arrears (Pay First rule).
+    Unfreezes gate passes if previously locked and activates pending space reservations.
+    """
+    booking = db.query(WarehouseRequest).filter(WarehouseRequest.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found.")
+    if booking.client_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    if getattr(booking, "is_forfeited", False):
+        raise HTTPException(status_code=400, detail="This lease was forfeited after 60 days non-payment and moved to auction.")
+
+    now = datetime.now(timezone.utc)
+    if booking.invoice:
+        booking.invoice.payment_status = PaymentStatus.PAID
+
+    booking.advance_payment_status = "PAID"
+    booking.overdue_since = None
+    booking.default_countdown_deadline = None
+    booking.is_gate_frozen = False
+    booking.last_reminder_stage = None
+
+    # Auto-activate if pending
+    if booking.status == BookingStatus.PENDING_REVIEW:
+        wh = booking.warehouse
+        if wh and wh.available_sqft >= booking.allocated_billed_sqft:
+            wh.available_sqft = max(0.0, wh.available_sqft - booking.allocated_billed_sqft)
+        booking.status = BookingStatus.ACTIVE_LEASED
+        booking.lease_start_date = now
+        booking.lease_end_date = now + timedelta(days=getattr(booking, "duration_days", 90) or 90)
+
+    db.commit()
+    return {
+        "message": f"Advance payment confirmed via {payment_method}! Lease #{booking.id} is active and gate clearance unlocked.",
+        "booking_id": booking.id,
+        "advance_payment_status": "PAID",
+        "is_gate_frozen": False,
+        "status": booking.status.value
+    }
+
+@router.get("/bookings/{booking_id}/contract")
+def get_client_booking_contract(
+    booking_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    booking = db.query(WarehouseRequest).filter(WarehouseRequest.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found.")
+    if booking.client_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    return generate_client_storage_contract(booking, booking.client or current_user, booking.warehouse)
+
+@router.post("/bookings/{booking_id}/modify")
+def modify_booking_lifecycle(
+    booking_id: int,
+    payload: BookingModifyRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Continuous Sq Ft Lifecycle Management: EXPAND (+sqft), DOWNSIZE (-sqft), or RENEW (+duration).
+    """
+    booking = db.query(WarehouseRequest).filter(WarehouseRequest.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found.")
+    if booking.client_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    if getattr(booking, "is_forfeited", False):
+        raise HTTPException(status_code=400, detail="Cannot modify a forfeited lease.")
+
+    wh = booking.warehouse
+    action = payload.action.upper()
+    msg = ""
+
+    if action == "EXPAND":
+        delta = float(payload.delta_sqft or 0.0)
+        if delta <= 0:
+            raise HTTPException(status_code=400, detail="Expansion sq ft must be positive.")
+        if wh.available_sqft < delta:
+            raise HTTPException(status_code=400, detail=f"Only {wh.available_sqft:,.0f} sq ft available to expand.")
+        wh.available_sqft = max(0.0, wh.available_sqft - delta)
+        booking.requested_sqft += delta
+        booking.allocated_billed_sqft += delta
+        msg = f"Expanded continuous space by +{delta:,.0f} sq ft (Total: {booking.allocated_billed_sqft:,.0f} sq ft)."
+    elif action == "DOWNSIZE":
+        delta = float(payload.delta_sqft or 0.0)
+        if delta <= 0 or (booking.allocated_billed_sqft - delta) < 100:
+            raise HTTPException(status_code=400, detail="Must retain at least 100 sq ft minimum.")
+        wh.available_sqft = min(wh.total_sqft, wh.available_sqft + delta)
+        booking.requested_sqft -= delta
+        booking.allocated_billed_sqft -= delta
+        msg = f"Downsized continuous space by -{delta:,.0f} sq ft (Released back to catalog)."
+    elif action == "RENEW":
+        extra_val = max(1, int(payload.extra_duration_value or 1))
+        dtype = (payload.duration_type or booking.booking_duration_type or "MONTHLY").upper()
+        extra_days = extra_val if dtype == "DAILY" else (extra_val * 7 if dtype == "WEEKLY" else extra_val * 30)
+        booking.duration_days = (booking.duration_days or 90) + extra_days
+        if booking.lease_end_date:
+            booking.lease_end_date = booking.lease_end_date + timedelta(days=extra_days)
+        else:
+            booking.lease_end_date = datetime.now(timezone.utc) + timedelta(days=extra_days)
+        msg = f"Lease renewed for +{extra_days} days! New expiry: {booking.lease_end_date.strftime('%Y-%m-%d')}."
+    else:
+        raise HTTPException(status_code=400, detail="Action must be EXPAND, DOWNSIZE, or RENEW.")
+
+    # Recalculate billing for updated sq ft
+    calc = calculate_flexible_storage_cost(
+        allocated_sqft=booking.allocated_billed_sqft,
+        monthly_rate_per_sqft=wh.monthly_rate_per_sqft if wh else 45.0,
+        booking_duration_type=booking.booking_duration_type or "MONTHLY",
+        duration_value=booking.duration_value or 3
+    )
+    booking.monthly_base_rent = calc["base_rent"]
+    booking.kwdc_margin_amount = calc["kwdc_margin_amount"]
+    booking.vat_13_percent = calc["vat_13_percent"]
+    booking.total_monthly_bill = calc["total_bill"]
+    db.commit()
+
+    return {
+        "message": msg,
+        "allocated_billed_sqft": booking.allocated_billed_sqft,
+        "total_monthly_bill": booking.total_monthly_bill,
+        "lease_end_date": booking.lease_end_date.strftime("%Y-%m-%d") if booking.lease_end_date else None
+    }
+
+@router.get("/my-inventory")
+def get_client_stored_inventory(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Client Stored Inventory & SKU Stock Ledger + Capacity Utilization Gauge.
+    """
+    items = db.query(StockItem).filter(StockItem.client_id == current_user.id).order_by(StockItem.updated_at.desc()).all()
+    bookings = db.query(WarehouseRequest).filter(
+        WarehouseRequest.client_id == current_user.id,
+        WarehouseRequest.is_forfeited == False
+    ).all()
+
+    total_leased_sqft = sum(b.allocated_billed_sqft for b in bookings)
+    total_units = sum(i.total_quantity for i in items)
+    # Approximate 12 sq ft footprint per pallet/master carton stack for utilization gauge
+    est_occupied_sqft = min(total_leased_sqft, round(total_units * 8.5, 1)) if total_leased_sqft > 0 else 0.0
+    utilization_pct = round((est_occupied_sqft / total_leased_sqft) * 100, 1) if total_leased_sqft > 0 else 0.0
+
+    ledger = []
+    for item in items:
+        units_list = [
+            {
+                "id": u.id,
+                "serial": u.serial_or_container_no,
+                "qr_hash": u.qr_code_hash,
+                "weight_kg": u.gross_weight_kg,
+                "status": u.status,
+                "bay_location": u.bay_rack_location
+            }
+            for u in (item.units or [])[:10]
+        ]
+        ledger.append({
+            "id": item.id,
+            "sku_code": item.sku_code,
+            "item_name": item.item_name,
+            "category": item.category,
+            "warehouse_id": item.warehouse_id,
+            "warehouse_title": item.warehouse.title if item.warehouse else f"Warehouse #{item.warehouse_id}",
+            "unit_type": item.unit_type.value if hasattr(item.unit_type, "value") else str(item.unit_type),
+            "total_quantity": item.total_quantity,
+            "inward_date": item.inward_date.strftime("%Y-%m-%d") if item.inward_date else "Today",
+            "sample_units": units_list
+        })
+
+    return {
+        "summary": {
+            "total_leased_sqft": total_leased_sqft,
+            "estimated_occupied_sqft": est_occupied_sqft,
+            "utilization_percent": utilization_pct,
+            "total_skus": len(ledger),
+            "total_stored_units": total_units
+        },
+        "items": ledger
+    }
+
+@router.post("/my-inventory")
+def log_client_inventory_stock(
+    payload: StockItemCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """Registers stored SKUs/pallets/cartons with ISO/IEC 18004 QR hashes under client's ledger."""
+    sku = (payload.sku_code or f"SKU-{random.randint(10000, 99999)}").strip().upper()
+    existing = db.query(StockItem).filter(StockItem.sku_code == sku).first()
+    if existing:
+        existing.total_quantity += payload.quantity
+        item = existing
+    else:
+        item = StockItem(
+            client_id=current_user.id,
+            warehouse_id=payload.warehouse_id,
+            sku_code=sku,
+            item_name=payload.item_name.strip(),
+            category=payload.category or "General Merchandise",
+            unit_type=payload.unit_type,
+            total_quantity=payload.quantity
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+    # Create traceable ISO QR unit record representing this batch
+    serial = f"{sku}-{random.randint(1000, 9999)}"
+    qr_hash = hashlib.sha256(f"{serial}:{current_user.id}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:16].upper()
+    unit = InventoryUnit(
+        stock_item_id=item.id,
+        unit_type=payload.unit_type,
+        serial_or_container_no=serial,
+        qr_code_hash=f"ISO18004-{qr_hash}",
+        gross_weight_kg=payload.gross_weight_kg or 25.0,
+        status="IN_STORAGE",
+        bay_rack_location=payload.bay_rack_location or "Zone A / Bay-1"
+    )
+    db.add(unit)
+    db.commit()
+
+    return {
+        "message": f"Added {payload.quantity} units of '{item.item_name}' (ISO QR: {unit.qr_code_hash}) to your stock ledger.",
+        "stock_item_id": item.id,
+        "sku_code": item.sku_code,
+        "qr_code_hash": unit.qr_code_hash
+    }
+
+@router.get("/saved-addresses")
+def list_saved_addresses(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    addrs = db.query(ClientSavedAddress).filter(ClientSavedAddress.client_id == current_user.id).order_by(ClientSavedAddress.id.desc()).all()
+    return [
+        {
+            "id": a.id,
+            "label": a.label,
+            "address": a.address,
+            "contact_name": a.contact_name,
+            "contact_phone": a.contact_phone,
+            "lat": a.lat,
+            "lng": a.lng
+        }
+        for a in addrs
+    ]
+
+@router.post("/saved-addresses")
+def create_saved_address(
+    payload: SavedAddressCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    addr = ClientSavedAddress(
+        client_id=current_user.id,
+        label=payload.label.strip(),
+        address=payload.address.strip(),
+        contact_name=payload.contact_name.strip(),
+        contact_phone=payload.contact_phone.strip(),
+        lat=payload.lat or 27.7172,
+        lng=payload.lng or 85.3240
+    )
+    db.add(addr)
+    db.commit()
+    db.refresh(addr)
+    return {
+        "message": f"Saved corridor address '{addr.label}' to your address book.",
+        "id": addr.id
+    }
+
+@router.delete("/saved-addresses/{addr_id}")
+def delete_saved_address(
+    addr_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    addr = db.query(ClientSavedAddress).filter(
+        ClientSavedAddress.id == addr_id,
+        ClientSavedAddress.client_id == current_user.id
+    ).first()
+    if not addr:
+        raise HTTPException(status_code=404, detail="Saved address not found.")
+    db.delete(addr)
+    db.commit()
+    return {"message": "Saved address deleted."}
 
 @router.get("/owner-leases")
 def get_owner_active_leases(

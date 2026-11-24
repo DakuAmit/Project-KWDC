@@ -42,97 +42,49 @@ def get_db_info() -> dict:
 
 def ensure_db_schema_extensions():
     try:
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            # Drivers table extensions
-            if is_sqlite:
-                # SQLite ALTER TABLE compatibility
-                try:
-                    conn.execute(text("ALTER TABLE drivers ADD COLUMN license_category VARCHAR(50) DEFAULT 'Category B (Delivery Van / Pickup)';"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE drivers ADD COLUMN license_photo_front_url VARCHAR(500);"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE drivers ADD COLUMN license_photo_back_url VARCHAR(500);"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE drivers ADD COLUMN blood_group VARCHAR(10);"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE drivers ADD COLUMN emergency_contact_name VARCHAR(255);"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE drivers ADD COLUMN emergency_contact_phone VARCHAR(50);"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE drivers ADD COLUMN has_clean_traffic_record BOOLEAN DEFAULT 1;"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE drivers ADD COLUMN login_pin VARCHAR(255) DEFAULT '1234';"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE users ADD COLUMN fleet_operator_type VARCHAR(50) DEFAULT 'COMMERCIAL_3PL';"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN reassigned_from_vehicle_id INTEGER;"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN reassigned_from_driver_id INTEGER;"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN reassignment_reason VARCHAR(500);"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN delivery_otp VARCHAR(6);"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN delivered_at TIMESTAMP;"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN benchmark_fare_npr FLOAT;"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN client_offered_fare_npr FLOAT;"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN cargo_weight_kg FLOAT DEFAULT 1000.0;"))
-                except Exception:
-                    pass
-            else:
-                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_category VARCHAR(50) DEFAULT 'Category B (Delivery Van / Pickup)';"))
-                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_photo_front_url VARCHAR(500);"))
-                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_photo_back_url VARCHAR(500);"))
-                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS blood_group VARCHAR(10);"))
-                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS emergency_contact_name VARCHAR(255);"))
-                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS emergency_contact_phone VARCHAR(50);"))
-                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS has_clean_traffic_record BOOLEAN DEFAULT TRUE;"))
-                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS login_pin VARCHAR(255) DEFAULT '1234';"))
-                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fleet_operator_type VARCHAR(50) DEFAULT 'COMMERCIAL_3PL';"))
-                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS reassigned_from_vehicle_id INTEGER;"))
-                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS reassigned_from_driver_id INTEGER;"))
-                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS reassignment_reason VARCHAR(500);"))
-                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS delivery_otp VARCHAR(6);"))
-                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;"))
-                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS benchmark_fare_npr FLOAT;"))
-                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS client_offered_fare_npr FLOAT;"))
-                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS cargo_weight_kg FLOAT DEFAULT 1000.0;"))
+        from sqlalchemy import text, inspect
+        inspector = inspect(engine)
+        existing_tables = inspector.get_table_names()
+
+        def add_col_if_missing(table_name: str, col_name: str, col_def: str):
+            if table_name not in existing_tables:
+                return
+            cols = [c["name"] for c in inspector.get_columns(table_name)]
+            if col_name not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def};"))
+
+        add_col_if_missing("drivers", "license_category", "VARCHAR(50) DEFAULT 'Category B (Delivery Van / Pickup)'")
+        add_col_if_missing("drivers", "license_photo_front_url", "VARCHAR(500)")
+        add_col_if_missing("drivers", "license_photo_back_url", "VARCHAR(500)")
+        add_col_if_missing("drivers", "blood_group", "VARCHAR(10)")
+        add_col_if_missing("drivers", "emergency_contact_name", "VARCHAR(255)")
+        add_col_if_missing("drivers", "emergency_contact_phone", "VARCHAR(50)")
+        add_col_if_missing("drivers", "has_clean_traffic_record", "BOOLEAN DEFAULT 1" if is_sqlite else "BOOLEAN DEFAULT TRUE")
+        add_col_if_missing("drivers", "login_pin", "VARCHAR(255) DEFAULT '1234'")
+
+        add_col_if_missing("users", "fleet_operator_type", "VARCHAR(50)")
+
+        add_col_if_missing("dispatch_orders", "reassigned_from_vehicle_id", "INTEGER")
+        add_col_if_missing("dispatch_orders", "reassigned_from_driver_id", "INTEGER")
+        add_col_if_missing("dispatch_orders", "reassignment_reason", "VARCHAR(500)")
+        add_col_if_missing("dispatch_orders", "delivery_otp", "VARCHAR(6)")
+        add_col_if_missing("dispatch_orders", "delivered_at", "TIMESTAMP")
+        add_col_if_missing("dispatch_orders", "benchmark_fare_npr", "FLOAT")
+        add_col_if_missing("dispatch_orders", "client_offered_fare_npr", "FLOAT")
+        add_col_if_missing("dispatch_orders", "cargo_weight_kg", "FLOAT DEFAULT 1000.0")
+
+        add_col_if_missing("warehouse_requests", "booking_duration_type", "VARCHAR(20) DEFAULT 'MONTHLY'")
+        add_col_if_missing("warehouse_requests", "duration_value", "INTEGER DEFAULT 3")
+        add_col_if_missing("warehouse_requests", "duration_days", "INTEGER DEFAULT 90")
+        add_col_if_missing("warehouse_requests", "client_intended_use", "VARCHAR(255) DEFAULT 'Commercial Freight'")
+        add_col_if_missing("warehouse_requests", "advance_payment_status", "VARCHAR(50) DEFAULT 'PAYMENT_DUE'")
+        add_col_if_missing("warehouse_requests", "overdue_since", "TIMESTAMP")
+        add_col_if_missing("warehouse_requests", "default_countdown_deadline", "TIMESTAMP")
+        add_col_if_missing("warehouse_requests", "is_gate_frozen", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
+        add_col_if_missing("warehouse_requests", "is_forfeited", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
+        add_col_if_missing("warehouse_requests", "last_reminder_sent_at", "TIMESTAMP")
+        add_col_if_missing("warehouse_requests", "last_reminder_stage", "VARCHAR(50)")
     except Exception as e:
         print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
 

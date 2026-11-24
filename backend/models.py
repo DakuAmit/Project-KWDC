@@ -330,11 +330,29 @@ class WarehouseRequest(Base):
     status = Column(Enum(BookingStatus), default=BookingStatus.PENDING_REVIEW, nullable=False)
     lease_start_date = Column(DateTime, nullable=True)
     lease_end_date = Column(DateTime, nullable=True)
+
+    # Flexible 3-Tier Storage Duration (DAILY, WEEKLY, MONTHLY)
+    booking_duration_type = Column(String(20), default="MONTHLY")  # DAILY, WEEKLY, MONTHLY
+    duration_value = Column(Integer, default=3)                    # e.g. 3 days, 2 weeks, 6 months
+    duration_days = Column(Integer, default=90)                    # Total days normalized
+    client_intended_use = Column(String(255), default="Commercial Freight")
+
+    # 60-Day Advance Payment, Escalating Lien Alerts & Auction Forfeiture
+    advance_payment_status = Column(String(50), default="PAYMENT_DUE") # PAID, PAYMENT_DUE, OVERDUE_MONTH_1, NOTICE_15_DAYS, NOTICE_7_DAYS, GATE_FROZEN_5_DAYS, FINAL_NOTICE_48_HOURS, FORFEITED_AUCTION
+    overdue_since = Column(DateTime, nullable=True)
+    default_countdown_deadline = Column(DateTime, nullable=True)
+    is_gate_frozen = Column(Boolean, default=False)
+    is_forfeited = Column(Boolean, default=False)
+    last_reminder_sent_at = Column(DateTime, nullable=True)
+    last_reminder_stage = Column(String(50), nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     client = relationship("User", back_populates="client_bookings")
     warehouse = relationship("Warehouse", back_populates="requests")
     invoice = relationship("TaxInvoice", back_populates="storage_booking", uselist=False)
+    lien_notifications = relationship("LienNotificationLog", back_populates="booking", cascade="all, delete-orphan")
+    auction_items = relationship("StockAuctionItem", back_populates="booking", cascade="all, delete-orphan")
 
 
 # ---------------------------------------------------------------------------
@@ -764,3 +782,82 @@ class PlatformConfig(Base):
     fuel_multiplier = Column(Float, default=1.0)
 
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Module 9: Warehouseman's Lien, Escalating Notifications & Stock Auction
+# ---------------------------------------------------------------------------
+class LienNotificationLog(Base):
+    """
+    Audit log of escalating overdue payment reminders dispatched to clients:
+    - MONTH_1 (Day 30): Grace period notice
+    - NOTICE_15_DAYS (Day 45): 15 days left before forfeiture
+    - NOTICE_7_DAYS (Day 53): 1 week urgent legal notice
+    - GATE_FROZEN_5_DAYS (Day 55): 5 days left, outbound gate passes blocked
+    - FINAL_NOTICE_48_HOURS (Day 58): 2 days (48 hrs) final warning
+    - FORFEITED (Day 60): Stock ownership transferred to KTM-WDC for auction
+    """
+    __tablename__ = "lien_notification_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("warehouse_requests.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    stage = Column(String(50), nullable=False)
+    message = Column(Text, nullable=False)
+    email_dispatched = Column(Boolean, default=False)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+
+    booking = relationship("WarehouseRequest", back_populates="lien_notifications")
+    client = relationship("User")
+
+
+class StockAuctionItem(Base):
+    """
+    Inventory forfeited to KTM-WDC after 60 days of lease non-payment
+    (or short-term overstay forfeiture), catalogued for liquidation auction.
+    """
+    __tablename__ = "stock_auction_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("warehouse_requests.id"), nullable=False)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    lot_number = Column(String(100), unique=True, nullable=False)
+    item_summary = Column(Text, nullable=False)
+    estimated_valuation_npr = Column(Float, default=0.0)
+    arrears_owed_npr = Column(Float, default=0.0)
+    reserve_price_npr = Column(Float, default=0.0)
+    winning_bid_npr = Column(Float, nullable=True)
+
+    auction_status = Column(String(50), default="CATALOGUED") # CATALOGUED, AUCTION_ACTIVE, SOLD, REDEEMED
+    buyer_name = Column(String(255), nullable=True)
+    buyer_phone = Column(String(50), nullable=True)
+    admin_notes = Column(Text, nullable=True)
+
+    forfeited_at = Column(DateTime, default=datetime.utcnow)
+    auction_scheduled_at = Column(DateTime, nullable=True)
+    sold_at = Column(DateTime, nullable=True)
+
+    booking = relationship("WarehouseRequest", back_populates="auction_items")
+    warehouse = relationship("Warehouse")
+    client = relationship("User")
+
+
+class ClientSavedAddress(Base):
+    """
+    Saved pickup / consignee delivery hubs for rapid 1-click dispatch scheduling.
+    """
+    __tablename__ = "client_saved_addresses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    label = Column(String(100), nullable=False)        # e.g. "Kalanki Wholesale Depot"
+    address = Column(String(255), nullable=False)
+    contact_name = Column(String(150), nullable=False)
+    contact_phone = Column(String(50), nullable=False)
+    lat = Column(Float, default=27.7172)
+    lng = Column(Float, default=85.3240)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    client = relationship("User")

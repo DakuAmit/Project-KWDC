@@ -33,6 +33,9 @@ app.include_router(incharge.router)
 app.include_router(fleet.router)
 app.include_router(insurance.router)
 
+# Ensure DB schema extensions & seed accounts run on serverless / TestClient imports too
+init_db_if_needed()
+
 # Template Engine & Static Files with Robust Vercel Paths
 current_dir = os.path.dirname(os.path.abspath(__file__)) # .../backend
 BASE_DIR = os.path.dirname(current_dir) # .../project-warehouse

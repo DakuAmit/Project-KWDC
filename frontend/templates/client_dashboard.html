@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -64,6 +66,11 @@
         <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
           <span class="flex items-center gap-3"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_bookings">My Active Leases</span></span>
           <span id="badgeActiveLeaseCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
+        </button>
+
+        <button type="button" onclick="switchTab('inventory')" id="nav-inventory" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="boxes" class="w-4 h-4 text-purple-400"></i> <span>Stored Inventory &amp; SKUs</span></span>
+          <span id="badgeInventoryCount" class="text-[11px] font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">0</span>
         </button>
 
         <button type="button" onclick="switchTab('calculator')" id="nav-calculator" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
@@ -128,6 +135,10 @@
         </div>
 
         <div class="flex items-center gap-3">
+          <button onclick="openKycModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="Corporate KYC & PAN/VAT">
+            <i data-lucide="building-2" class="w-3.5 h-3.5 text-indigo-600"></i> <span id="topKycStatusLabel">Corporate KYC</span>
+          </button>
+
           <!-- Bilingual Switcher Pill -->
           <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
             <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
@@ -144,6 +155,24 @@
 
       <!-- Main Panels -->
       <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+        <!-- Urgent 60-Day Lien / Payment Alert Banner (Dynamic) -->
+        <div id="lienUrgentAlertBanner" class="hidden rounded-2xl border-2 border-red-400 bg-red-50 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
+          <div class="flex items-start gap-3">
+            <span class="w-10 h-10 rounded-xl bg-red-600 text-white grid place-items-center shrink-0 animate-pulse">
+              <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+            </span>
+            <div>
+              <h4 class="font-black text-red-900 text-sm" id="lienAlertTitle">OVERDUE WAREHOUSE RENT ALERT — ACTION REQUIRED</h4>
+              <p class="text-xs text-red-700 mt-0.5 leading-relaxed" id="lienAlertMessage">
+                You have an unpaid/overdue storage lease approaching the 60-day statutory Warehouseman's Lien deadline.
+              </p>
+            </div>
+          </div>
+          <button onclick="switchTab('bookings')" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow shrink-0 transition">
+            Settle Lease Dues Now &rarr;
+          </button>
+        </div>
 
         <!-- Continuous Area Guarantee Banner -->
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -273,6 +302,77 @@
           </div>
         </section>
 
+        <!-- View 2B: Stored Inventory & ISO QR Stock Ledger -->
+        <section id="view-inventory" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h3 class="text-base font-bold text-navy flex items-center gap-2">
+                  <i data-lucide="boxes" class="w-5 h-5 text-purple-600"></i>
+                  <span>Live Stored Inventory &amp; ISO/IEC 18004 Stock Ledger</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Track SKUs, pallets, master cartons, bay locations, and leased continuous floor utilization across all contracted godowns.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openStockEntryModal()" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white text-xs font-bold shadow flex items-center gap-1.5 transition">
+                  <i data-lucide="plus" class="w-4 h-4 text-amber-400"></i> Log Inward Stock Batch
+                </button>
+                <button onclick="loadClientInventory()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+                </button>
+              </div>
+            </div>
+
+            <!-- Capacity Utilization Gauge & KPIs -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <span class="text-[10px] font-mono uppercase text-slate-400 block">Total Leased Area</span>
+                <strong class="text-lg font-black text-navy font-mono" id="invTotalLeasedSqft">0 sq ft</strong>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <span class="text-[10px] font-mono uppercase text-slate-400 block">Est. Occupied Footprint</span>
+                <strong class="text-lg font-black text-purple-700 font-mono" id="invOccupiedSqft">0 sq ft</strong>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <span class="text-[10px] font-mono uppercase text-slate-400 block">Active SKUs</span>
+                <strong class="text-lg font-black text-navy font-mono" id="invTotalSkus">0</strong>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <span class="text-[10px] font-mono uppercase text-slate-400 block">Total Units Stored</span>
+                <strong class="text-lg font-black text-emerald-700 font-mono" id="invTotalUnits">0</strong>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-purple-50/60 border border-purple-200">
+              <div class="flex items-center justify-between text-xs font-bold text-navy mb-1.5">
+                <span>Leased Godown Floor Utilization Gauge</span>
+                <span class="font-mono text-purple-700" id="invUtilPctLabel">0% Occupied</span>
+              </div>
+              <div class="w-full h-3 bg-purple-200/70 rounded-full overflow-hidden">
+                <div id="invUtilBar" class="h-full bg-purple-600 rounded-full transition-all duration-500" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="p-3.5">SKU Code</th>
+                    <th class="p-3.5">Commodity / Item Name</th>
+                    <th class="p-3.5">Facility Location</th>
+                    <th class="p-3.5">Unit Type</th>
+                    <th class="p-3.5">Qty In Storage</th>
+                    <th class="p-3.5">ISO/IEC 18004 QR &amp; Bay</th>
+                  </tr>
+                </thead>
+                <tbody id="clientInventoryTbody" class="divide-y divide-slate-100 font-mono">
+                  <tr><td colspan="6" class="p-8 text-center text-slate-400 font-sans">Loading stored inventory ledger...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <!-- View 3: Continuous Calculator -->
         <section id="view-calculator" class="hidden space-y-6">
           <div class="bg-white rounded-2xl border border-slate-200 p-6 lg:p-8 shadow-sm">
@@ -297,13 +397,21 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-3">
                   <div>
-                    <label class="block text-xs font-bold mb-1 text-slate-700" data-i18n="calc_rate_label">Rate per sq ft (Rs.)</label>
+                    <label class="block text-xs font-bold mb-1 text-slate-700">Duration Mode</label>
+                    <select id="calcDurationType" onchange="runQuickCalc()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-xs bg-white">
+                      <option value="MONTHLY">Monthly (1+ Months)</option>
+                      <option value="WEEKLY">Weekly (1-3 Weeks)</option>
+                      <option value="DAILY">Daily (1-6 Days)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold mb-1 text-slate-700" data-i18n="calc_rate_label">Monthly Rate/sq ft (Rs.)</label>
                     <input type="number" id="calcRateInput" value="45" min="15" max="300" oninput="runQuickCalc()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs">
                   </div>
                   <div>
-                    <label class="block text-xs font-bold mb-1 text-slate-700" data-i18n="calc_months_label">Tenure (Months)</label>
+                    <label class="block text-xs font-bold mb-1 text-slate-700" id="calcDurationLabel">Tenure (Months)</label>
                     <input type="number" id="calcMonthsInput" value="6" min="1" max="60" oninput="runQuickCalc()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs">
                   </div>
                 </div>
@@ -513,9 +621,19 @@
 
                 <!-- Destination -->
                 <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
-                  <div class="flex items-center gap-2 text-xs font-bold text-navy uppercase tracking-wider">
-                    <i data-lucide="flag" class="w-4 h-4 text-rose-600"></i>
-                    <span data-i18n="label_dest_point">2. Destination Consignee Point (स्थान जहाँ सामान पुर्‍याउने)</span>
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 text-xs font-bold text-navy uppercase tracking-wider">
+                      <i data-lucide="flag" class="w-4 h-4 text-rose-600"></i>
+                      <span data-i18n="label_dest_point">2. Destination Consignee Point (स्थान जहाँ सामान पुर्‍याउने)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <select id="savedDestSelect" onchange="applySavedAddress('dest', this.value)" class="px-2.5 py-1 rounded-lg border border-slate-300 text-[11px] bg-white font-semibold text-navy">
+                        <option value="">Load Saved Address...</option>
+                      </select>
+                      <button type="button" onclick="saveCurrentDirectAddress('dest')" class="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-bold border border-amber-300" title="Save this consignee to your Address Book">
+                        + Save
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_dest_addr">Delivery Physical Address / Hub *</label>
@@ -724,10 +842,20 @@
         <p class="text-[11px] text-slate-500 mt-1 font-mono">Available continuous: <strong id="bookMaxAvailable">10,000</strong> sq ft</p>
       </div>
 
+      <div class="p-3 rounded-xl bg-amber-50/60 border border-amber-200 space-y-2.5">
+        <label class="block text-xs font-bold text-navy">Storage Duration Tier *</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" onclick="setBookDurationType('DAILY')" id="btnTierDaily" class="py-2 px-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-600 transition">⏱ Daily (1-6 Days)</button>
+          <button type="button" onclick="setBookDurationType('WEEKLY')" id="btnTierWeekly" class="py-2 px-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-600 transition">📅 Weekly (1-3 Wks)</button>
+          <button type="button" onclick="setBookDurationType('MONTHLY')" id="btnTierMonthly" class="py-2 px-2 rounded-xl border-2 border-navy bg-navy text-white text-xs font-bold transition">🏢 Monthly (1+ Mo)</button>
+        </div>
+        <input type="hidden" id="bookDurationType" value="MONTHLY">
+      </div>
+
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_lease_duration">Lease Duration (Months) *</label>
-          <input type="number" id="bookDurationInput" required min="1" max="60" value="6" oninput="recalcModalBooking()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs">
+          <label class="block text-xs font-bold text-navy mb-1" id="bookDurationLabel">Tenure (Months) *</label>
+          <input type="number" id="bookDurationInput" required min="1" max="60" value="3" oninput="recalcModalBooking()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs">
         </div>
         <div>
           <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_intended_cargo">Intended Cargo Type *</label>
@@ -755,7 +883,7 @@
       <!-- Real-Time Cost Summary -->
       <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs font-mono text-slate-700">
         <div class="flex justify-between">
-          <span data-i18n="calc_base_rent">Monthly Base Rent:</span>
+          <span id="modalBaseRentLabel">Base Rent:</span>
           <strong id="modalBaseRent">Rs. 0</strong>
         </div>
         <div class="flex justify-between">
@@ -767,9 +895,12 @@
           <strong id="modalVat">Rs. 0</strong>
         </div>
         <div class="flex justify-between border-t border-slate-200 pt-2 text-navy font-bold text-sm">
-          <span data-i18n="calc_total_monthly">Total Monthly Outlay:</span>
+          <span id="modalTotalLabel">Advance Payable Now:</span>
           <span id="modalTotalMonthly" class="text-emerald-700">Rs. 0</span>
         </div>
+        <p class="text-[10px] text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 font-sans mt-2 leading-relaxed">
+          <strong>Advance Payment &amp; 60-Day Lien Notice:</strong> Rent is payable in advance ("Pay First"). Under Nepal Muluki Civil Code 2074, unpaid rent triggers formal warnings at Month 1, 15d, 7d, 5d (Gate Freeze), and 48h, with stock forfeiture to auction at Day 60 (30d for short-term overstays).
+        </p>
       </div>
 
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
@@ -1013,6 +1144,263 @@
         <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
           <i data-lucide="send" class="w-3.5 h-3.5"></i> <span data-i18n="btn_issue_token">Generate Digital Pass</span>
         </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Log Inward Inventory Stock Batch -->
+  <dialog id="stockEntryModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-purple-500 text-white grid place-items-center font-bold">
+          <i data-lucide="boxes" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Log Stored Inventory Batch</h3>
+          <p class="text-xs text-slate-400">Generates ISO/IEC 18004 QR tracking hash</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('stockEntryModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleStockEntrySubmit(event)" class="p-6 space-y-3.5 text-xs">
+      <div>
+        <label class="block font-bold text-navy mb-1">Warehouse Facility *</label>
+        <select id="stkWarehouseId" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-medium"></select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">SKU Code (Auto if blank)</label>
+          <input type="text" id="stkSkuCode" placeholder="e.g. SKU-TV-55" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono uppercase">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Unit Type *</label>
+          <select id="stkUnitType" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+            <option value="CARTOON">Master Carton</option>
+            <option value="PALLET">Pallet</option>
+            <option value="CONTAINER">Container</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Item / Commodity Name *</label>
+        <input type="text" id="stkItemName" required placeholder="e.g. Samsung 55-inch Smart LED TVs" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Quantity (Units) *</label>
+          <input type="number" id="stkQty" required min="1" value="50" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Bay / Rack Location</label>
+          <input type="text" id="stkBayLoc" value="Zone A / Bay-02" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('stockEntryModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow">Register Stock &amp; QR</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Continuous Sq Ft Lifecycle (Expand, Downsize, Renew) -->
+  <dialog id="modifyLeaseModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-emerald-500 text-white grid place-items-center font-bold">
+          <i data-lucide="maximize-2" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Modify Continuous Lease</h3>
+          <p class="text-xs text-slate-400" id="modLeaseTitle">Facility</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('modifyLeaseModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleModifyLeaseSubmit(event)" class="p-6 space-y-4 text-xs">
+      <input type="hidden" id="modBookingId">
+      <div>
+        <label class="block font-bold text-navy mb-1">Lifecycle Action *</label>
+        <select id="modAction" onchange="toggleModifyFields()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold">
+          <option value="EXPAND">Expand Continuous Area (+Sq Ft)</option>
+          <option value="DOWNSIZE">Downsize Continuous Area (-Sq Ft)</option>
+          <option value="RENEW">Renew / Extend Lease Tenure</option>
+        </select>
+      </div>
+      <div id="modSqftGroup">
+        <label class="block font-bold text-navy mb-1" id="modSqftLabel">Additional Area (sq ft) *</label>
+        <input type="number" id="modDeltaSqft" min="50" value="500" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+      </div>
+      <div id="modRenewGroup" class="hidden grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Extend Mode</label>
+          <select id="modDurationType" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+            <option value="MONTHLY">Months</option>
+            <option value="WEEKLY">Weeks</option>
+            <option value="DAILY">Days</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Additional Units *</label>
+          <input type="number" id="modExtraVal" min="1" value="3" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('modifyLeaseModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold shadow">Confirm Update</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: View Client Storage Agreement & Lien Terms -->
+  <dialog id="contractModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-2xl border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="file-text" class="w-5 h-5 text-amber-400"></i>
+        <h3 class="font-bold text-base text-white" id="contractModalHeader">Executed Commercial Storage Agreement</h3>
+      </div>
+      <button onclick="document.getElementById('contractModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4">
+      <pre id="contractModalBody" class="bg-slate-900 text-slate-100 p-4 rounded-xl font-mono text-xs whitespace-pre-wrap leading-relaxed max-h-[60vh] overflow-y-auto"></pre>
+      <div class="flex justify-end gap-2">
+        <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-navy font-bold text-xs flex items-center gap-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i> Print Copy
+        </button>
+        <button onclick="document.getElementById('contractModal').close()" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: Live Corridor GPS Tracking Radar -->
+  <dialog id="liveTrackingModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-2xl border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 grid place-items-center">
+          <i data-lucide="radio" class="w-5 h-5 animate-pulse"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Live Freight GPS Radar</h3>
+          <p class="text-xs text-slate-400" id="trackModalSub">Real-time corridor telemetry</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('liveTrackingModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div id="clientTrackMap" class="w-full h-72 rounded-2xl border border-slate-200 bg-slate-100"></div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <span class="text-[10px] text-slate-400 block uppercase">Driver</span>
+          <strong id="trackDriverName" class="text-navy">-</strong>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <span class="text-[10px] text-slate-400 block uppercase">Vehicle Plate</span>
+          <strong id="trackVehiclePlate" class="text-navy">-</strong>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <span class="text-[10px] text-slate-400 block uppercase">Consignee OTP</span>
+          <strong id="trackDeliveryOtp" class="text-amber-600">-</strong>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <span class="text-[10px] text-slate-400 block uppercase">Last Ping</span>
+          <strong id="trackLastPing" class="text-emerald-700">Live</strong>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: Official Electronic Proof of Delivery (e-POD) -->
+  <dialog id="epodModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-emerald-800 text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="package-check" class="w-6 h-6 text-emerald-300"></i>
+        <div>
+          <h3 class="font-bold text-base text-white">Verified Electronic Proof of Delivery (e-POD)</h3>
+          <p class="text-xs text-emerald-200" id="epodOrderNum">FRT-2083-XXXX</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('epodModal').close()" class="p-1 rounded-lg text-emerald-200 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4 text-xs">
+      <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2 font-mono">
+        <div class="flex justify-between"><span class="text-slate-500">Consignee:</span> <strong id="epodConsignee" class="text-navy">-</strong></div>
+        <div class="flex justify-between"><span class="text-slate-500">Carrier / Driver:</span> <strong id="epodDriver" class="text-navy">-</strong></div>
+        <div class="flex justify-between"><span class="text-slate-500">OTP Verification:</span> <strong id="epodOtp" class="text-emerald-700">-</strong></div>
+        <div class="flex justify-between"><span class="text-slate-500">Delivered At:</span> <strong id="epodTime" class="text-navy">-</strong></div>
+        <div class="flex justify-between"><span class="text-slate-500">Total Agreed Fare:</span> <strong id="epodFare" class="text-navy">-</strong></div>
+      </div>
+      <div>
+        <span class="font-bold text-navy block mb-1">Consignee Signature / Remarks:</span>
+        <p id="epodRemarks" class="p-3 rounded-xl bg-slate-50 border border-slate-200 italic text-slate-700">Received in full without damage.</p>
+      </div>
+      <div id="epodPhotoBox" class="hidden">
+        <span class="font-bold text-navy block mb-1">On-Site Unloading Proof Photo:</span>
+        <img id="epodPhotoImg" src="" alt="Proof of Delivery" class="w-full h-40 object-cover rounded-xl border border-slate-200">
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+        <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-navy font-bold flex items-center gap-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i> Print / Save PDF
+        </button>
+        <button onclick="document.getElementById('epodModal').close()" class="px-4 py-2 rounded-xl bg-navy text-white font-bold">Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: Corporate KYC & Nepal PAN/VAT Verification -->
+  <dialog id="kycModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-indigo-500 text-white grid place-items-center font-bold">
+          <i data-lucide="building-2" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Corporate KYC &amp; Tax Registration</h3>
+          <p class="text-xs text-slate-400">Company Reg, PAN/VAT Certificate &amp; Signatory Verification</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('kycModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleClientKycSubmit(event)" class="p-6 space-y-3.5 text-xs">
+      <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
+        <span class="font-bold text-indigo-900">Verification Status:</span>
+        <span id="kycModalStatusBadge" class="px-2.5 py-0.5 rounded-full font-mono font-bold bg-white text-indigo-700 border border-indigo-200">PENDING_SUBMISSION</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Company Reg. Number *</label>
+          <input type="text" id="kycRegNo" required placeholder="e.g. OCR-241982/078/079" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Company PAN / VAT No. *</label>
+          <input type="text" id="kycPanVat" required placeholder="e.g. 601289410" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Authorized Signatory Full Name *</label>
+        <input type="text" id="kycSigName" required placeholder="e.g. Hari Prasad Adhikari (Managing Director)" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Company Reg. Certificate URL / Doc Ref</label>
+        <input type="text" id="kycRegDoc" placeholder="https://... or Document Reference #" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">PAN / VAT Certificate URL / Doc Ref</label>
+        <input type="text" id="kycPanDoc" placeholder="https://... or IRD PAN Certificate #" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('kycModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold shadow">Submit KYC for Audit</button>
       </div>
     </form>
   </dialog>
@@ -1302,7 +1690,7 @@
     }
 
     function switchTab(tabId) {
-      ['catalog', 'bookings', 'calculator', 'gatepass', 'invoices', 'insurance', 'pickup-dispatch', 'pickup-drop'].forEach(id => {
+      ['catalog', 'bookings', 'inventory', 'calculator', 'gatepass', 'invoices', 'insurance', 'pickup-dispatch', 'pickup-drop'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const nav = document.getElementById('nav-' + id);
         const mob = document.getElementById('mob-' + id);
@@ -1330,10 +1718,12 @@
 
       if (tabId === 'catalog') loadCatalog();
       if (tabId === 'bookings') loadMyBookings();
+      if (tabId === 'inventory') loadClientInventory();
       if (tabId === 'gatepass') loadClientGatePasses();
       if (tabId === 'insurance') loadClientInsurance();
       if (tabId === 'pickup-dispatch' || tabId === 'pickup-drop') {
         loadClientOrders();
+        loadSavedAddresses();
         calcDirectTariff();
       }
     }
@@ -1548,18 +1938,68 @@
       lucide.createIcons();
     }
 
+    function setBookDurationType(type) {
+      document.getElementById('bookDurationType').value = type;
+      const btnD = document.getElementById('btnTierDaily');
+      const btnW = document.getElementById('btnTierWeekly');
+      const btnM = document.getElementById('btnTierMonthly');
+      [btnD, btnW, btnM].forEach(b => {
+        if (!b) return;
+        b.classList.remove('border-2', 'border-navy', 'bg-navy', 'text-white');
+        b.classList.add('border', 'border-slate-300', 'bg-white', 'text-slate-600');
+      });
+      const activeBtn = type === 'DAILY' ? btnD : (type === 'WEEKLY' ? btnW : btnM);
+      if (activeBtn) {
+        activeBtn.classList.add('border-2', 'border-navy', 'bg-navy', 'text-white');
+        activeBtn.classList.remove('border', 'border-slate-300', 'bg-white', 'text-slate-600');
+      }
+
+      const durInput = document.getElementById('bookDurationInput');
+      const durLbl = document.getElementById('bookDurationLabel');
+      if (type === 'DAILY') {
+        durLbl.textContent = 'Staging Days (1 - 6 Days) *';
+        durInput.min = 1; durInput.max = 6; durInput.value = Math.min(6, Math.max(1, parseInt(durInput.value) || 3));
+      } else if (type === 'WEEKLY') {
+        durLbl.textContent = 'Short-Term Weeks (1 - 3 Weeks) *';
+        durInput.min = 1; durInput.max = 3; durInput.value = Math.min(3, Math.max(1, parseInt(durInput.value) || 2));
+      } else {
+        durLbl.textContent = 'Lease Tenure (Months) *';
+        durInput.min = 1; durInput.max = 60; durInput.value = Math.max(1, parseInt(durInput.value) || 3);
+      }
+      recalcModalBooking();
+    }
+
     function recalcModalBooking() {
       const sqft = parseFloat(document.getElementById('bookSqftInput').value) || 0;
       const rate = parseFloat(document.getElementById('bookBaseRate').value) || 45;
-      const baseMonthly = Math.round(sqft * rate);
-      const platformFee = Math.round(baseMonthly * 0.10);
-      const vat = Math.round((baseMonthly + platformFee) * 0.13);
-      const totalMonthly = baseMonthly + platformFee + vat;
+      const dtype = document.getElementById('bookDurationType')?.value || 'MONTHLY';
+      const dval = Math.max(1, parseInt(document.getElementById('bookDurationInput')?.value) || 1);
 
-      document.getElementById('modalBaseRent').textContent = 'Rs. ' + baseMonthly.toLocaleString('en-IN');
+      let baseRent = 0;
+      if (dtype === 'DAILY') {
+        const dailyUnit = (rate / 30.0) * 1.25;
+        baseRent = Math.round(sqft * dailyUnit * dval);
+        document.getElementById('modalBaseRentLabel').textContent = `Daily Staging (${dval}d Base):`;
+        document.getElementById('modalTotalLabel').textContent = `100% Advance Total (${dval} Days):`;
+      } else if (dtype === 'WEEKLY') {
+        const weeklyUnit = (rate / 4.0) * 1.10;
+        baseRent = Math.round(sqft * weeklyUnit * dval);
+        document.getElementById('modalBaseRentLabel').textContent = `Weekly Holding (${dval}w Base):`;
+        document.getElementById('modalTotalLabel').textContent = `100% Advance Total (${dval} Weeks):`;
+      } else {
+        baseRent = Math.round(sqft * rate);
+        document.getElementById('modalBaseRentLabel').textContent = 'Monthly Base Rent:';
+        document.getElementById('modalTotalLabel').textContent = '1st Month Advance Payable:';
+      }
+
+      const platformFee = Math.round(baseRent * 0.10);
+      const vat = Math.round((baseRent + platformFee) * 0.13);
+      const total = baseRent + platformFee + vat;
+
+      document.getElementById('modalBaseRent').textContent = 'Rs. ' + baseRent.toLocaleString('en-IN');
       document.getElementById('modalPlatformFee').textContent = 'Rs. ' + platformFee.toLocaleString('en-IN');
       document.getElementById('modalVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
-      document.getElementById('modalTotalMonthly').textContent = 'Rs. ' + totalMonthly.toLocaleString('en-IN');
+      document.getElementById('modalTotalMonthly').textContent = 'Rs. ' + total.toLocaleString('en-IN');
     }
 
     function handleBookCargoChange() {
@@ -1576,12 +2016,18 @@
 
       const rawCargo = document.getElementById('bookCargoType').value;
       const cargoDesc = (rawCargo === 'OTHER') ? (document.getElementById('bookCargoOther').value.trim() || 'Custom Cargo') : rawCargo;
+      const dtype = document.getElementById('bookDurationType')?.value || 'MONTHLY';
+      const dval = parseInt(document.getElementById('bookDurationInput')?.value) || 3;
 
       const payload = {
         warehouse_id: parseInt(document.getElementById('bookWarehouseId').value),
         requested_sqft: parseFloat(document.getElementById('bookSqftInput').value),
+        booking_duration_type: dtype,
+        duration_value: dval,
+        duration_months: dtype === 'MONTHLY' ? dval : 1,
         client_intended_use: cargoDesc,
-        client_pan_vat: document.getElementById('bookPanInput').value.trim() || undefined
+        client_pan_vat: document.getElementById('bookPanInput').value.trim() || undefined,
+        buyer_pan: document.getElementById('bookPanInput').value.trim() || undefined
       };
 
       try {
@@ -1592,7 +2038,7 @@
         });
         const data = await res.json();
         if (res.ok) {
-          showToast("Continuous space lease request submitted! SuperAdmin will review and dispatch digital contract.");
+          showToast(data.message || "Booking submitted! Complete advance payment in Active Leases.");
           document.getElementById('bookSpaceModal').close();
           switchTab('bookings');
         } else {
@@ -1815,6 +2261,7 @@
         }
 
         const orders = await res.json();
+        window.clientOrdersCache = orders;
         const badgeDisp = document.getElementById('badgeDispatchCount');
         const badgeDirect = document.getElementById('badgeDirectCount');
         if (badgeDisp) badgeDisp.textContent = `${orders.length} Orders`;
@@ -1842,7 +2289,19 @@
                 <div class="text-right shrink-0">
                   <span class="text-[10px] text-slate-400 uppercase font-mono">Agreed / Offered Fare</span>
                   <p class="text-sm font-black text-navy font-mono">Rs. ${Number(o.total_fare_npr).toLocaleString('en-IN')}</p>
-                  <span class="text-[10px] text-emerald-600 font-medium">Inc. 13% IRD VAT</span>
+                  <span class="text-[10px] text-emerald-600 font-medium block">Inc. 13% IRD VAT</span>
+                  <div class="mt-2 flex flex-wrap justify-end gap-1.5">
+                    ${(o.status === 'IN_TRANSIT' || o.status === 'ASSIGNED' || o.status === 'PICKUP_IN_PROGRESS') ? `
+                      <button onclick="openLiveTrackingModal(${o.id})" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs">
+                        <i data-lucide="radio" class="w-3 h-3"></i> Track GPS
+                      </button>
+                    ` : ''}
+                    ${o.status === 'DELIVERED' ? `
+                      <button onclick="openEpodModal(${o.id})" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs">
+                        <i data-lucide="package-check" class="w-3 h-3"></i> View Official e-POD
+                      </button>
+                    ` : ''}
+                  </div>
                 </div>
               </div>
 
@@ -1894,10 +2353,12 @@
                 <p class="text-[10px] text-slate-500 font-mono">${escapeHtml(o.vehicle_plate)}</p>
               </td>
               <td class="p-3 font-bold text-emerald-700">Rs. ${Number(o.total_fare_npr).toLocaleString('en-IN')}</td>
-              <td class="p-3">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+              <td class="p-3 space-y-1">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold block w-fit ${o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
                   ${escapeHtml(o.status)}
                 </span>
+                ${(o.status === 'IN_TRANSIT' || o.status === 'ASSIGNED') ? `<button onclick="openLiveTrackingModal(${o.id})" class="text-[10px] font-bold text-cyan-700 hover:underline flex items-center gap-1"><i data-lucide="radio" class="w-3 h-3"></i> Live GPS</button>` : ''}
+                ${o.status === 'DELIVERED' ? `<button onclick="openEpodModal(${o.id})" class="text-[10px] font-bold text-emerald-700 hover:underline flex items-center gap-1"><i data-lucide="package-check" class="w-3 h-3"></i> e-POD</button>` : ''}
               </td>
             </tr>
           `).join('');
@@ -1930,21 +2391,38 @@
     function runQuickCalc() {
       const sqft = parseFloat(document.getElementById('calcSlider').value) || 2500;
       const rate = parseFloat(document.getElementById('calcRateInput').value) || 45;
-      const months = parseInt(document.getElementById('calcMonthsInput').value) || 6;
+      const dtype = document.getElementById('calcDurationType')?.value || 'MONTHLY';
+      const val = Math.max(1, parseInt(document.getElementById('calcMonthsInput').value) || 1);
 
       document.getElementById('calcDisplaySqft').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+      const lbl = document.getElementById('calcDurationLabel');
 
-      const baseMonthly = Math.round(sqft * rate);
-      const platformFee = Math.round(baseMonthly * 0.10);
-      const vat = Math.round((baseMonthly + platformFee) * 0.13);
-      const totalMonthly = baseMonthly + platformFee + vat;
-      const contractTotal = totalMonthly * months;
+      let baseRent = 0;
+      let durLabel = '';
+      if (dtype === 'DAILY') {
+        if (lbl) lbl.textContent = 'Tenure (Days 1-6)';
+        baseRent = Math.round(sqft * ((rate / 30.0) * 1.25) * val);
+        durLabel = `${val}-Day Staging (100% Advance)`;
+      } else if (dtype === 'WEEKLY') {
+        if (lbl) lbl.textContent = 'Tenure (Weeks 1-3)';
+        baseRent = Math.round(sqft * ((rate / 4.0) * 1.10) * val);
+        durLabel = `${val}-Week Hold (100% Advance)`;
+      } else {
+        if (lbl) lbl.textContent = 'Tenure (Months)';
+        baseRent = Math.round(sqft * rate);
+        durLabel = `${val}-Month Contract Total`;
+      }
 
-      document.getElementById('outBaseRent').textContent = 'Rs. ' + baseMonthly.toLocaleString('en-IN');
+      const platformFee = Math.round(baseRent * 0.10);
+      const vat = Math.round((baseRent + platformFee) * 0.13);
+      const totalBill = baseRent + platformFee + vat;
+      const contractTotal = (dtype === 'MONTHLY') ? (totalBill * val) : totalBill;
+
+      document.getElementById('outBaseRent').textContent = 'Rs. ' + baseRent.toLocaleString('en-IN');
       document.getElementById('outPlatformFee').textContent = 'Rs. ' + platformFee.toLocaleString('en-IN');
       document.getElementById('outVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
-      document.getElementById('outTotalMonthly').textContent = 'Rs. ' + totalMonthly.toLocaleString('en-IN');
-      document.getElementById('outContractDuration').textContent = `${months}-Month Contract Total`;
+      document.getElementById('outTotalMonthly').textContent = 'Rs. ' + totalBill.toLocaleString('en-IN');
+      document.getElementById('outContractDuration').textContent = durLabel;
       document.getElementById('outContractTotal').textContent = 'Rs. ' + contractTotal.toLocaleString('en-IN');
     }
 
@@ -1952,6 +2430,7 @@
       try {
         const res = await fetch('/api/warehouses/my-bookings', { headers: getAuthHeaders() });
         const list = document.getElementById('clientBookingsList');
+        const alertBanner = document.getElementById('lienUrgentAlertBanner');
         if (!res.ok) {
           list.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">Sign in to view your commercial leases.</p>`;
           return;
@@ -1959,34 +2438,86 @@
         const data = await res.json();
         document.getElementById('badgeActiveLeaseCount').textContent = data.length;
 
+        // Check for any overdue, gate-frozen, or imminent lien leases
+        const criticalLease = data.find(b => b.is_gate_frozen || (b.advance_payment_status && !['PAID', 'PAYMENT_DUE'].includes(b.advance_payment_status)));
+        if (alertBanner) {
+          if (criticalLease) {
+            alertBanner.classList.remove('hidden');
+            document.getElementById('lienAlertTitle').textContent = criticalLease.is_forfeited
+              ? `LIEN EXECUTED — STOCK FORFEITED TO AUCTION (LEASE #${criticalLease.id})`
+              : `URGENT RENT DEFAULT NOTICE: ${criticalLease.advance_payment_status.replace(/_/g, ' ')}`;
+            document.getElementById('lienAlertMessage').textContent = criticalLease.is_gate_frozen
+              ? `Outbound gate passes are LOCKED for ${criticalLease.warehouse_title}. ${criticalLease.days_to_forfeiture !== null ? criticalLease.days_to_forfeiture + ' days remaining until stock auction forfeiture.' : 'Settle arrears immediately.'}`
+              : `Lease #${criticalLease.id} (${criticalLease.warehouse_title}) has overdue arrears. Please settle immediately to avoid gate freeze & 60-day auction lien.`;
+          } else {
+            alertBanner.classList.add('hidden');
+          }
+        }
+
         if (data.length === 0) {
           list.innerHTML = `<p class="text-xs text-slate-400 py-8 text-center">No storage contracts currently active. Explore the catalog to contract space.</p>`;
           return;
         }
 
-        list.innerHTML = data.map(b => `
-          <div class="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <h4 class="font-bold text-navy text-sm">${b.warehouse_title}</h4>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${b.status === 'APPROVED_CONTRACT_DISPATCHED' || b.status === 'ACTIVE_LEASED' ? 'bg-emerald-100 text-emerald-800' : 'bg-yellow-100 text-yellow-800'}">${b.status}</span>
+        list.innerHTML = data.map(b => {
+          const isPaid = b.payment_status === 'paid' || b.advance_payment_status === 'PAID';
+          const tierLabel = b.booking_duration_type === 'DAILY' ? `${b.duration_value} Day(s)` : (b.booking_duration_type === 'WEEKLY' ? `${b.duration_value} Week(s)` : `${b.duration_value} Month(s)`);
+          return `
+          <div class="py-5 flex flex-col gap-3">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h4 class="font-bold text-navy text-sm">${escapeHtml(b.warehouse_title)}</h4>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${b.status === 'ACTIVE_LEASED' ? 'bg-emerald-100 text-emerald-800' : (b.is_forfeited ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800')}">${escapeHtml(b.status)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(b.booking_duration_type)} • ${tierLabel}</span>
+                  ${b.is_gate_frozen ? `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-red-600 text-white animate-pulse">🔒 OUTBOUND GATE FROZEN</span>` : ''}
+                </div>
+                <p class="text-xs text-slate-500 font-mono mt-1">
+                  Continuous Area: <strong>${Number(b.allocated_billed_sqft || 0).toLocaleString('en-IN')} sq ft</strong> • Base Rate: Rs. ${b.monthly_rate_per_sqft || 45}/sq ft
+                </p>
+                <p class="text-[11px] text-slate-400 font-mono mt-0.5">
+                  Cargo: ${escapeHtml(b.client_intended_use || 'Commercial Freight')} • Term: ${b.lease_start_date || 'Pending Advance'} &rarr; ${b.lease_end_date || '-'}
+                </p>
               </div>
-              <p class="text-xs text-slate-500 font-mono mt-1">
-                Continuous Leased Area: <strong>${Number(b.booked_sqft).toLocaleString('en-IN')} sq ft</strong> • Rate: Rs. ${b.rate_per_sqft}/sq ft
-              </p>
-              <p class="text-[11px] text-slate-400 font-mono mt-0.5">
-                Cargo Classification: ${b.cargo_type || 'Commercial Freight'}
-              </p>
+              <div class="text-right shrink-0">
+                <span class="text-[10px] text-slate-400 uppercase font-mono">${b.booking_duration_type === 'MONTHLY' ? 'Monthly Advance Bill' : 'Total Staging Advance'}</span>
+                <p class="text-base font-black text-navy font-mono">Rs. ${Number(b.total_monthly_bill || 0).toLocaleString('en-IN')}</p>
+                <span class="text-[10px] font-bold ${isPaid ? 'text-emerald-600' : 'text-red-600'}">
+                  ${isPaid ? '✓ ADVANCE PAID' : `⏳ ${escapeHtml(b.advance_payment_status)}`}
+                </span>
+              </div>
             </div>
-            <div class="text-right">
-              <span class="text-xs text-slate-400">Monthly Lease Tariff</span>
-              <p class="text-base font-black text-navy font-mono">Rs. ${Number(b.monthly_rent_npr).toLocaleString('en-IN')}</p>
-              <a href="/invoice" target="_blank" class="mt-1 text-[11px] text-amber-600 font-bold hover:underline inline-flex items-center gap-1">
-                <i data-lucide="receipt" class="w-3 h-3"></i> View IRD Tax Invoice
+
+            ${(b.lien_notifications && b.lien_notifications.length > 0 && !b.is_forfeited && !isPaid) ? `
+              <div class="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center justify-between gap-2">
+                <span><strong>⚠️ ${escapeHtml(b.last_reminder_stage || 'OVERDUE')}:</strong> ${escapeHtml(b.lien_notifications[b.lien_notifications.length - 1].message)}</span>
+                ${b.days_to_forfeiture !== null ? `<span class="px-2 py-1 rounded bg-red-600 text-white font-mono font-bold shrink-0">${b.days_to_forfeiture}d to Auction</span>` : ''}
+              </div>
+            ` : ''}
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+              <div class="flex flex-wrap items-center gap-2">
+                ${(!isPaid && !b.is_forfeited) ? `
+                  <button onclick="payAdvanceNow(${b.id}, ${b.total_monthly_bill})" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition">
+                    <i data-lucide="credit-card" class="w-3.5 h-3.5"></i> Pay Advance Now (Unlock Gate)
+                  </button>
+                ` : ''}
+                ${!b.is_forfeited ? `
+                  <button onclick="openModifyLeaseModal(${b.id}, '${escapeHtml(b.warehouse_title)}')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-navy font-bold text-xs flex items-center gap-1.5 transition">
+                    <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-indigo-600"></i> Expand / Downsize / Renew
+                  </button>
+                ` : ''}
+                <button onclick="openLeaseContractModal(${b.id})" class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs flex items-center gap-1.5 transition">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5"></i> View Lease &amp; Lien Contract
+                </button>
+              </div>
+              <a href="/invoice" target="_blank" class="text-[11px] text-amber-600 font-bold hover:underline inline-flex items-center gap-1">
+                <i data-lucide="receipt" class="w-3 h-3"></i> IRD Tax Invoice (${escapeHtml(b.invoice_number)})
               </a>
             </div>
           </div>
-        `).join('');
+          `;
+        }).join('');
 
         lucide.createIcons();
       } catch (err) {
@@ -1996,41 +2527,344 @@
 
     async function loadClientGatePasses() {
       try {
-        const res = await fetch('/api/incharge/gate-passes', { headers: getAuthHeaders() });
+        const res = await fetch('/api/incharge/my-gate-passes', { headers: getAuthHeaders() });
         const tbody = document.getElementById('clientGatePassTableBody');
         let passes = [];
         if (res.ok) passes = await res.json();
 
         if (passes.length === 0) {
-          // Demo fallback
-          passes = [
-            {
-              pass_token: "GP-2083-0091",
-              vehicle_plate: "Ba 2 Kha 4921",
-              driver_name: "Ramesh Thapa",
-              manifest_summary: "24 Pallets - Packaged Food Products",
-              movement_type: "inbound",
-              status: "CLEARED"
-            }
-          ];
+          tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400 font-sans">No gate passes requested yet. Click "+ Request Truck Gate Pass" above.</td></tr>';
+          return;
         }
 
         tbody.innerHTML = passes.map(p => `
           <tr class="hover:bg-slate-50 transition">
-            <td class="p-3.5 font-bold text-navy">${p.pass_token}</td>
-            <td class="p-3.5 font-sans">${p.vehicle_plate}</td>
-            <td class="p-3.5 font-sans">${p.driver_name}</td>
-            <td class="p-3.5 font-sans">${p.manifest_summary || 'Commercial Cargo'}</td>
-            <td class="p-3.5 uppercase font-bold ${p.movement_type === 'inbound' ? 'text-emerald-700' : 'text-blue-700'}">${p.movement_type}</td>
+            <td class="p-3.5 font-bold text-navy">${escapeHtml(p.pass_token)}</td>
+            <td class="p-3.5 font-sans">${escapeHtml(p.vehicle_plate)}</td>
+            <td class="p-3.5 font-sans">${escapeHtml(p.driver_name)}</td>
+            <td class="p-3.5 font-sans">${escapeHtml(p.remarks || 'Commercial Cargo')}</td>
+            <td class="p-3.5 uppercase font-bold ${(p.pass_type || '').toUpperCase() === 'INWARD' || (p.pass_type || '').toUpperCase() === 'INBOUND' ? 'text-emerald-700' : 'text-blue-700'}">${escapeHtml(p.pass_type)}</td>
             <td class="p-3.5">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'CLEARED' ? 'bg-emerald-100 text-emerald-800' : 'bg-yellow-100 text-yellow-800'}">
-                ${p.status}
-              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">CLEARED</span>
             </td>
           </tr>
         `).join('');
       } catch (err) {
         console.error(err);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Stored Inventory, Lease Lifecycle, Live GPS, e-POD & KYC Helpers
+    // -------------------------------------------------------------
+    async function loadClientInventory() {
+      const tbody = document.getElementById('clientInventoryTbody');
+      try {
+        const res = await fetch('/api/warehouses/my-inventory', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        const s = data.summary || {};
+        document.getElementById('invTotalLeasedSqft').textContent = Number(s.total_leased_sqft || 0).toLocaleString('en-IN') + ' sq ft';
+        document.getElementById('invOccupiedSqft').textContent = Number(s.estimated_occupied_sqft || 0).toLocaleString('en-IN') + ' sq ft';
+        document.getElementById('invTotalSkus').textContent = s.total_skus || 0;
+        document.getElementById('invTotalUnits').textContent = Number(s.total_stored_units || 0).toLocaleString('en-IN');
+        document.getElementById('badgeInventoryCount').textContent = s.total_skus || 0;
+
+        const pct = Math.min(100, s.utilization_percent || 0);
+        document.getElementById('invUtilPctLabel').textContent = `${pct}% Occupied`;
+        document.getElementById('invUtilBar').style.width = `${pct}%`;
+
+        const items = data.items || [];
+        if (items.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400 font-sans">No inventory batches logged yet. Click "+ Log Inward Stock Batch" above.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = items.map(it => {
+          const u = (it.sample_units && it.sample_units[0]) ? it.sample_units[0] : {};
+          return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3.5 font-bold text-navy">${escapeHtml(it.sku_code)}</td>
+              <td class="p-3.5 font-sans font-semibold text-slate-800">${escapeHtml(it.item_name)}</td>
+              <td class="p-3.5 font-sans text-slate-600">${escapeHtml(it.warehouse_title)}</td>
+              <td class="p-3.5">${escapeHtml(it.unit_type)}</td>
+              <td class="p-3.5 font-black text-emerald-700">${Number(it.total_quantity).toLocaleString('en-IN')}</td>
+              <td class="p-3.5">
+                <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-bold">${escapeHtml(u.qr_hash || 'ISO-QR-VERIFIED')}</span>
+                <span class="block text-[10px] text-slate-400 mt-0.5">${escapeHtml(u.bay_location || 'Zone A')}</span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function openStockEntryModal() {
+      const sel = document.getElementById('stkWarehouseId');
+      if (sel && allWarehousesCache.length > 0) {
+        sel.innerHTML = allWarehousesCache.map(w => `<option value="${w.id}">${escapeHtml(w.title)}</option>`).join('');
+      }
+      document.getElementById('stockEntryModal').showModal();
+      lucide.createIcons();
+    }
+
+    async function handleStockEntrySubmit(e) {
+      e.preventDefault();
+      const payload = {
+        warehouse_id: parseInt(document.getElementById('stkWarehouseId').value),
+        sku_code: document.getElementById('stkSkuCode').value.trim() || undefined,
+        item_name: document.getElementById('stkItemName').value.trim(),
+        unit_type: document.getElementById('stkUnitType').value,
+        quantity: parseInt(document.getElementById('stkQty').value) || 1,
+        bay_rack_location: document.getElementById('stkBayLoc').value.trim() || 'Zone A'
+      };
+      try {
+        const res = await fetch('/api/warehouses/my-inventory', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          document.getElementById('stockEntryModal').close();
+          loadClientInventory();
+        } else {
+          showToast(formatToastMessage(data.detail), true);
+        }
+      } catch (err) {
+        showToast("Error saving stock batch: " + err.message, true);
+      }
+    }
+
+    async function payAdvanceNow(bookingId, amount) {
+      if (!confirm(`Confirm advance settlement of Rs. ${Number(amount).toLocaleString('en-IN')} via ConnectIPS / Digital Settlement? This will activate your lease and unlock gate passes.`)) return;
+      try {
+        const res = await fetch(`/api/warehouses/bookings/${bookingId}/pay-advance?payment_method=CONNECT_IPS`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          loadMyBookings();
+        } else {
+          showToast(formatToastMessage(data.detail), true);
+        }
+      } catch (e) {
+        showToast("Payment error: " + e.message, true);
+      }
+    }
+
+    function openModifyLeaseModal(bookingId, title) {
+      document.getElementById('modBookingId').value = bookingId;
+      document.getElementById('modLeaseTitle').textContent = title;
+      toggleModifyFields();
+      document.getElementById('modifyLeaseModal').showModal();
+      lucide.createIcons();
+    }
+
+    function toggleModifyFields() {
+      const act = document.getElementById('modAction').value;
+      const sqftG = document.getElementById('modSqftGroup');
+      const renG = document.getElementById('modRenewGroup');
+      if (act === 'RENEW') {
+        sqftG.classList.add('hidden');
+        renG.classList.remove('hidden');
+      } else {
+        sqftG.classList.remove('hidden');
+        renG.classList.add('hidden');
+        document.getElementById('modSqftLabel').textContent = act === 'EXPAND' ? 'Additional Continuous Area (sq ft) *' : 'Area to Release (sq ft) *';
+      }
+    }
+
+    async function handleModifyLeaseSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('modBookingId').value;
+      const act = document.getElementById('modAction').value;
+      const payload = {
+        action: act,
+        delta_sqft: parseFloat(document.getElementById('modDeltaSqft').value) || 0,
+        duration_type: document.getElementById('modDurationType').value,
+        extra_duration_value: parseInt(document.getElementById('modExtraVal').value) || 1
+      };
+      try {
+        const res = await fetch(`/api/warehouses/bookings/${id}/modify`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          document.getElementById('modifyLeaseModal').close();
+          loadMyBookings();
+        } else {
+          showToast(formatToastMessage(data.detail), true);
+        }
+      } catch (err) {
+        showToast("Error modifying lease: " + err.message, true);
+      }
+    }
+
+    async function openLeaseContractModal(bookingId) {
+      try {
+        const res = await fetch(`/api/warehouses/bookings/${bookingId}/contract`, { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('contractModalHeader').textContent = `Contract ${data.contract_number}`;
+          document.getElementById('contractModalBody').textContent = data.contract_text;
+          document.getElementById('contractModal').showModal();
+          lucide.createIcons();
+        }
+      } catch (e) {
+        showToast("Unable to load contract.", true);
+      }
+    }
+
+    let clientTrackMapInst = null;
+    function openLiveTrackingModal(orderId) {
+      const o = (window.clientOrdersCache || []).find(x => x.id === orderId);
+      if (!o) return;
+      document.getElementById('trackModalSub').textContent = `${o.order_number} • ${o.pickup_address} → ${o.destination_address}`;
+      document.getElementById('trackDriverName').textContent = o.driver_name || 'Driver';
+      document.getElementById('trackVehiclePlate').textContent = o.vehicle_plate || '-';
+      document.getElementById('trackDeliveryOtp').textContent = o.delivery_otp || 'Generated on Transit';
+      document.getElementById('trackLastPing').textContent = o.last_telemetry_at || 'Live Telemetry';
+      document.getElementById('liveTrackingModal').showModal();
+
+      setTimeout(() => {
+        if (clientTrackMapInst) { clientTrackMapInst.remove(); clientTrackMapInst = null; }
+        const lat = o.live_lat || o.pickup_lat || 27.7172;
+        const lng = o.live_lng || o.pickup_lng || 85.3240;
+        const dLat = o.dest_lat || 27.6937;
+        const dLng = o.dest_lng || 85.2816;
+        clientTrackMapInst = L.map('clientTrackMap').setView([lat, lng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(clientTrackMapInst);
+        L.marker([lat, lng]).addTo(clientTrackMapInst).bindPopup(`<strong>Truck: ${escapeHtml(o.vehicle_plate)}</strong><br/>Driver: ${escapeHtml(o.driver_name)}`).openPopup();
+        L.marker([dLat, dLng]).addTo(clientTrackMapInst).bindPopup(`Destination: ${escapeHtml(o.destination_address)}`);
+        L.polyline([[lat, lng], [dLat, dLng]], { color: '#0f172a', weight: 3, dashArray: '6 6' }).addTo(clientTrackMapInst);
+        lucide.createIcons();
+      }, 150);
+    }
+
+    function openEpodModal(orderId) {
+      const o = (window.clientOrdersCache || []).find(x => x.id === orderId);
+      if (!o) return;
+      document.getElementById('epodOrderNum').textContent = o.order_number;
+      document.getElementById('epodConsignee').textContent = `${o.consignee_name} (${o.consignee_phone})`;
+      document.getElementById('epodDriver').textContent = `${o.driver_name} (${o.vehicle_plate})`;
+      document.getElementById('epodOtp').textContent = o.delivery_otp ? `OTP #${o.delivery_otp} VERIFIED` : 'VERIFIED';
+      document.getElementById('epodTime').textContent = o.delivered_at || o.created_at;
+      document.getElementById('epodFare').textContent = `Rs. ${Number(o.total_fare_npr).toLocaleString('en-IN')}`;
+      document.getElementById('epodRemarks').textContent = o.consignee_signature_url || 'Cargo received in full intact condition.';
+      const photoBox = document.getElementById('epodPhotoBox');
+      if (o.delivery_proof_photo_url) {
+        document.getElementById('epodPhotoImg').src = o.delivery_proof_photo_url;
+        photoBox.classList.remove('hidden');
+      } else {
+        photoBox.classList.add('hidden');
+      }
+      document.getElementById('epodModal').showModal();
+      lucide.createIcons();
+    }
+
+    let savedAddressesCache = [];
+    async function loadSavedAddresses() {
+      try {
+        const res = await fetch('/api/warehouses/saved-addresses', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        savedAddressesCache = await res.json();
+        const sel = document.getElementById('savedDestSelect');
+        if (sel) {
+          sel.innerHTML = '<option value="">Load Saved Address...</option>' + savedAddressesCache.map(a =>
+            `<option value="${a.id}">${escapeHtml(a.label)} (${escapeHtml(a.contact_name)})</option>`
+          ).join('');
+        }
+      } catch (e) {}
+    }
+
+    function applySavedAddress(target, addrId) {
+      const a = savedAddressesCache.find(x => x.id == addrId);
+      if (!a) return;
+      if (target === 'dest') {
+        document.getElementById('directDestAddr').value = a.address;
+        document.getElementById('directDestName').value = a.contact_name;
+        document.getElementById('directDestPhone').value = a.contact_phone;
+        showToast(`Loaded '${a.label}' from Address Book.`);
+      }
+    }
+
+    async function saveCurrentDirectAddress(target) {
+      const addr = document.getElementById('directDestAddr').value.trim();
+      const name = document.getElementById('directDestName').value.trim();
+      const phone = document.getElementById('directDestPhone').value.trim();
+      if (!addr || !name || !phone) {
+        showToast("Fill destination address, receiver name, and phone first to save.", true);
+        return;
+      }
+      const label = prompt("Enter a short nickname for this hub (e.g., Kalanki Wholesale Depot):", name + " Hub");
+      if (!label) return;
+      try {
+        const res = await fetch('/api/warehouses/saved-addresses', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ label, address: addr, contact_name: name, contact_phone: phone })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          loadSavedAddresses();
+        }
+      } catch (e) {}
+    }
+
+    async function openKycModal() {
+      try {
+        const res = await fetch('/api/auth/kyc-profile', { headers: getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('kycModalStatusBadge').textContent = data.kyc_status || 'PENDING_SUBMISSION';
+          document.getElementById('topKycStatusLabel').textContent = data.kyc_status === 'VERIFIED' ? 'KYC Verified ✓' : 'Corporate KYC';
+          if (data.profile) {
+            document.getElementById('kycRegNo').value = data.profile.company_reg_number || '';
+            document.getElementById('kycPanVat').value = data.profile.company_pan_vat || '';
+            document.getElementById('kycSigName').value = data.profile.authorized_signatory_name || '';
+            document.getElementById('kycRegDoc').value = data.profile.company_reg_doc_url || '';
+            document.getElementById('kycPanDoc').value = data.profile.company_pan_doc_url || '';
+          }
+        }
+      } catch (e) {}
+      document.getElementById('kycModal').showModal();
+      lucide.createIcons();
+    }
+
+    async function handleClientKycSubmit(e) {
+      e.preventDefault();
+      const payload = {
+        company_reg_number: document.getElementById('kycRegNo').value.trim(),
+        company_pan_vat: document.getElementById('kycPanVat').value.trim(),
+        authorized_signatory_name: document.getElementById('kycSigName').value.trim(),
+        company_reg_doc_url: document.getElementById('kycRegDoc').value.trim() || undefined,
+        company_pan_doc_url: document.getElementById('kycPanDoc').value.trim() || undefined
+      };
+      try {
+        const res = await fetch('/api/auth/submit-kyc', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast("Corporate KYC dossier submitted for SuperAdmin audit!");
+          document.getElementById('kycModal').close();
+        } else {
+          showToast(formatToastMessage(data.detail), true);
+        }
+      } catch (err) {
+        showToast("KYC submission error: " + err.message, true);
       }
     }
 
@@ -2263,6 +3097,8 @@
       applyTranslations(savedLang);
 
       loadCatalog();
+      loadMyBookings();
+      loadSavedAddresses();
       runQuickCalc();
       lucide.createIcons();
     });

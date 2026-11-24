@@ -141,6 +141,11 @@
               <span id="badgeHoldsCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
+            <button type="button" onclick="switchTab('lien-auctions')" id="nav-lien-auctions" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i> <span>Lien Defaults &amp; Auctions</span></span>
+              <span id="badgeAuctionCount" class="text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
+
             <button type="button" onclick="switchTab('insurance')" id="nav-insurance" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
               <span class="flex items-center gap-2.5"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_insurance">Stock Insurance</span></span>
               <span id="badgeInsuranceCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
@@ -774,6 +779,72 @@
           </div>
         </section>
 
+        <!-- View 11: 60-Day Lien Default Escalation & Stock Auction Manager -->
+        <section id="view-lien-auctions" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                  <i data-lucide="bell-ring" class="w-5 h-5 text-rose-600"></i>
+                  <span>60-Day Overdue Lease Monitor &amp; Escalating Lien Alerts</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Push statutory reminders (Month 1, 15d, 7d, 5d Gate Freeze, 48h Final Notice) or execute Day 60 stock forfeiture.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="runAdminLienSweep()" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow flex items-center gap-1.5">
+                  <i data-lucide="zap" class="w-3.5 h-3.5"></i> Run Auto-Escalation Sweep
+                </button>
+                <button onclick="loadLienAndAuctions()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-4 py-3">Lease Ref / Tenant</th>
+                    <th class="px-4 py-3">Facility &amp; Tier</th>
+                    <th class="px-4 py-3">Payment / Lien Status</th>
+                    <th class="px-4 py-3">Gate Lock</th>
+                    <th class="px-4 py-3 text-right">Dispatch Escalation Stage</th>
+                  </tr>
+                </thead>
+                <tbody id="lienLeasesTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">Loading lease compliance ledger...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200">
+              <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                <i data-lucide="gavel" class="w-5 h-5 text-purple-600"></i>
+                <span>Forfeited Inventory &amp; Public Liquidation Auction Ledger</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">Cargo transferred to KTM-WDC after Day 60 default for reserve auctioning to recover unpaid arrears.</p>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-4 py-3">Auction Lot #</th>
+                    <th class="px-4 py-3">Forfeited Stock Manifest</th>
+                    <th class="px-4 py-3">Arrears Owed</th>
+                    <th class="px-4 py-3">Reserve Price</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3 text-right">Liquidation Action</th>
+                  </tr>
+                </thead>
+                <tbody id="auctionLotsTableBody" class="divide-y divide-slate-100 font-mono">
+                  <tr><td colspan="6" class="px-4 py-8 text-center text-slate-400 font-sans">No forfeited stock lots in auction queue.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <!-- View: Stock & Cargo Insurance Underwriting -->
         <section id="view-insurance" class="hidden space-y-4">
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -1231,12 +1302,13 @@
       'maintenance-holds': 'Warehouse Maintenance Hold & Space Freeze Manager',
       invoices: 'Nepal IRD Schedule 13 Electronic Tax Ledger',
       'tariff-margin': 'Freight Tariff Engine & Platform Margin Control Center',
+      'lien-auctions': '60-Day Lien Governance & Stock Liquidation Auctions',
       insurance: 'Cargo & Stock Insurance Underwriting Policies',
       users: 'Platform User Directory & Role-Based Access Control'
     };
 
     function switchTab(tabId) {
-      const tabs = ['overview', 'pending', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'invoices', 'tariff-margin', 'maintenance-holds', 'insurance', 'users'];
+      const tabs = ['overview', 'pending', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'invoices', 'tariff-margin', 'maintenance-holds', 'lien-auctions', 'insurance', 'users'];
       tabs.forEach(t => {
         const view = document.getElementById(`view-${t}`);
         const nav = document.getElementById(`nav-${t}`);
@@ -1265,6 +1337,8 @@
         loadInvoices();
       } else if (tabId === 'tariff-margin') {
         loadFareTariffConfig();
+      } else if (tabId === 'lien-auctions') {
+        loadLienAndAuctions();
       } else if (tabId === 'insurance') {
         loadInsuranceRequests();
       } else if (tabId === 'users') {
@@ -2486,6 +2560,134 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       }
     }
 
+    async function loadLienAndAuctions() {
+      const lBody = document.getElementById('lienLeasesTableBody');
+      const aBody = document.getElementById('auctionLotsTableBody');
+      try {
+        const [lRes, aRes] = await Promise.all([
+          fetch('/api/admin/lien-overdue-leases', { headers: getAuthHeaders() }),
+          fetch('/api/admin/auctions', { headers: getAuthHeaders() })
+        ]);
+        if (lRes.ok) {
+          const leases = await lRes.json();
+          lBody.innerHTML = leases.length ? leases.map(l => `
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3">
+                <span class="font-mono font-bold text-navy">${escapeHtml(l.lease_ref)}</span>
+                <p class="text-xs text-slate-600">${escapeHtml(l.client_name)}</p>
+              </td>
+              <td class="px-4 py-3">
+                <p class="font-semibold text-navy">${escapeHtml(l.warehouse_title)}</p>
+                <span class="text-[10px] font-mono text-slate-500">${escapeHtml(l.booking_duration_type)} • ${Number(l.allocated_billed_sqft).toLocaleString('en-IN')} sq ft</span>
+              </td>
+              <td class="px-4 py-3">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${l.advance_payment_status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : (l.is_forfeited ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800')}">
+                  ${escapeHtml(l.advance_payment_status)}
+                </span>
+                ${l.notifications_count > 0 ? `<span class="block text-[10px] text-slate-400 mt-0.5">${l.notifications_count} alert(s) dispatched</span>` : ''}
+              </td>
+              <td class="px-4 py-3 font-mono text-[11px]">
+                ${l.is_gate_frozen ? '<span class="text-red-600 font-bold">🔒 FROZEN</span>' : '<span class="text-emerald-600">OPEN</span>'}
+              </td>
+              <td class="px-4 py-3 text-right">
+                ${!l.is_forfeited ? `
+                  <select onchange="if(this.value) pushAdminLienStage(${l.id}, this.value); this.value='';" class="px-2.5 py-1 rounded-lg border border-slate-300 text-[11px] bg-white font-semibold">
+                    <option value="">Push Notice / Lien...</option>
+                    <option value="OVERDUE_MONTH_1">Month 1 Overdue Notice</option>
+                    <option value="NOTICE_15_DAYS">15 Days Remaining Alert</option>
+                    <option value="NOTICE_7_DAYS">7 Days Demand Notice</option>
+                    <option value="GATE_FROZEN_5_DAYS">5 Days Left (Freeze Gate)</option>
+                    <option value="FINAL_NOTICE_48_HOURS">48 Hours Final Notice</option>
+                    <option value="FORFEITED_AUCTION">⚡ Day 60: Forfeit to Auction</option>
+                  </select>
+                ` : '<span class="text-[10px] font-bold text-purple-700 uppercase">Transferred to Auction</span>'}
+              </td>
+            </tr>
+          `).join('') : '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No active leases found.</td></tr>';
+        }
+
+        if (aRes.ok) {
+          const lots = await aRes.json();
+          const badge = document.getElementById('badgeAuctionCount');
+          if (badge) badge.textContent = lots.length;
+          aBody.innerHTML = lots.length ? lots.map(a => `
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 font-bold text-navy">${escapeHtml(a.lot_number)}</td>
+              <td class="px-4 py-3 font-sans">
+                <p class="font-semibold text-navy">${escapeHtml(a.item_summary)}</p>
+                <span class="text-[10px] text-slate-400">${escapeHtml(a.warehouse_title)} • Ex-Tenant: ${escapeHtml(a.former_client_name)}</span>
+              </td>
+              <td class="px-4 py-3 text-red-600 font-bold">Rs. ${Number(a.arrears_owed_npr).toLocaleString('en-IN')}</td>
+              <td class="px-4 py-3 font-bold text-navy">Rs. ${Number(a.reserve_price_npr).toLocaleString('en-IN')}</td>
+              <td class="px-4 py-3">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${a.auction_status === 'SOLD' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'}">${escapeHtml(a.auction_status)}</span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                ${a.auction_status !== 'SOLD' ? `
+                  <button onclick="markAuctionSold(${a.id}, ${a.reserve_price_npr})" class="px-3 py-1 rounded-lg bg-navy hover:bg-slate-800 text-white text-[11px] font-sans font-bold">
+                    Mark Sold
+                  </button>
+                ` : `<span class="text-[11px] text-emerald-700 font-sans font-bold">Sold: Rs. ${Number(a.winning_bid_npr || a.reserve_price_npr).toLocaleString('en-IN')}</span>`}
+              </td>
+            </tr>
+          `).join('') : '<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400 font-sans">No forfeited stock lots in auction queue.</td></tr>';
+        }
+        lucide.createIcons();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function pushAdminLienStage(bookingId, stage) {
+      if (stage === 'FORFEITED_AUCTION' && !confirm('Execute Day 60 Forfeiture? This transfers stored inventory to KTM-WDC auction and frees the warehouse sq ft.')) return;
+      try {
+        const res = await fetch(`/api/admin/bookings/${bookingId}/push-lien-reminder`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ stage })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || `Stage ${stage} pushed & email dispatched.`);
+          loadLienAndAuctions();
+        } else {
+          showToast(data.detail || "Failed to push lien stage.", true);
+        }
+      } catch (e) {
+        showToast("Error pushing lien reminder.", true);
+      }
+    }
+
+    async function runAdminLienSweep() {
+      try {
+        const res = await fetch('/api/admin/lien-sweep', { method: 'POST', headers: getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          loadLienAndAuctions();
+        }
+      } catch (e) {}
+    }
+
+    async function markAuctionSold(auctionId, reservePrice) {
+      const bid = prompt("Enter winning bid amount (NPR):", reservePrice);
+      if (!bid) return;
+      const buyer = prompt("Enter Winning Bidder / Liquidator Name:", "Kathmandu Wholesale Liquidators");
+      if (!buyer) return;
+      try {
+        const res = await fetch(`/api/admin/auctions/${auctionId}/update`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ auction_status: "SOLD", winning_bid_npr: parseFloat(bid), buyer_name: buyer })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          loadLienAndAuctions();
+        }
+      } catch (e) {}
+    }
+
     function refreshData() {
       loadPendingWarehouses();
       loadBookings();
@@ -2495,6 +2697,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       loadMaintenanceHolds();
       loadInvoices();
       loadFareTariffConfig();
+      loadLienAndAuctions();
       loadInsuranceRequests();
       loadUsers();
     }

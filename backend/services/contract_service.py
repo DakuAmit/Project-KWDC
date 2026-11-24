@@ -85,12 +85,32 @@ ARTICLE 4: ADMINISTRATIVE GOVERNANCE & LOCKOUT PROVISION
 4.1. Upon verification and digital execution of this contract, all facility
      specifications (area, rate, amenities, access road) are permanently locked
      from direct alteration by the Property Owner.
-4.2. All subsequent operations—including client space allocation, 10% block
+4.2. All subsequent operations—including client space allocation, continuous area
      partitioning, availability toggles, and maintenance holds—are strictly
      governed and approved by KWDC Admin to protect contracted commercial tenants.
 4.3. In the event of emergency repairs (e.g. roof leaks, drainage maintenance),
      the Property Owner must submit a written Hold Reason Note through the platform
      for administrative audit and approval.
+
+--------------------------------------------------------------------------------
+ARTICLE 5: ADVANCE PAYMENT, 60-DAY WAREHOUSEMAN'S LIEN & STOCK AUCTION CLAUSE
+5.1. Advance Payment Covenant: Commercial storage rent and staging charges are
+     strictly payable IN ADVANCE according to the selected tenure (Daily, Weekly,
+     or Monthly).
+5.2. Escalating Default Notification Protocol: For standard monthly leases, if
+     rent remains unpaid for 30 days (Month 1), KTM-WDC shall issue formal digital
+     default notices at exact statutory intervals:
+       (a) Day 45 (15 Days Remaining): Formal Overdue Warning Notice.
+       (b) Day 53 (7 Days Remaining): Legal Demand Notice.
+       (c) Day 55 (5 Days Remaining): Outbound Gate Clearance Freeze (No cargo exit).
+       (d) Day 58 (2 Days / 48 Hours Remaining): Final Pre-Auction Notice.
+5.3. Stock Forfeiture & Public Auction Rights (Day 60): If all unpaid rent,
+     handling fees, and demurrage remain unsettled after sixty (60) days (or
+     thirty (30) days for short-term Daily/Weekly overstays), legal title and
+     disposal authority over the stored inventory shall irrevocably transfer to
+     KTM-WDC under the Statutory Warehouseman's Lien (Nepal Muluki Civil Code 2074).
+     KTM-WDC is expressly authorized to catalogue, liquidate, and auction the
+     forfeited stock to recover arrears and liberate the warehouse space.
 
 --------------------------------------------------------------------------------
 DIGITAL CERTIFICATE OF VERIFICATION:
@@ -108,4 +128,70 @@ Status: VERIFIED & DIGITALLY EXECUTED
         "total_sqft": total_sqft,
         "holding_liability": "NPR 0.00 (Zero Holding Liability)",
         "rate_per_sqft": rate
+    }
+
+
+def generate_client_storage_contract(booking, client, warehouse) -> dict:
+    """
+    Generates the binding Client Commercial Storage / Micro-Staging Agreement
+    incorporating Advance Payment rules, Continuous Sq Ft terms, and the
+    60-Day Warehouseman's Lien & Auction Forfeiture Clause.
+    """
+    b_id = getattr(booking, "id", 1)
+    contract_no = f"KWDC-CLI-2083-{b_id:04d}"
+    dtype = (getattr(booking, "booking_duration_type", "MONTHLY") or "MONTHLY").upper()
+    dval = getattr(booking, "duration_value", 3) or 3
+    ddays = getattr(booking, "duration_days", 90) or 90
+    sqft = getattr(booking, "allocated_billed_sqft", 1000.0)
+    bill = getattr(booking, "total_monthly_bill", 0.0)
+    intended = getattr(booking, "client_intended_use", "Commercial Merchandise")
+    wh_title = getattr(warehouse, "title", "KTM-WDC Commercial Facility") if warehouse else "KTM-WDC Commercial Facility"
+    wh_loc = f"{getattr(warehouse, 'municipality', 'Kathmandu')}, {getattr(warehouse, 'district', 'Kathmandu')}" if warehouse else "Kathmandu Valley"
+
+    if dtype in ("DAILY", "WEEKLY"):
+        term_title = f"SHORT-TERM MICRO-STAGING AGREEMENT ({dval} {'DAY(S)' if dtype == 'DAILY' else 'WEEK(S)'})"
+        payment_clause = f"100% ADVANCE PAYMENT REQUIRED BEFORE GATE-IN: Total NPR {bill:,.2f} (inc. 13% IRD VAT) upfront for {ddays} day(s)."
+        lien_clause = (
+            "SHORT-TERM OVERSTAY & LIEN: If cargo is not evacuated upon expiry of the staging period, "
+            "daily demurrage of 1.5x applies immediately. Outbound gate passes lock until cleared. "
+            "If arrears remain unpaid after 30 days post-expiry, stock forfeits to KTM-WDC for auction liquidation."
+        )
+    else:
+        term_title = f"CONTINUOUS COMMERCIAL WAREHOUSE LEASE AGREEMENT ({dval} MONTH(S))"
+        payment_clause = f"ADVANCE MONTHLY RENT COVENANT: NPR {bill:,.2f}/month (inc. 13% IRD VAT) payable in advance on the 1st of each billing cycle."
+        lien_clause = (
+            "60-DAY WAREHOUSEMAN'S LIEN & STOCK AUCTION (Muluki Civil Code 2074): "
+            "If rent remains unpaid for 30 days (1 Month Overdue), KTM-WDC shall push formal overdue notices at "
+            "15 Days, 7 Days, 5 Days (Outbound Gate Freeze), and 48 Hours (2 Days) remaining. "
+            "If unsettled at Day 60 (2 Months Overdue), ownership of all stored inventory irrevocably transfers "
+            "to KTM-WDC for public auction liquidation, and the leased sq ft shall be reclaimed."
+        )
+
+    text = f"""
+================================================================================
+KATHMANDU WAREHOUSING & DISTRIBUTION CENTER PVT. LTD. (KTM-WDC)
+{term_title}
+Agreement Reference: {contract_no}
+Tenant / Client: {getattr(client, 'full_name', 'Commercial Client')} (PAN: {getattr(client, 'kyc_pan_vat', 'N/A')})
+Facility: {wh_title} ({wh_loc}) | Continuous Area: {sqft:,.2f} sq ft
+Authorized Cargo: {intended}
+================================================================================
+
+1. PAYMENT TERM (PAY FIRST):
+   {payment_clause}
+
+2. STATUTORY WAREHOUSEMAN'S LIEN, DEFAULT NOTICES & AUCTION:
+   {lien_clause}
+
+3. CONTINUOUS SQ FT FLEXIBILITY & PRIVACY SHIELD:
+   Tenant contracts exact continuous sq ft with 24/7 digital gate pass governance,
+   live SKU inventory tracking, and corporate counterparty protection by KTM-WDC.
+================================================================================
+""".strip()
+
+    return {
+        "contract_number": contract_no,
+        "duration_type": dtype,
+        "duration_days": ddays,
+        "contract_text": text
     }
