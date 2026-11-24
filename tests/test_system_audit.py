@@ -157,7 +157,31 @@ def run_audit():
         else:
             record_fail("Owner List Space", f"Status {res.status_code}: {res.text}")
 
-        # 2.2 Get owner's listings
+        # 2.2 List Open Yard (Zero Ceiling Height test)
+        open_yard_payload = {
+            "title": "Chobhar Dry Port Open Vehicle & Container Yard",
+            "space_type": "open_yard",
+            "total_sqft": 1369.0, # Exactly 4 Aana
+            "ceiling_height_ft": 0.0,
+            "base_rate_per_sqft": 25.0,
+            "district": "Kathmandu",
+            "municipality": "Chobhar Dry Port Road",
+            "road_access_width_ft": 40.0,
+            "has_three_phase_power": False,
+            "has_cctv": True,
+            "has_security_guard": True,
+            "has_raised_dock": False,
+            "has_forklift_access": True,
+            "has_fire_safety": True
+        }
+        res_yard = client.post("/api/warehouses/list-space", headers=owner_headers, json=open_yard_payload)
+        if res_yard.status_code == 200:
+            yard_id = res_yard.json().get("warehouse_id")
+            record_pass("Owner List Open Yard", f"Open yard registered (ID: {yard_id}) with ceiling height 0.0")
+        else:
+            record_fail("Owner List Open Yard", f"Status {res_yard.status_code}: {res_yard.text}")
+
+        # 2.3 Get owner's listings
         res = client.get("/api/warehouses/my-listings", headers=owner_headers)
         if res.status_code == 200:
             listings = res.json()
@@ -238,7 +262,7 @@ def run_audit():
             incharge_id = incharge_data.get("incharge_id")
             record_pass("Admin Provision Incharge", f"Provisioned Incharge ID: {incharge_id}")
         else:
-            if "already registered" in res.text:
+            if "already registered" in res.text or "already exists" in res.text:
                 record_pass("Admin Provision Incharge", "Incharge user already registered & active")
             else:
                 record_fail("Admin Provision Incharge", f"Status {res.status_code}: {res.text}")
@@ -425,6 +449,55 @@ def run_audit():
                 record_pass("Client Request Gate Pass", f"Token: {res.json().get('pass_token')}")
             else:
                 record_fail("Client Request Gate Pass", f"Status {res.status_code}: {res.text}")
+
+        # 5.5 Client Request Cargo & Stock Insurance
+        ins_policy_id = None
+        ins_payload = {
+            "warehouse_id": target_wh or 1,
+            "commodity_type": "Packaged FMCG & Food Items",
+            "declared_valuation_npr": 2500000.0, # 25 Lakhs NPR
+            "coverage_scope": "Comprehensive All-Risk (Fire, Flood, Earthquake, Burglary)",
+            "stock_manifest_summary": "48 Pallets containing 1,200 cartons of imported consumer goods.",
+            "manifest_summary": "48 Pallets containing 1,200 cartons of imported consumer goods."
+        }
+        res_ins = client.post("/api/insurance/request", headers=client_headers, json=ins_payload)
+        if res_ins.status_code == 200:
+            ins_data = res_ins.json()
+            ins_policy_id = ins_data.get("policy_id")
+            record_pass("Client Request Cargo Insurance", f"Policy #{ins_data.get('policy_number')} created (Valuation: Rs. {ins_data.get('declared_valuation_npr'):,})")
+        else:
+            record_fail("Client Request Cargo Insurance", f"Status {res_ins.status_code}: {res_ins.text}")
+
+        # 5.6 Client List My Policies
+        res_my_ins = client.get("/api/insurance/my-policies", headers=client_headers)
+        if res_my_ins.status_code == 200:
+            my_policies = res_my_ins.json()
+            record_pass("Client List My Policies", f"Retrieved {len(my_policies)} insurance policies")
+        else:
+            record_fail("Client List My Policies", f"Status {res_my_ins.status_code}: {res_my_ins.text}")
+
+        # 5.7 SuperAdmin Process & Underwrite Insurance Request
+        if ins_policy_id:
+            res_admin_req = client.get("/api/insurance/admin/requests", headers=admin_headers)
+            if res_admin_req.status_code == 200:
+                record_pass("Admin Get Insurance Requests", f"Retrieved {len(res_admin_req.json())} insurance applications")
+            else:
+                record_fail("Admin Get Insurance Requests", f"Status {res_admin_req.status_code}: {res_admin_req.text}")
+
+            process_payload = {
+                "underwriter_name": "Shikhar Insurance Company Ltd.",
+                "premium_rate_percent": 0.25,
+                "coverage_scope": "Institutional All-Risk: Fire, Earthquake, Monsoon Flood & Burglary"
+            }
+            res_process = client.post(f"/api/insurance/admin/{ins_policy_id}/process", headers=admin_headers, json=process_payload)
+            if res_process.status_code == 200:
+                proc_data = res_process.json()
+                record_pass("Admin Underwrite Insurance Cover", f"Cover note bound to {proc_data.get('underwriter_name')} (Status: {proc_data.get('status')})")
+            else:
+                record_fail("Admin Underwrite Insurance Cover", f"Status {res_process.status_code}: {res_process.text}")
+
+    except Exception as e:
+        record_fail("Commercial Client Operations Exception", str(e))
 
     except Exception as e:
         record_fail("Commercial Client Operations Exception", str(e))

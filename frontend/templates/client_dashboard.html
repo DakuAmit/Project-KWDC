@@ -77,6 +77,11 @@
         <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
           <i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> <span data-i18n="nav_invoices">IRD Tax Invoices</span>
         </button>
+
+        <button type="button" onclick="switchTab('insurance')" id="nav-insurance" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_insurance">Cargo &amp; Stock Insurance</span></span>
+          <span id="badgeInsuranceCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
+        </button>
       </nav>
 
       <!-- Drawer Footer: User Profile & Sign Out -->
@@ -365,6 +370,29 @@
           </div>
         </section>
 
+        <!-- View 6: Cargo & Stock Insurance -->
+        <section id="view-insurance" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h3 class="text-base font-bold text-navy flex items-center gap-2">
+                  <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600"></i>
+                  <span data-i18n="insurance_title">Cargo &amp; Stock Insurance Policies</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="insurance_sub">Underwritten by licensed insurers (Shikhar, Siddhartha Premier, Himalayan Everest). Covers Fire, Monsoon Flood, Earthquake, and Burglary.</p>
+              </div>
+              <button onclick="openInsuranceModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow transition flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i> <span data-i18n="btn_request_insurance">Request Stock Insurance</span>
+              </button>
+            </div>
+
+            <!-- Active Insurance Cards / Table -->
+            <div id="insuranceCardsList" class="mt-4 space-y-3">
+              <div class="p-8 text-center text-slate-400 text-xs">Loading insurance policies...</div>
+            </div>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -468,6 +496,100 @@
     </form>
   </dialog>
 
+  <!-- Modal: Request Stock Insurance -->
+  <dialog id="insuranceModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-emerald-500 text-white grid place-items-center font-bold">
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-sm text-white">Request Inventory &amp; Cargo Insurance</h3>
+          <p class="text-xs text-slate-400">Institutional Underwriting &amp; Cover Note</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('insuranceModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form onsubmit="submitStockInsurance(event)" class="p-5 space-y-4 text-xs">
+      <div>
+        <label class="block font-bold text-navy mb-1">Target Storage Facility *</label>
+        <select id="insWarehouseId" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-medium">
+          <option value="">Select Facility...</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Commodity / Goods Classification *</label>
+          <select id="insCommodityType" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-medium">
+            <option value="Packaged FMCG & Food Items">Packaged FMCG &amp; Food Items</option>
+            <option value="Consumer Electronics & Hardware">Consumer Electronics &amp; Hardware</option>
+            <option value="Textiles, Apparel & Footwear">Textiles, Apparel &amp; Footwear</option>
+            <option value="Pharmaceuticals & Health Supplies">Pharmaceuticals &amp; Health Supplies</option>
+            <option value="Industrial Machinery & Spare Parts">Industrial Machinery &amp; Parts</option>
+            <option value="Construction & Building Materials">Construction Materials</option>
+            <option value="Beverages & Packaged Liquids">Beverages &amp; Packaged Liquids</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Declared Stock Valuation (NPR) *</label>
+          <input type="number" id="insDeclaredValuation" required min="10000" step="1000" value="1000000" oninput="calcClientInsuranceEst()" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs" placeholder="e.g. 2500000">
+        </div>
+      </div>
+
+      <!-- Real-time Premium Indicator -->
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] font-mono space-y-1">
+        <div class="flex justify-between">
+          <span class="text-slate-500">Estimated Annual Tariff (0.25%):</span>
+          <span class="font-bold text-navy" id="insEstPremium">Rs. 2,500</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">13% Statutory IRD VAT:</span>
+          <span class="font-bold text-navy" id="insEstVat">Rs. 325</span>
+        </div>
+        <div class="flex justify-between border-t border-slate-200 pt-1 font-bold text-emerald-700">
+          <span>Est. Annual Net Cost:</span>
+          <span id="insEstTotal">Rs. 2,825</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Included Coverage Perils</label>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <label class="flex items-center gap-1.5 p-2 rounded border border-slate-200 bg-white">
+            <input type="checkbox" checked disabled class="rounded text-emerald-600"> Fire &amp; Lightning
+          </label>
+          <label class="flex items-center gap-1.5 p-2 rounded border border-slate-200 bg-white">
+            <input type="checkbox" checked disabled class="rounded text-emerald-600"> Monsoon / Flood Damage
+          </label>
+          <label class="flex items-center gap-1.5 p-2 rounded border border-slate-200 bg-white">
+            <input type="checkbox" checked disabled class="rounded text-emerald-600"> Earthquake Perils
+          </label>
+          <label class="flex items-center gap-1.5 p-2 rounded border border-slate-200 bg-white">
+            <input type="checkbox" checked disabled class="rounded text-emerald-600"> Burglary &amp; Theft
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Inventory Manifest Summary *</label>
+        <textarea id="insManifestSummary" required rows="2" placeholder="e.g. 48 Pallets containing 1,200 cartons of imported consumer goods. Factory sealed with tamper tapes." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs"></textarea>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('insuranceModal').close()" class="px-3.5 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="submit" id="btnSubmitClientIns" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition flex items-center gap-1.5 shadow">
+          <i data-lucide="send" class="w-4 h-4"></i> Submit for Underwriting
+        </button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Modal: Request New Gate Pass -->
   <dialog id="newGatePassModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
@@ -538,6 +660,10 @@
         nav_calculator: "Area & Tariff Estimator",
         nav_gatepass: "Digital Gate Passes",
         nav_invoices: "IRD Tax Invoices",
+        nav_insurance: "Cargo & Stock Insurance",
+        insurance_title: "Cargo & Stock Insurance Policies",
+        insurance_sub: "Institutional underwriting with licensed insurers (Shikhar, Siddhartha Premier, Himalayan Everest). Covers Fire, Monsoon Flood, Earthquake, and Burglary.",
+        btn_request_insurance: "Request Stock Insurance",
         header_title: "Commercial Storage Marketplace",
         header_sub: "Rent Exact Continuous Square Feet • IRD Schedule 13 Invoicing • Zero Block Lock-in",
         btn_quick_calc: "Tariff Calculator",
@@ -605,6 +731,10 @@
         nav_calculator: "निरन्तर क्षेत्रफल तथा दर क्यालकुलेटर",
         nav_gatepass: "डिजिटल गेट पास",
         nav_invoices: "आन्तरिक राजस्व भ्याट बिजकहरू",
+        nav_insurance: "सामान तथा मौज्दात बीमा",
+        insurance_title: "गोदाम सामान तथा मौज्दात बीमा",
+        insurance_sub: "नेपालका मान्यता प्राप्त बीमा कम्पनीहरूसँग संस्थागत साझेदारी • आगलागी, बाढीपहिरो तथा सम्पूर्ण जोखिम कभर",
+        btn_request_insurance: "बीमा कभर अनुरोध गर्नुहोस्",
         header_title: "व्यावसायिक भण्डारण बजार",
         header_sub: "आवश्यक निरन्तर वर्ग फिट भाडामा लिनुहोस् • अनुसूची १३ कर बिजक • कुनै कृत्रिम ब्लक बन्देज छैन",
         btn_quick_calc: "दर क्यालकुलेटर",
@@ -710,8 +840,39 @@
       }
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatToastMessage(msg) {
+      if (!msg) return "An unexpected error occurred.";
+      if (typeof msg === 'string') return msg;
+      if (Array.isArray(msg)) {
+        return msg.map(item => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object') {
+            const loc = Array.isArray(item.loc) ? item.loc.filter(x => x !== 'body').join(' ') : '';
+            return (loc ? loc + ': ' : '') + (item.msg || JSON.stringify(item));
+          }
+          return String(item);
+        }).join(' | ');
+      }
+      if (typeof msg === 'object') {
+        if (msg.detail) return formatToastMessage(msg.detail);
+        if (msg.message) return msg.message;
+        return JSON.stringify(msg);
+      }
+      return String(msg);
+    }
+
     function switchTab(tabId) {
-      ['catalog', 'bookings', 'calculator', 'gatepass', 'invoices'].forEach(id => {
+      ['catalog', 'bookings', 'calculator', 'gatepass', 'invoices', 'insurance'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const nav = document.getElementById('nav-' + id);
         const mob = document.getElementById('mob-' + id);
@@ -740,13 +901,15 @@
       if (tabId === 'catalog') loadCatalog();
       if (tabId === 'bookings') loadMyBookings();
       if (tabId === 'gatepass') loadClientGatePasses();
+      if (tabId === 'insurance') loadClientInsurance();
     }
 
     function showToast(msg, isError = false) {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
+      const safeText = formatToastMessage(msg);
       toast.className = `p-4 rounded-xl text-white text-xs font-semibold shadow-xl pointer-events-auto transition-all transform duration-300 ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
-      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4"></i><span>${msg}</span></div>`;
+      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4 shrink-0"></i><span>${escapeHtml(safeText)}</span></div>`;
       container.appendChild(toast);
       lucide.createIcons();
       setTimeout(() => {
@@ -1082,6 +1245,157 @@
         }
       } catch (err) {
         showToast("Network error issuing gate pass.", true);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Stock & Inventory Insurance Logic
+    // -------------------------------------------------------------
+    function calcClientInsuranceEst() {
+      const val = parseFloat(document.getElementById('insDeclaredValuation').value) || 0;
+      const premium = Math.round(val * 0.0025); // 0.25% Beema Samiti standard tariff
+      const vat = Math.round(premium * 0.13); // 13% Nepal IRD VAT
+      const total = premium + vat;
+
+      document.getElementById('insEstPremium').textContent = 'Rs. ' + premium.toLocaleString('en-IN');
+      document.getElementById('insEstVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+      document.getElementById('insEstTotal').textContent = 'Rs. ' + total.toLocaleString('en-IN');
+    }
+
+    function openInsuranceModal() {
+      const select = document.getElementById('insWarehouseId');
+      if (select && allWarehousesCache.length > 0) {
+        select.innerHTML = '<option value="">Select Facility...</option>' + allWarehousesCache.map(w => `<option value="${w.id}">${escapeHtml(w.title)} (${escapeHtml(w.municipality || 'Kathmandu')})</option>`).join('');
+      }
+      calcClientInsuranceEst();
+      document.getElementById('insuranceModal').showModal();
+      lucide.createIcons();
+    }
+
+    async function submitStockInsurance(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitClientIns');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Submitting...`;
+
+      const payload = {
+        warehouse_id: parseInt(document.getElementById('insWarehouseId').value),
+        commodity_type: document.getElementById('insCommodityType').value,
+        declared_valuation_npr: parseFloat(document.getElementById('insDeclaredValuation').value),
+        stock_manifest_summary: document.getElementById('insManifestSummary').value,
+        manifest_summary: document.getElementById('insManifestSummary').value
+      };
+
+      try {
+        const res = await fetch('/api/insurance/request', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Insurance request submitted! Policy Ref: ${data.policy_number}`);
+          document.getElementById('insuranceModal').close();
+          loadClientInsurance();
+        } else {
+          showToast(data.detail || "Failed to submit insurance request.", true);
+        }
+      } catch (err) {
+        showToast("Network error submitting insurance request.", true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Submit for Underwriting`;
+        lucide.createIcons();
+      }
+    }
+
+    async function loadClientInsurance() {
+      const container = document.getElementById('insuranceCardsList');
+      if (!container) return;
+      container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs">Loading insurance policies...</div>`;
+
+      try {
+        const res = await fetch('/api/insurance/my-policies', { headers: getAuthHeaders() });
+        if (!res.ok) {
+          container.innerHTML = `<div class="p-8 text-center text-red-600 text-xs bg-red-50 rounded-2xl border border-red-200">Unable to load insurance policies. Please sign in.</div>`;
+          return;
+        }
+
+        const policies = await res.json();
+        if (policies.length === 0) {
+          container.innerHTML = `
+            <div class="p-12 text-center bg-white rounded-2xl border border-slate-200">
+              <span class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 grid place-items-center mx-auto mb-3">
+                <i data-lucide="shield-plus" class="w-6 h-6"></i>
+              </span>
+              <h4 class="font-bold text-navy text-sm">No Active Cargo Insurance Policies</h4>
+              <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Protect your stored inventory against fire, flood, and transit perils. Request institutional cover note with licensed Nepal underwriters.</p>
+              <button onclick="openInsuranceModal()" class="mt-4 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow inline-flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i> Request Stock Insurance
+              </button>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        container.innerHTML = policies.map(p => {
+          const isApproved = p.status === 'APPROVED_ACTIVE';
+          const badgeClass = isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
+          const underwriter = p.underwriter_name || 'Pending Underwriter Assignment';
+
+          return `
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                  <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center font-bold">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                  </span>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h4 class="font-bold text-navy text-sm">${escapeHtml(p.policy_number)}</h4>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${escapeHtml(p.status)}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-mono mt-0.5">Underwriter: <strong class="text-navy">${escapeHtml(underwriter)}</strong></p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] text-slate-400 uppercase font-bold">Declared Valuation</span>
+                  <p class="text-base font-black text-navy font-mono">Rs. ${Number(p.declared_valuation_npr).toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <span class="text-[10px] text-slate-400 block uppercase">Commodity</span>
+                  <span class="font-bold text-navy truncate block">${escapeHtml(p.commodity_type)}</span>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <span class="text-[10px] text-slate-400 block uppercase">Premium (0.25%)</span>
+                  <span class="font-bold text-navy">Rs. ${Number(p.premium_amount_npr).toLocaleString('en-IN')}</span>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <span class="text-[10px] text-slate-400 block uppercase">13% IRD VAT</span>
+                  <span class="font-bold text-navy">Rs. ${Number(p.vat_13_percent).toLocaleString('en-IN')}</span>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <span class="text-[10px] text-slate-400 block uppercase">Total Payable</span>
+                  <span class="font-bold text-emerald-700">Rs. ${Number(p.total_payable_npr).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <div class="text-[11px] text-slate-600 bg-slate-50/50 p-3 rounded-xl border border-dashed border-slate-200 flex flex-col sm:flex-row justify-between gap-2">
+                <span><strong>Perils Covered:</strong> ${escapeHtml(p.coverage_scope || 'Fire, Flood, Earthquake, Burglary')}</span>
+                <span class="text-slate-400 shrink-0 font-mono">Created: ${new Date(p.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        lucide.createIcons();
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div class="p-8 text-center text-red-600 text-xs">Error loading insurance records.</div>`;
       }
     }
 

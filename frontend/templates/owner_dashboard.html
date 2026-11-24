@@ -324,7 +324,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_space_type">Space Classification *</label>
-          <select id="propSpaceType" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white">
+          <select id="propSpaceType" required onchange="handleSpaceTypeChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white">
             <option value="dry_storage">Dry Storage (सामान्य सुख्खा भण्डारण)</option>
             <option value="cold_storage">Cold Storage (शीत भण्डार / २°-८°C)</option>
             <option value="bonded_warehouse">Bonded Warehouse (भन्सार बन्डेड)</option>
@@ -334,7 +334,7 @@
         </div>
         <div>
           <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_expected_rate">Expected Monthly Rate (Rs./sq ft) *</label>
-          <input type="number" id="propBaseRate" required min="10" max="500" value="45" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20 font-mono">
+          <input type="number" id="propBaseRate" required min="5" max="500" step="any" value="45" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20 font-mono">
         </div>
       </div>
 
@@ -347,29 +347,36 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-[11px] font-semibold text-slate-600 mb-1" data-i18n="label_input_val">Input Value *</label>
-            <input type="number" id="propAreaValue" required min="100" value="5000" oninput="convertUnits()" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs">
+            <input type="number" id="propAreaValue" required min="0.01" step="any" value="5000" oninput="convertUnits()" placeholder="e.g. 5000 or 4.5" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs">
+            <p id="areaUnitHint" class="text-[10px] text-slate-400 mt-1">Standard Base Measurement</p>
           </div>
           <div>
             <label class="block text-[11px] font-semibold text-slate-600 mb-1" data-i18n="label_unit">Unit *</label>
-            <select id="propAreaUnit" onchange="convertUnits()" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+            <select id="propAreaUnit" onchange="handleUnitChange()" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-medium">
               <option value="sqft">Square Feet (वर्ग फिट)</option>
-              <option value="ropani">Ropani (रोपनी)</option>
-              <option value="aana">Aana (आना)</option>
-              <option value="bigha">Bigha (बिघा)</option>
-              <option value="kattha">Kattha (कट्ठा)</option>
+              <option value="aana">Aana (आना - ३४२.२५ वर्ग फिट)</option>
+              <option value="ropani">Ropani (रोपनी - १६ आना)</option>
+              <option value="bigha">Bigha (बिघा - ७२,९०० वर्ग फिट)</option>
+              <option value="kattha">Kattha (कट्ठा - ३,६४५ वर्ग फिट)</option>
               <option value="sqm">Square Meters (वर्ग मिटर)</option>
             </select>
           </div>
-          <div>
+          <div id="ceilingHeightCol">
             <label class="block text-[11px] font-semibold text-slate-600 mb-1" data-i18n="label_ceiling_ht">Ceiling Height (ft)</label>
-            <input type="number" id="propCeilingHeight" min="8" max="40" value="14" oninput="convertUnits()" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs">
+            <input type="number" id="propCeilingHeight" min="6" max="60" step="0.5" value="14" oninput="convertUnits()" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs">
+          </div>
+          <div id="openYardNoteCol" class="hidden">
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Open Air Yard (छत नभएको)</label>
+            <div class="px-3 py-2 rounded-lg border border-dashed border-emerald-300 bg-emerald-50/70 text-emerald-800 text-[11px] font-semibold flex items-center gap-1.5 h-[34px]">
+              <i data-lucide="sun" class="w-4 h-4 text-emerald-600 shrink-0"></i> <span>Open Air / No Ceiling</span>
+            </div>
           </div>
         </div>
 
         <div id="unitConversionPreview" class="p-3 bg-white rounded-lg border border-slate-200 text-xs font-mono text-slate-700 flex flex-wrap gap-x-4 gap-y-1">
           <span>Total: <strong class="text-navy font-bold" id="previewSqft">5,000</strong> sq ft</span>
           <span>• Traditional: <strong id="previewTraditional">0 Ropani, 14.6 Aana</strong></span>
-          <span>• Volume: <strong id="previewVolume">70,000</strong> cu ft</span>
+          <span id="previewVolumeSpan">• Volume: <strong id="previewVolume">70,000 cu ft</strong></span>
         </div>
       </div>
 
@@ -704,11 +711,31 @@
       lucide.createIcons();
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+
+    function formatToastMessage(msg) {
+      if (!msg) return 'Operation failed.';
+      if (typeof msg === 'string') return msg;
+      if (Array.isArray(msg)) {
+        return msg.map(item => item.msg || (item.loc ? `${item.loc.slice(-1)[0]}: ${item.msg}` : JSON.stringify(item))).join(' | ');
+      }
+      if (typeof msg === 'object') {
+        if (msg.detail) return formatToastMessage(msg.detail);
+        if (msg.message) return msg.message;
+        return JSON.stringify(msg);
+      }
+      return String(msg);
+    }
+
     function showToast(msg, isError = false) {
       const container = document.getElementById('toastContainer');
+      const cleanMsg = formatToastMessage(msg);
       const toast = document.createElement('div');
       toast.className = `p-4 rounded-xl text-white text-xs font-semibold shadow-xl pointer-events-auto transition-all transform duration-300 ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
-      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4"></i><span>${msg}</span></div>`;
+      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4 shrink-0"></i><span>${cleanMsg}</span></div>`;
       container.appendChild(toast);
       lucide.createIcons();
       setTimeout(() => {
@@ -725,11 +752,65 @@
       };
     }
 
+    function handleSpaceTypeChange() {
+      const type = document.getElementById('propSpaceType').value;
+      const isYard = (type === 'open_yard');
+      const ceilingCol = document.getElementById('ceilingHeightCol');
+      const yardCol = document.getElementById('openYardNoteCol');
+      const htInput = document.getElementById('propCeilingHeight');
+      const volSpan = document.getElementById('previewVolumeSpan');
+
+      if (ceilingCol && yardCol) {
+        ceilingCol.classList.toggle('hidden', isYard);
+        yardCol.classList.toggle('hidden', !isYard);
+      }
+      if (volSpan) {
+        volSpan.classList.toggle('hidden', isYard);
+      }
+      if (isYard && htInput) {
+        htInput.value = 0;
+      } else if (htInput && parseFloat(htInput.value) <= 0) {
+        htInput.value = 14;
+      }
+      convertUnits();
+    }
+
+    function handleUnitChange() {
+      const unit = document.getElementById('propAreaUnit').value;
+      const areaInput = document.getElementById('propAreaValue');
+      const hintEl = document.getElementById('areaUnitHint');
+      
+      const cfgs = {
+        sqft: { min: "10", step: "10", placeholder: "e.g. 5,000", hint: "Standard Base Measurement (वर्ग फिट)" },
+        aana: { min: "0.1", step: "0.1", placeholder: "e.g. 4.5", hint: "१ आना = ३४२.२५ वर्ग फिट (काठमाडौं उपत्यका मापदण्ड)" },
+        ropani: { min: "0.1", step: "0.1", placeholder: "e.g. 2", hint: "१ रोपनी = १६ आना = ५,४७६ वर्ग फिट" },
+        bigha: { min: "0.05", step: "0.05", placeholder: "e.g. 1", hint: "१ बिघा = २० कट्ठा = ७२,९०० वर्ग फिट (तराई मापदण्ड)" },
+        kattha: { min: "0.1", step: "0.1", placeholder: "e.g. 3", hint: "१ कट्ठा = ३,६४५ वर्ग फिट" },
+        sqm: { min: "1", step: "1", placeholder: "e.g. 450", hint: "१ वर्ग मिटर = १०.७६४ वर्ग फिट" }
+      };
+
+      const c = cfgs[unit] || cfgs.sqft;
+      areaInput.min = c.min;
+      areaInput.step = c.step;
+      areaInput.placeholder = c.placeholder;
+      if (hintEl) hintEl.textContent = c.hint;
+
+      // Friendly default adjustment if previous value was default 5000
+      const cur = parseFloat(areaInput.value);
+      if (unit === 'aana' && cur > 500) areaInput.value = "4";
+      if (unit === 'bigha' && cur > 50) areaInput.value = "1";
+      if (unit === 'ropani' && cur > 100) areaInput.value = "2";
+      if (unit === 'kattha' && cur > 100) areaInput.value = "3";
+
+      convertUnits();
+    }
+
     // Official Nepali Land Standards conversion
     function convertUnits() {
       const val = parseFloat(document.getElementById('propAreaValue').value) || 0;
       const unit = document.getElementById('propAreaUnit').value;
-      const ht = parseFloat(document.getElementById('propCeilingHeight').value) || 12;
+      const isYard = (document.getElementById('propSpaceType').value === 'open_yard');
+      const ht = isYard ? 0 : (parseFloat(document.getElementById('propCeilingHeight').value) || 12);
 
       const factors = {
         sqft: 1.0,
@@ -741,13 +822,22 @@
       };
 
       const sqft = Math.round(val * (factors[unit] || 1.0));
-      const ropani = (sqft / 5476.0).toFixed(1);
-      const aana = ((sqft % 5476) / 342.25).toFixed(1);
-      const cuft = (sqft * ht).toLocaleString('en-IN');
+      const ropaniInt = Math.floor(sqft / 5476.0);
+      const aanaDec = ((sqft % 5476) / 342.25).toFixed(1);
+      const bighaInt = Math.floor(sqft / 72900.0);
+      const katthaDec = ((sqft % 72900) / 3645.0).toFixed(1);
 
       document.getElementById('previewSqft').textContent = sqft.toLocaleString('en-IN');
-      document.getElementById('previewTraditional').textContent = `${Math.floor(sqft / 5476)} Ropani, ${aana} Aana`;
-      document.getElementById('previewVolume').textContent = cuft;
+      if (unit === 'bigha' || unit === 'kattha') {
+        document.getElementById('previewTraditional').textContent = `${bighaInt} Bigha, ${katthaDec} Kattha`;
+      } else {
+        document.getElementById('previewTraditional').textContent = `${ropaniInt} Ropani, ${aanaDec} Aana`;
+      }
+
+      const volEl = document.getElementById('previewVolume');
+      if (volEl) {
+        volEl.textContent = isYard ? 'N/A (Open Plot)' : (sqft * ht).toLocaleString('en-IN') + ' cu ft';
+      }
     }
 
     async function loadMyListings() {
@@ -756,7 +846,12 @@
         const grid = document.getElementById('ownerPropertiesGrid');
         
         if (!res.ok) {
-          grid.innerHTML = `<div class="col-span-full p-8 text-center bg-white rounded-2xl border border-red-200 text-red-600 text-xs">Failed to load properties. Ensure you are signed in.</div>`;
+          if (res.status === 401 || res.status === 403) {
+            grid.innerHTML = `<div class="col-span-full p-8 text-center bg-white rounded-2xl border border-red-200 text-red-600 text-xs">Session expired or unauthorized. Please <a href="/login" class="underline font-bold text-navy">sign in again</a>.</div>`;
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            grid.innerHTML = `<div class="col-span-full p-8 text-center bg-white rounded-2xl border border-red-200 text-red-600 text-xs">${formatToastMessage(errData) || 'Failed to load properties.'}</div>`;
+          }
           return;
         }
 
@@ -792,6 +887,7 @@
 
           const ropani = (w.total_sqft / 5476).toFixed(1);
           const aana = ((w.total_sqft % 5476) / 342.25).toFixed(1);
+          const isOpenYard = (w.space_type === 'WALLED_LAND_PLOT' || !w.clear_ceiling_height_ft || w.clear_ceiling_height_ft <= 0);
 
           return `
             <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
@@ -799,8 +895,8 @@
                 <div class="flex items-start justify-between gap-3 mb-3">
                   <div>
                     <span class="text-[10px] font-mono font-bold text-slate-400">ID: W-${w.id}</span>
-                    <h4 class="font-bold text-navy text-base leading-snug">${w.title}</h4>
-                    <p class="text-xs text-slate-500 mt-0.5">${w.municipality || 'Kathmandu'}, ${w.district}</p>
+                    <h4 class="font-bold text-navy text-base leading-snug">${escapeHtml(w.title)}</h4>
+                    <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(w.municipality || 'Kathmandu')}, ${escapeHtml(w.district || 'Bagmati')}</p>
                   </div>
                   ${badge}
                 </div>
@@ -815,8 +911,12 @@
                     <span>${Math.floor(w.total_sqft / 5476)} Ropani, ${aana} Aana</span>
                   </div>
                   <div class="flex justify-between">
+                    <span class="text-slate-400">Structure / Height:</span>
+                    <span class="${isOpenYard ? 'text-amber-700 font-bold' : ''}">${isOpenYard ? 'Open Yard (No Ceiling)' : `${w.clear_ceiling_height_ft} ft clear ceiling`}</span>
+                  </div>
+                  <div class="flex justify-between">
                     <span class="text-slate-400">Base Tariff:</span>
-                    <span class="text-emerald-700 font-bold">Rs. ${w.base_rate_per_sqft} / sq ft</span>
+                    <span class="text-emerald-700 font-bold">Rs. ${w.base_rate_per_sqft || w.monthly_rate_per_sqft || 45} / sq ft</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-slate-400">Truck Road Access:</span>
@@ -826,7 +926,7 @@
 
                 ${w.is_on_maintenance_hold ? `
                   <div class="mt-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
-                    <strong>Hold Reason:</strong> ${w.hold_reason_note || 'Maintenance in progress.'}
+                    <strong>Hold Reason:</strong> ${escapeHtml(w.hold_reason_note || 'Maintenance in progress.')}
                   </div>
                 ` : ''}
               </div>
@@ -836,7 +936,7 @@
                   ${w.is_approved ? 'Locked to protect lease' : 'Pending verification'}
                 </span>
                 ${w.is_approved ? `
-                  <button onclick="openMaintenanceModal(${w.id}, '${w.title.replace(/'/g, "\'")}', ${w.is_on_maintenance_hold})" class="text-xs font-bold px-3 py-1.5 rounded-lg ${w.is_on_maintenance_hold ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'} transition flex items-center gap-1.5">
+                  <button onclick="openMaintenanceModal(${w.id}, '${escapeHtml(w.title).replace(/'/g, "\\'")}', ${w.is_on_maintenance_hold})" class="text-xs font-bold px-3 py-1.5 rounded-lg ${w.is_on_maintenance_hold ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'} transition flex items-center gap-1.5">
                     <i data-lucide="wrench" class="w-3.5 h-3.5"></i> ${w.is_on_maintenance_hold ? 'Release Hold' : 'Maintenance'}
                   </button>
                 ` : ''}
@@ -857,19 +957,24 @@
       btn.disabled = true;
       btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Submitting...`;
 
-      const val = parseFloat(document.getElementById('propAreaValue').value);
+      const val = parseFloat(document.getElementById('propAreaValue').value) || 0;
       const unit = document.getElementById('propAreaUnit').value;
+      const isYard = (document.getElementById('propSpaceType').value === 'open_yard');
       const factors = { sqft: 1.0, sqm: 10.7639, aana: 342.25, ropani: 5476.0, kattha: 3645.0, bigha: 72900.0 };
       const total_sqft = Math.round(val * (factors[unit] || 1.0));
+      const ceiling_ht = isYard ? 0.0 : (parseFloat(document.getElementById('propCeilingHeight').value) || 12.0);
 
       const payload = {
-        title: document.getElementById('propTitle').value,
+        title: document.getElementById('propTitle').value.trim(),
         space_type: document.getElementById('propSpaceType').value,
+        input_value: val,
+        input_unit: unit,
         total_sqft: total_sqft,
-        ceiling_height_ft: parseFloat(document.getElementById('propCeilingHeight').value) || 12,
-        base_rate_per_sqft: parseFloat(document.getElementById('propBaseRate').value),
+        ceiling_height_ft: ceiling_ht,
+        base_rate_per_sqft: parseFloat(document.getElementById('propBaseRate').value) || 45,
         district: document.getElementById('propDistrict').value,
-        municipality: document.getElementById('propAddress').value,
+        municipality: document.getElementById('propAddress').value.trim(),
+        neighborhood_landmark: document.getElementById('propAddress').value.trim(),
         road_access_width_ft: parseFloat(document.getElementById('propRoadAccess').value) || 20,
         has_three_phase_power: document.getElementById('propHas3Phase').checked,
         has_cctv: document.getElementById('propHasCctv').checked,
@@ -890,17 +995,19 @@
           showToast("Storage facility registered! SuperAdmin assigned for on-site physical audit.");
           document.getElementById('listSpaceModal').close();
           e.target.reset();
+          handleSpaceTypeChange();
           loadMyListings();
         } else {
-          showToast(data.detail || "Submission failed.", true);
+          showToast(formatToastMessage(data.detail || data), true);
         }
       } catch (err) {
-        showToast("Network error submitting property.", true);
+        showToast("Network error submitting property: " + err.message, true);
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Submit for Physical Audit`;
         lucide.createIcons();
       }
+    }
     }
 
     function openMaintenanceModal(id, title, isCurrentlyOnHold) {

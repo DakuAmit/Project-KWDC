@@ -143,3 +143,29 @@ class DriverCreate(BaseModel):
     license_number: str
     citizenship_no: Optional[str] = "CTZ-VERIFIED"
     assigned_vehicle_id: Optional[int] = None
+
+class InsuranceRequestCreate(BaseModel):
+    warehouse_id: int
+    booking_id: Optional[int] = None
+    commodity_type: str
+    declared_valuation_npr: float = Field(..., gt=0)
+    coverage_scope: Optional[str] = "Fire, Lightning, Earthquake, Monsoon Flood, Burglary"
+    stock_manifest_summary: Optional[str] = None
+    manifest_summary: Optional[str] = None
+    invoice_document_ref: Optional[str] = None
+
+    @model_validator(mode="after")
+    def resolve_manifest_summary(self):
+        if not self.stock_manifest_summary and not self.manifest_summary:
+            raise ValueError("Stock manifest summary is required.")
+        if not self.stock_manifest_summary:
+            self.stock_manifest_summary = self.manifest_summary
+        return self
+
+class InsuranceProcessRequest(BaseModel):
+    underwriter_name: str = "Shikhar Insurance Co. Ltd."
+    policy_number: Optional[str] = None
+    premium_rate_percent: float = Field(default=0.25, ge=0.01)
+    status: str = "ACTIVE_INSURED"
+    admin_notes: Optional[str] = None
+    duration_months: int = 12

@@ -499,6 +499,42 @@ class TaxInvoice(Base):
 
 
 # ---------------------------------------------------------------------------
+# Module 5.1: Stock & Cargo Underwriting Insurance
+# ---------------------------------------------------------------------------
+class StockInsurancePolicy(Base):
+    __tablename__ = "stock_insurance_policies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    booking_id = Column(Integer, ForeignKey("warehouse_requests.id"), nullable=True)
+
+    policy_number = Column(String(100), unique=True, index=True, nullable=True)
+    commodity_type = Column(String(150), nullable=False)
+    declared_valuation_npr = Column(Float, nullable=False)
+    coverage_scope = Column(String(255), default="Fire, Lightning, Earthquake, Monsoon Flood, Burglary")
+    stock_manifest_summary = Column(Text, nullable=False)
+    invoice_document_ref = Column(String(255), nullable=True)
+
+    underwriter_name = Column(String(255), default="Shikhar Insurance Co. Ltd.")
+    premium_rate_percent = Column(Float, default=0.25)
+    premium_amount_npr = Column(Float, default=0.0)
+    vat_13_percent = Column(Float, default=0.0)
+    total_payable_npr = Column(Float, default=0.0)
+
+    status = Column(String(50), default="REQUESTED", nullable=False)
+    coverage_start_date = Column(DateTime, nullable=True)
+    coverage_end_date = Column(DateTime, nullable=True)
+    admin_notes = Column(Text, nullable=True)
+    certificate_qr_payload = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    client = relationship("User", foreign_keys=[client_id])
+    warehouse = relationship("Warehouse", foreign_keys=[warehouse_id])
+    booking = relationship("WarehouseRequest", foreign_keys=[booking_id])
+
+
+# ---------------------------------------------------------------------------
 # Module 6: Heavy Machinery Fleet
 # ---------------------------------------------------------------------------
 class HeavyEquipment(Base):

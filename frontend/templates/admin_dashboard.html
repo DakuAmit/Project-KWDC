@@ -136,6 +136,11 @@
               <span id="badgeHoldsCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
+            <button type="button" onclick="switchTab('insurance')" id="nav-insurance" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_insurance">Stock Insurance</span></span>
+              <span id="badgeInsuranceCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
+
             <button type="button" onclick="switchTab('users')" id="nav-users" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
               <span class="flex items-center gap-2.5"><i data-lucide="users" class="w-4 h-4 text-purple-400"></i> <span data-i18n="nav_users">User Directory &amp; RBAC</span></span>
               <span id="badgeUserCount" class="text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">0</span>
@@ -567,6 +572,43 @@
           </div>
         </section>
 
+        <!-- View: Stock & Cargo Insurance Underwriting -->
+        <section id="view-insurance" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base">Cargo &amp; Stock Insurance Underwriting Policies</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Commercial client stock declarations, underwriter quotation, Cover Note execution, and policy binding.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="loadInsuranceRequests()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Policy # / Ref</th>
+                    <th class="px-5 py-3">Client (Policyholder)</th>
+                    <th class="px-5 py-3">Facility &amp; Commodity</th>
+                    <th class="px-5 py-3">Declared Valuation</th>
+                    <th class="px-5 py-3">Underwriter Partner</th>
+                    <th class="px-5 py-3">Premium (inc. 13% VAT)</th>
+                    <th class="px-5 py-3">Status</th>
+                    <th class="px-5 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="insuranceTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">Loading insurance requests...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <!-- View 10: Platform User Directory & RBAC -->
         <section id="view-users" class="hidden space-y-4">
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -712,6 +754,105 @@
     </form>
   </dialog>
 
+  <!-- Modal: Process & Bind Insurance Policy -->
+  <dialog id="processInsuranceModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-emerald-500 text-white grid place-items-center font-bold">
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-sm text-white">Bind Insurance Policy &amp; Issue Cover Note</h3>
+          <p class="text-xs text-slate-400">Commercial Stock Insurance Underwriting</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('processInsuranceModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form onsubmit="submitInsuranceProcess(event)" class="p-5 space-y-4 text-xs">
+      <input type="hidden" id="procPolicyId">
+      <input type="hidden" id="procRawValuation">
+      
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+        <div class="flex justify-between">
+          <span class="text-slate-500">Policyholder:</span>
+          <span class="font-bold text-navy" id="procClientName">-</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Commodity:</span>
+          <span class="font-medium text-slate-800" id="procCommodity">-</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Declared Stock Value:</span>
+          <span class="font-bold text-emerald-700 font-mono text-sm" id="procValuation">-</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Underwriter Insurance Partner *</label>
+        <select id="procUnderwriter" required onchange="handleUnderwriterChange()" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-medium">
+          <option value="Shikhar Insurance Co. Ltd.">Shikhar Insurance Co. Ltd. (शिखर इन्स्योरेन्स)</option>
+          <option value="Siddhartha Premier Insurance Ltd.">Siddhartha Premier Insurance Ltd. (सिद्धार्थ प्रिमियर)</option>
+          <option value="Himalayan Everest Insurance Ltd.">Himalayan Everest Insurance Ltd. (हिमालयन एभरेष्ट)</option>
+          <option value="Nepal Insurance Company Ltd.">Nepal Insurance Company Ltd. (नेपाल इन्स्योरेन्स)</option>
+          <option value="Neco Insurance Ltd.">Neco Insurance Ltd. (नेको इन्स्योरेन्स)</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Cover Note / Policy # *</label>
+          <input type="text" id="procPolicyNumber" required placeholder="e.g. SHIKHAR-KTM-2083-0042" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Annual Rate (%) *</label>
+          <input type="number" id="procRatePercent" step="0.01" min="0.05" max="5.0" value="0.25" oninput="calcInsuranceQuotePreview()" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs">
+        </div>
+      </div>
+
+      <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-[11px] font-mono space-y-1">
+        <div class="flex justify-between">
+          <span class="text-emerald-900">Base Premium:</span>
+          <span class="font-bold" id="procBasePremium">Rs. 0</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-emerald-900">13% Statutory VAT:</span>
+          <span class="font-bold" id="procVat">Rs. 0</span>
+        </div>
+        <div class="flex justify-between border-t border-emerald-200 pt-1 font-bold text-navy">
+          <span>Total Payable NPR:</span>
+          <span id="procTotalPayable">Rs. 0</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Coverage Duration</label>
+        <select id="procDuration" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+          <option value="12">12 Months (Annual Policy)</option>
+          <option value="6">6 Months (Semi-Annual)</option>
+          <option value="3">3 Months (Quarterly)</option>
+          <option value="1">1 Month (Transit / Short-term)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Underwriter Endorsement Notes</label>
+        <textarea id="procAdminNotes" rows="2" placeholder="e.g. Bound under master commercial risk covenant. Zero deductible on fire & water damage." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs"></textarea>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('processInsuranceModal').close()" class="px-3.5 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="submit" id="btnSubmitInsurance" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition flex items-center gap-1.5 shadow">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Issue Cover Note &amp; Activate
+        </button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- ===================================================================== -->
   <!-- JAVASCRIPT MASTER GOVERNANCE ENGINE -->
   <!-- ===================================================================== -->
@@ -761,11 +902,12 @@
       payouts: 'Space Owner Monthly Disbursements (90/10)',
       'maintenance-holds': 'Warehouse Maintenance Hold & Space Freeze Manager',
       invoices: 'Nepal IRD Schedule 13 Electronic Tax Ledger',
+      insurance: 'Cargo & Stock Insurance Underwriting Policies',
       users: 'Platform User Directory & Role-Based Access Control'
     };
 
     function switchTab(tabId) {
-      const tabs = ['overview', 'pending', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'maintenance-holds', 'invoices', 'users'];
+      const tabs = ['overview', 'pending', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'maintenance-holds', 'invoices', 'insurance', 'users'];
       tabs.forEach(t => {
         const view = document.getElementById(`view-${t}`);
         const nav = document.getElementById(`nav-${t}`);
@@ -792,6 +934,8 @@
         loadMaintenanceHolds();
       } else if (tabId === 'invoices') {
         loadInvoices();
+      } else if (tabId === 'insurance') {
+        loadInsuranceRequests();
       } else if (tabId === 'users') {
         loadUsers();
       }
@@ -1446,6 +1590,145 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       }
     }
 
+    // -------------------------------------------------------------
+    // Stock & Cargo Insurance Underwriting Governance
+    // -------------------------------------------------------------
+    let currentProcValuation = 0;
+
+    async function loadInsuranceRequests() {
+      const tbody = document.getElementById('insuranceTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">Loading insurance requests...</td></tr>';
+      try {
+        const res = await fetch('/api/insurance/admin/requests', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load insurance requests');
+        const policies = await res.json();
+        document.getElementById('badgeInsuranceCount').textContent = policies.filter(p => p.status === 'UNDER_REVIEW' || p.status === 'REQUESTED').length;
+
+        if (!policies.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="px-5 py-8 text-center text-slate-400">No client stock insurance requests submitted yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = policies.map(p => {
+          let badgeClass = 'bg-amber-50 text-amber-700 border border-amber-200';
+          if (p.status === 'ACTIVE_INSURED') badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+          if (p.status === 'REJECTED') badgeClass = 'bg-rose-50 text-rose-700 border border-rose-200';
+
+          return `
+            <tr class="hover:bg-slate-50/60 transition">
+              <td class="px-5 py-3 font-mono font-bold text-navy text-xs">${escapeHtml(p.policy_number || `REQ-INS-${p.id}`)}</td>
+              <td class="px-5 py-3">
+                <p class="font-bold text-slate-800">${escapeHtml(p.client_name)}</p>
+                <p class="text-[11px] text-slate-500">${escapeHtml(p.client_email)} • ${escapeHtml(p.client_phone)}</p>
+              </td>
+              <td class="px-5 py-3">
+                <p class="font-medium text-navy">${escapeHtml(p.warehouse_title)}</p>
+                <p class="text-[11px] text-slate-500">${escapeHtml(p.commodity_type)}</p>
+              </td>
+              <td class="px-5 py-3 font-mono font-bold text-emerald-700">Rs. ${Number(p.declared_valuation_npr).toLocaleString('en-IN')}</td>
+              <td class="px-5 py-3 text-slate-700 text-xs">${escapeHtml(p.underwriter_name || 'Shikhar Insurance')}</td>
+              <td class="px-5 py-3 font-mono text-slate-800 font-bold">Rs. ${Number(p.total_payable_npr).toLocaleString('en-IN')}</td>
+              <td class="px-5 py-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}">
+                  ${p.status}
+                </span>
+              </td>
+              <td class="px-5 py-3 text-right">
+                ${p.status !== 'ACTIVE_INSURED' ? `
+                  <button onclick="openProcessInsuranceModal(${p.id}, '${escapeHtml(p.client_name).replace(/'/g, "\\'")}', ${p.declared_valuation_npr}, '${escapeHtml(p.commodity_type).replace(/'/g, "\\'")}')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Underwrite
+                  </button>
+                ` : `
+                  <span class="text-[11px] font-mono text-emerald-700 font-bold flex items-center justify-end gap-1">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i> Bound
+                  </span>
+                `}
+              </td>
+            </tr>
+          `;
+        }).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-8 text-center text-rose-500 font-semibold">${err.message}</td></tr>`;
+      }
+    }
+
+    function openProcessInsuranceModal(policyId, clientName, valuation, commodity) {
+      document.getElementById('procPolicyId').value = policyId;
+      document.getElementById('procRawValuation').value = valuation;
+      currentProcValuation = valuation;
+
+      document.getElementById('procClientName').textContent = clientName;
+      document.getElementById('procCommodity').textContent = commodity;
+      document.getElementById('procValuation').textContent = 'Rs. ' + Number(valuation).toLocaleString('en-IN');
+
+      handleUnderwriterChange();
+      calcInsuranceQuotePreview();
+
+      document.getElementById('processInsuranceModal').showModal();
+      lucide.createIcons();
+    }
+
+    function handleUnderwriterChange() {
+      const underwriter = document.getElementById('procUnderwriter').value;
+      const code = underwriter.split(' ')[0].toUpperCase();
+      const yr = new Date().getFullYear();
+      const pid = document.getElementById('procPolicyId').value || '1';
+      document.getElementById('procPolicyNumber').value = `KWDC-${code}-${yr}-${String(pid).padStart(4, '0')}`;
+    }
+
+    function calcInsuranceQuotePreview() {
+      const rate = parseFloat(document.getElementById('procRatePercent').value) || 0.25;
+      const val = parseFloat(document.getElementById('procRawValuation').value) || currentProcValuation || 0;
+      const basePrem = Math.round(val * (rate / 100));
+      const vat = Math.round(basePrem * 0.13);
+      const total = basePrem + vat;
+
+      document.getElementById('procBasePremium').textContent = 'Rs. ' + basePrem.toLocaleString('en-IN');
+      document.getElementById('procVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+      document.getElementById('procTotalPayable').textContent = 'Rs. ' + total.toLocaleString('en-IN');
+    }
+
+    async function submitInsuranceProcess(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitInsurance');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Issuing...`;
+
+      const policyId = document.getElementById('procPolicyId').value;
+      const payload = {
+        underwriter_name: document.getElementById('procUnderwriter').value,
+        policy_number: document.getElementById('procPolicyNumber').value.trim(),
+        premium_rate_percent: parseFloat(document.getElementById('procRatePercent').value) || 0.25,
+        duration_months: parseInt(document.getElementById('procDuration').value) || 12,
+        status: 'ACTIVE_INSURED',
+        admin_notes: document.getElementById('procAdminNotes').value.trim()
+      };
+
+      try {
+        const res = await fetch(`/api/insurance/admin/${policyId}/process`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || "Insurance policy issued successfully!");
+          document.getElementById('processInsuranceModal').close();
+          loadInsuranceRequests();
+        } else {
+          showToast(data.detail || "Failed to process insurance.", true);
+        }
+      } catch (err) {
+        showToast("Network error processing insurance.", true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Issue Cover Note & Activate`;
+        lucide.createIcons();
+      }
+    }
+
     function refreshData() {
       loadPendingWarehouses();
       loadBookings();
@@ -1454,6 +1737,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       loadPayouts();
       loadMaintenanceHolds();
       loadInvoices();
+      loadInsuranceRequests();
       loadUsers();
     }
 
@@ -1475,6 +1759,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
         nav_radar: "Fleet Telemetry Radar",
         nav_payouts: "Owner Payouts (90/10)",
         nav_invoices: "IRD VAT Invoices",
+        nav_insurance: "Cargo & Stock Insurance",
         nav_maintenance_holds: "Maintenance Holds",
         nav_users: "User Directory & RBAC"
       },
@@ -1491,6 +1776,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
         nav_radar: "फ्लीट टेलिमेट्री राडार",
         nav_payouts: "जग्गाधनी भुक्तानी (९०/१०)",
         nav_invoices: "आन्तरिक राजस्व भ्याट बिजक",
+        nav_insurance: "स्टक तथा कार्गो बिमा",
         nav_maintenance_holds: "मर्मत तथा होल्डहरू",
         nav_users: "प्रयोगकर्ता तथा पहुँच नियन्त्रण"
       }

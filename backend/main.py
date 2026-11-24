@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from backend.config import settings
-from backend.routers import auth, warehouses, admin, incharge, fleet
+from backend.routers import auth, warehouses, admin, incharge, fleet, insurance
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -22,6 +22,7 @@ app.include_router(warehouses.router)
 app.include_router(admin.router)
 app.include_router(incharge.router)
 app.include_router(fleet.router)
+app.include_router(insurance.router)
 
 # Template Engine & Static Files with Robust Vercel Paths
 current_dir = os.path.dirname(os.path.abspath(__file__)) # .../backend

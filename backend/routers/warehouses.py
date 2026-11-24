@@ -78,6 +78,7 @@ def list_warehouse_space(
     rate = payload.monthly_rate_per_sqft if payload.monthly_rate_per_sqft is not None else (payload.base_rate_per_sqft if payload.base_rate_per_sqft is not None else 45.0)
     road_width = payload.road_access_width_ft if payload.road_access_width_ft is not None else (payload.road_access_ft if payload.road_access_ft is not None else 20.0)
     stype = normalize_space_type(payload.space_type)
+    ceiling_ht = 0.0 if stype == SpaceType.WALLED_LAND_PLOT else float(payload.ceiling_height_ft or 12.0)
 
     new_warehouse = Warehouse(
         owner_id=current_user.id,
@@ -85,7 +86,7 @@ def list_warehouse_space(
         space_type=stype,
         total_sqft=normalized_sqft,
         available_sqft=normalized_sqft,
-        clear_ceiling_height_ft=payload.ceiling_height_ft,
+        clear_ceiling_height_ft=ceiling_ht,
         original_input_unit=normalize_area_unit(payload.input_unit),
         original_input_value=raw_val,
         monthly_rate_per_sqft=rate,
@@ -227,6 +228,11 @@ def get_my_listings(
             "total_sqft": w.total_sqft,
             "available_sqft": w.available_sqft,
             "monthly_rate_per_sqft": w.monthly_rate_per_sqft,
+            "base_rate_per_sqft": w.monthly_rate_per_sqft,
+            "clear_ceiling_height_ft": w.clear_ceiling_height_ft,
+            "road_access_width_ft": w.road_access_ft,
+            "municipality": w.municipality,
+            "district": w.district,
             "is_approved": w.is_approved,
             "is_available": w.is_available,
             "is_on_maintenance_hold": w.is_on_maintenance_hold,

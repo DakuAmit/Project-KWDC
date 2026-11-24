@@ -25,39 +25,40 @@ SQFT_CONVERSIONS = {
 
 def to_sqft(value: float, unit: str, ceiling_height_ft: float = 10.0) -> float:
     """Converts any input unit to standard Square Feet (sqft)."""
-    unit_lower = unit.lower().strip()
+    unit_lower = (unit or "sqft").lower().strip()
     if unit_lower == "cuft":
-        height = max(ceiling_height_ft, 1.0)
-        return round(value / height, 2)
+        height = max(float(ceiling_height_ft or 1.0), 1.0)
+        return round(float(value or 0.0) / height, 2)
     
     factor = SQFT_CONVERSIONS.get(unit_lower, 1.0)
-    return round(value * factor, 2)
+    return round(float(value or 0.0) * factor, 2)
 
 def from_sqft_to_all(sqft: float, ceiling_height_ft: float = 10.0) -> Dict[str, Any]:
     """Returns the given sqft represented in all Nepali traditional and international units."""
-    height = max(ceiling_height_ft, 1.0)
+    sqft_val = float(sqft or 0.0)
+    h = float(ceiling_height_ft or 0.0)
     
     # Traditional Hill calculation (Ropani-Aana-Paisa-Daam)
-    ropani_val = sqft / 5476.0
-    aana_val = sqft / 342.25
+    ropani_val = sqft_val / 5476.0
+    aana_val = sqft_val / 342.25
     
     # Traditional Terai calculation (Bigha-Kattha-Dhur)
-    bigha_val = sqft / 72900.0
-    kattha_val = sqft / 3645.0
-    dhur_val = sqft / 182.25
+    bigha_val = sqft_val / 72900.0
+    kattha_val = sqft_val / 3645.0
+    dhur_val = sqft_val / 182.25
     
     return {
-        "sqft": round(sqft, 2),
-        "sqm": round(sqft / SQFT_CONVERSIONS["sqm"], 2),
-        "cuft": round(sqft * height, 2),
+        "sqft": round(sqft_val, 2),
+        "sqm": round(sqft_val / SQFT_CONVERSIONS["sqm"], 2),
+        "cuft": round(sqft_val * h, 2) if h > 0 else 0.0,
         "aana": round(aana_val, 2),
         "ropani": round(ropani_val, 3),
         "bigha": round(bigha_val, 3),
         "kattha": round(kattha_val, 2),
         "dhur": round(dhur_val, 1),
-        "ceiling_height_ft": height,
-        "traditional_hill_str": f"{int(sqft // 5476)} Ropani, {round((sqft % 5476) / 342.25, 1)} Aana",
-        "traditional_terai_str": f"{int(sqft // 72900)} Bigha, {round((sqft % 72900) / 3645, 1)} Kattha"
+        "ceiling_height_ft": h,
+        "traditional_hill_str": f"{int(sqft_val // 5476)} Ropani, {round((sqft_val % 5476) / 342.25, 1)} Aana",
+        "traditional_terai_str": f"{int(sqft_val // 72900)} Bigha, {round((sqft_val % 72900) / 3645, 1)} Kattha"
     }
 
 def get_warehouse_usable_capacity(gross_sqft: float) -> Dict[str, float]:
