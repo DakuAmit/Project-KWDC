@@ -24,7 +24,7 @@ from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseRequest, User, UserRole,
     BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog,
-    WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport
+    WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport, UserKycProfile
 )
 from backend.auth_utils import require_user, require_roles, get_password_hash
 from backend.services.contract_service import generate_master_lease_contract
@@ -684,6 +684,53 @@ def toggle_user_account_status(
     state = "Active" if u.is_active else "Suspended"
     return {"message": f"User account '{u.full_name}' is now {state}.", "is_active": u.is_active}
 
+@router.get("/users/{user_id}/kyc")
+def get_user_kyc_dossier(
+    user_id: int,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Retrieves full role-specific KYC dossier for SuperAdmin audit."""
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    profile = db.query(UserKycProfile).filter(UserKycProfile.user_id == u.id).first()
+    return {
+        "user_id": u.id,
+        "full_name": u.full_name,
+        "email": u.email,
+        "phone_number": u.phone_number,
+        "role": u.role.value,
+        "kyc_status": u.kyc_status.value,
+        "is_verified": u.is_verified,
+        "profile": {
+            # Property Owner: strictly Citizenship and Bank Account proof
+            "citizenship_number": profile.citizenship_number if profile else None,
+            "citizenship_front_url": profile.citizenship_front_url if profile else None,
+            "citizenship_back_url": profile.citizenship_back_url if profile else None,
+            "bank_name": profile.bank_name if profile else None,
+            "bank_account_number": profile.bank_account_number if profile else None,
+            "bank_account_name": profile.bank_account_name if profile else None,
+            "bank_branch": profile.bank_branch if profile else None,
+            "bank_proof_doc_url": profile.bank_proof_doc_url if profile else None,
+            # Commercial Client
+            "company_name": profile.company_name if profile else u.company_name,
+            "company_reg_number": profile.company_reg_number if profile else None,
+            "company_pan_vat": profile.company_pan_vat or u.kyc_pan_vat if profile else u.kyc_pan_vat,
+            "company_reg_doc_url": profile.company_reg_doc_url if profile else None,
+            "company_pan_doc_url": profile.company_pan_doc_url if profile else None,
+            "authorized_signatory_name": profile.authorized_signatory_name if profile else None,
+            "authorized_signatory_doc_url": profile.authorized_signatory_doc_url if profile else None,
+            # Fleet Partner
+            "fleet_operator_pan_vat": profile.fleet_operator_pan_vat if profile else None,
+            "fleet_operator_reg_no": profile.fleet_operator_reg_no if profile else None,
+            "fleet_operator_doc_url": profile.fleet_operator_doc_url if profile else None,
+            "admin_review_notes": profile.admin_review_notes if profile else None,
+            "verified_at": profile.verified_at.strftime("%Y-%m-%d %H:%M") if profile and profile.verified_at else None
+        } if profile else None
+    }
+
 @router.post("/users/{user_id}/kyc-verify")
 def set_user_kyc_status(
     user_id: int,
@@ -695,15 +742,29 @@ def set_user_kyc_status(
     if not u:
         raise HTTPException(status_code=404, detail="User not found.")
 
+    profile = db.query(UserKycProfile).filter(UserKycProfile.user_id == u.id).first()
+    now = datetime.now(timezone.utc)
     status_upper = payload.kyc_status.upper()
     if status_upper in ["APPROVED", "VERIFIED"]:
         u.kyc_status = KycStatus.VERIFIED
         u.is_verified = True
+        u.kyc_verified_at = now
+        if profile:
+            profile.kyc_status = KycStatus.VERIFIED
+            profile.verified_at = now
+            if payload.admin_notes:
+                profile.admin_review_notes = payload.admin_notes
     elif status_upper == "REJECTED":
         u.kyc_status = KycStatus.REJECTED
         u.is_verified = False
+        if profile:
+            profile.kyc_status = KycStatus.REJECTED
+            if payload.admin_notes:
+                profile.admin_review_notes = payload.admin_notes
     else:
         u.kyc_status = KycStatus.UNDER_REVIEW
+        if profile:
+            profile.kyc_status = KycStatus.UNDER_REVIEW
 
     db.commit()
     return {"message": f"KYC status for '{u.full_name}' updated to {u.kyc_status.value}.", "kyc_status": u.kyc_status.value}

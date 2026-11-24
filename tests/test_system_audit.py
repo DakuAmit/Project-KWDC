@@ -219,6 +219,31 @@ def run_audit():
         else:
             record_fail("Owner Payouts (90/10)", f"Status {res.status_code}: {res.text}")
 
+        # 2.5 Submit Space Owner KYC (Strictly Citizenship + Bank Account Proof only)
+        owner_kyc_payload = {
+            "citizenship_number": "27-01-78-09876",
+            "citizenship_front_url": "https://kwdc-docs.s3.amazonaws.com/kyc/ctz-front-ram.jpg",
+            "citizenship_back_url": "https://kwdc-docs.s3.amazonaws.com/kyc/ctz-back-ram.jpg",
+            "bank_name": "Nabil Bank Ltd.",
+            "bank_account_name": "Ram Bahadur Shrestha",
+            "bank_account_number": "01201017500123",
+            "bank_branch": "Balaju Branch, Kathmandu",
+            "bank_proof_doc_url": "https://kwdc-docs.s3.amazonaws.com/kyc/cheque-leaf-ram.jpg"
+        }
+        res_kyc = client.post("/api/auth/submit-kyc", headers=owner_headers, json=owner_kyc_payload)
+        if res_kyc.status_code == 200:
+            record_pass("Owner Submit KYC (Citizenship + Bank Proof Only)", "Owner KYC submitted under review")
+        else:
+            record_fail("Owner Submit KYC", f"Status {res_kyc.status_code}: {res_kyc.text}")
+
+        # 2.6 Fetch Owner KYC Profile
+        res_prof = client.get("/api/auth/kyc-profile", headers=owner_headers)
+        if res_prof.status_code == 200 and res_prof.json().get("profile"):
+            p = res_prof.json()["profile"]
+            record_pass("Owner KYC Profile Read", f"Bank: {p.get('bank_name')}, Citizenship: {p.get('citizenship_number')}")
+        else:
+            record_fail("Owner KYC Profile Read", f"Status {res_prof.status_code}: {res_prof.text}")
+
     except Exception as e:
         record_fail("Property Owner Exception", str(e))
 
@@ -310,6 +335,25 @@ def run_audit():
             record_pass("Admin User Directory", f"Retrieved {len(res.json())} registered users")
         else:
             record_fail("Admin User Directory", f"Status {res.status_code}: {res.text}")
+
+        # 3.10 SuperAdmin Review & Verify Property Owner KYC
+        owner_user_id = 2
+        res_admin_kyc = client.get(f"/api/admin/users/{owner_user_id}/kyc", headers=admin_headers)
+        if res_admin_kyc.status_code == 200:
+            dossier = res_admin_kyc.json()
+            record_pass("Admin Fetch Owner KYC Dossier", f"Retrieved dossier for {dossier.get('full_name')} ({dossier.get('role')})")
+        else:
+            record_fail("Admin Fetch Owner KYC Dossier", f"Status {res_admin_kyc.status_code}: {res_admin_kyc.text}")
+
+        res_verify = client.post(
+            f"/api/admin/users/{owner_user_id}/kyc-verify",
+            headers=admin_headers,
+            json={"kyc_status": "VERIFIED", "admin_notes": "Verified via DoTM and ConnectIPS bank penny-drop audit."}
+        )
+        if res_verify.status_code == 200:
+            record_pass("Admin Verify Owner KYC", "Status updated to VERIFIED")
+        else:
+            record_fail("Admin Verify Owner KYC", f"Status {res_verify.status_code}: {res_verify.text}")
 
     except Exception as e:
         record_fail("SuperAdmin Operations Exception", str(e))
@@ -499,9 +543,6 @@ def run_audit():
     except Exception as e:
         record_fail("Commercial Client Operations Exception", str(e))
 
-    except Exception as e:
-        record_fail("Commercial Client Operations Exception", str(e))
-
 
     # =========================================================================
     # 6. FLEET PARTNER & TELEMETRY OPERATIONS
@@ -526,18 +567,26 @@ def run_audit():
         else:
             record_fail("Fleet Register Vehicle", f"Status {res.status_code}: {res.text}")
 
-        # 6.2 Register Commercial Driver
+        # 6.2 Register Commercial Driver with Complete DoTM KYC Credentials
         drv_payload = {
             "full_name": "Sunil Bahadur Thapa",
             "phone_number": f"+977-9841{random.randint(100000, 999999)}",
-            "license_number": f"01-06-{random.randint(100000, 999999)}"
+            "license_number": f"01-06-{random.randint(100000, 999999)}",
+            "license_category": "Category B (Light Commercial / Pickup)",
+            "license_photo_front_url": "https://kwdc-docs.s3.amazonaws.com/drivers/license-front.jpg",
+            "license_photo_back_url": "https://kwdc-docs.s3.amazonaws.com/drivers/license-back.jpg",
+            "citizenship_photo_url": "https://kwdc-docs.s3.amazonaws.com/drivers/citizenship.jpg",
+            "blood_group": "O+",
+            "emergency_contact_name": "Hari Bahadur Thapa",
+            "emergency_contact_phone": "+977-9841998877",
+            "has_clean_traffic_record": True
         }
         res = client.post("/api/fleet/drivers", headers=fleet_headers, json=drv_payload)
         if res.status_code == 200:
             driver_id = res.json().get("driver_id")
-            record_pass("Fleet Register Driver", f"Driver assigned (ID: {driver_id})")
+            record_pass("Fleet Register Driver with DoTM KYC", f"Driver assigned (ID: {driver_id}) with Category B and O+ blood group")
         else:
-            record_fail("Fleet Register Driver", f"Status {res.status_code}: {res.text}")
+            record_fail("Fleet Register Driver with DoTM KYC", f"Status {res.status_code}: {res.text}")
 
         # 6.3 My Fleet Roster
         res = client.get("/api/fleet/my-fleet", headers=fleet_headers)

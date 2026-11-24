@@ -132,6 +132,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
+    kyc_profile = relationship("UserKycProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     warehouses = relationship("Warehouse", foreign_keys="Warehouse.owner_id", back_populates="owner", cascade="all, delete-orphan")
     incharge_assignments = relationship("WarehouseInchargeAssignment", back_populates="incharge")
     incharge_reports = relationship("WarehouseActivityLog", back_populates="incharge")
@@ -141,6 +142,53 @@ class User(Base):
     dispatch_orders_as_client = relationship("DispatchOrder", foreign_keys="DispatchOrder.client_id", back_populates="client")
     equipment_items = relationship("HeavyEquipment", back_populates="owner")
     security_agency_profile = relationship("SecurityAgency", back_populates="user", uselist=False)
+
+
+class UserKycProfile(Base):
+    """
+    Dedicated KYC verification dossier:
+    - Property Owner: Strictly Nepalese Citizenship & Bank Account Proof (for 90% direct payouts).
+    - Commercial Client: Company Registration, PAN/VAT certificate, Authorized Signatory.
+    - Fleet Partner: Transport operator registration & PAN/VAT certificate.
+    """
+    __tablename__ = "user_kyc_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    role = Column(String(50), nullable=False)
+    kyc_status = Column(Enum(KycStatus), default=KycStatus.PENDING_SUBMISSION, nullable=False)
+
+    # 1. PROPERTY OWNER (Strictly Citizenship and Bank Account Proof per user directive)
+    citizenship_number = Column(String(100), nullable=True)
+    citizenship_front_url = Column(String(500), nullable=True)
+    citizenship_back_url = Column(String(500), nullable=True)
+    bank_name = Column(String(150), nullable=True)
+    bank_account_number = Column(String(100), nullable=True)
+    bank_account_name = Column(String(255), nullable=True)
+    bank_branch = Column(String(150), nullable=True)
+    bank_proof_doc_url = Column(String(500), nullable=True) # Cheque leaf or bank statement proof
+
+    # 2. COMMERCIAL CLIENT
+    company_name = Column(String(255), nullable=True)
+    company_reg_number = Column(String(100), nullable=True)
+    company_pan_vat = Column(String(50), nullable=True)
+    company_reg_doc_url = Column(String(500), nullable=True)
+    company_pan_doc_url = Column(String(500), nullable=True)
+    authorized_signatory_name = Column(String(255), nullable=True)
+    authorized_signatory_doc_url = Column(String(500), nullable=True)
+
+    # 3. FLEET PARTNER
+    fleet_operator_pan_vat = Column(String(50), nullable=True)
+    fleet_operator_reg_no = Column(String(100), nullable=True)
+    fleet_operator_doc_url = Column(String(500), nullable=True)
+
+    # Compliance & Review
+    admin_review_notes = Column(Text, nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="kyc_profile")
 
 
 # ---------------------------------------------------------------------------
@@ -335,9 +383,16 @@ class Driver(Base):
     full_name = Column(String(255), nullable=False)
     phone_number = Column(String(50), unique=True, nullable=False)
     license_number = Column(String(100), unique=True, nullable=False)
+    license_category = Column(String(50), default="Category B (Delivery Van / Pickup)")
     citizenship_no = Column(String(100), nullable=False)
     license_photo_url = Column(String(500), nullable=True)
+    license_photo_front_url = Column(String(500), nullable=True)
+    license_photo_back_url = Column(String(500), nullable=True)
     citizenship_photo_url = Column(String(500), nullable=True)
+    blood_group = Column(String(10), nullable=True)
+    emergency_contact_name = Column(String(255), nullable=True)
+    emergency_contact_phone = Column(String(50), nullable=True)
+    has_clean_traffic_record = Column(Boolean, default=True)
     kyc_status = Column(Enum(KycStatus), default=KycStatus.PENDING_SUBMISSION, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)

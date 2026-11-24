@@ -44,8 +44,33 @@ class TokenResponse(BaseModel):
     kyc_status: str
 
 class SubmitKycRequest(BaseModel):
+    # Backward compatibility
     pan_vat_number: Optional[str] = None
     document_url: Optional[str] = None
+
+    # Property Owner KYC (STRICTLY Citizenship & Bank Account Proof per user directive)
+    citizenship_number: Optional[str] = None
+    citizenship_front_url: Optional[str] = None
+    citizenship_back_url: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_branch: Optional[str] = None
+    bank_proof_doc_url: Optional[str] = None
+
+    # Commercial Client KYC
+    company_name: Optional[str] = None
+    company_reg_number: Optional[str] = None
+    company_pan_vat: Optional[str] = None
+    company_reg_doc_url: Optional[str] = None
+    company_pan_doc_url: Optional[str] = None
+    authorized_signatory_name: Optional[str] = None
+    authorized_signatory_doc_url: Optional[str] = None
+
+    # Fleet Partner KYC
+    fleet_operator_pan_vat: Optional[str] = None
+    fleet_operator_reg_no: Optional[str] = None
+    fleet_operator_doc_url: Optional[str] = None
 
 class PhysicalAuditSubmit(BaseModel):
     warehouse_id: int
@@ -141,7 +166,16 @@ class DriverCreate(BaseModel):
     full_name: str
     phone_number: str
     license_number: str
+    license_category: Optional[str] = "Category B (Delivery Van / Pickup)"
     citizenship_no: Optional[str] = "CTZ-VERIFIED"
+    blood_group: Optional[str] = "O+"
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    license_photo_url: Optional[str] = None
+    license_photo_front_url: Optional[str] = None
+    license_photo_back_url: Optional[str] = None
+    citizenship_photo_url: Optional[str] = None
+    has_clean_traffic_record: Optional[bool] = True
     assigned_vehicle_id: Optional[int] = None
 
 class InsuranceRequestCreate(BaseModel):

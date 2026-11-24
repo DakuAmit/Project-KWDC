@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.models import User, UserRole, KycStatus
+from backend.models import User, UserRole, KycStatus, UserKycProfile
 from backend.schemas import UserRegister, VerifyOtpRequest, UserLogin, TokenResponse, SubmitKycRequest
 from backend.auth_utils import (
     verify_password, get_password_hash, create_access_token,
@@ -164,17 +164,122 @@ def login_user(payload: UserLogin, response: Response, db: Session = Depends(get
         kyc_status=user.kyc_status.value
     )
 
+@router.get("/kyc-profile")
+def get_my_kyc_profile(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieves current user's structured KYC submission."""
+    profile = db.query(UserKycProfile).filter(UserKycProfile.user_id == current_user.id).first()
+    return {
+        "user_id": current_user.id,
+        "full_name": current_user.full_name,
+        "role": current_user.role.value,
+        "kyc_status": current_user.kyc_status.value,
+        "is_verified": current_user.is_verified,
+        "profile": {
+            "citizenship_number": profile.citizenship_number if profile else None,
+            "citizenship_front_url": profile.citizenship_front_url if profile else None,
+            "citizenship_back_url": profile.citizenship_back_url if profile else None,
+            "bank_name": profile.bank_name if profile else None,
+            "bank_account_number": profile.bank_account_number if profile else None,
+            "bank_account_name": profile.bank_account_name if profile else None,
+            "bank_branch": profile.bank_branch if profile else None,
+            "bank_proof_doc_url": profile.bank_proof_doc_url if profile else None,
+            "company_name": profile.company_name if profile else current_user.company_name,
+            "company_reg_number": profile.company_reg_number if profile else None,
+            "company_pan_vat": profile.company_pan_vat or current_user.kyc_pan_vat if profile else current_user.kyc_pan_vat,
+            "company_reg_doc_url": profile.company_reg_doc_url if profile else None,
+            "company_pan_doc_url": profile.company_pan_doc_url if profile else None,
+            "authorized_signatory_name": profile.authorized_signatory_name if profile else None,
+            "authorized_signatory_doc_url": profile.authorized_signatory_doc_url if profile else None,
+            "fleet_operator_pan_vat": profile.fleet_operator_pan_vat if profile else None,
+            "fleet_operator_reg_no": profile.fleet_operator_reg_no if profile else None,
+            "fleet_operator_doc_url": profile.fleet_operator_doc_url if profile else None,
+            "admin_review_notes": profile.admin_review_notes if profile else None,
+            "verified_at": profile.verified_at.strftime("%Y-%m-%d %H:%M") if profile and profile.verified_at else None
+        } if profile else None
+    }
+
 @router.post("/submit-kyc")
 def submit_kyc(
     payload: SubmitKycRequest,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db)
 ):
-    """Allows verified users to submit PAN/VAT or registration certificate for formal audit."""
-    current_user.kyc_pan_vat = payload.pan_vat_number
-    current_user.kyc_document_url = payload.document_url or "DOC-UPLOADED"
+    """
+    Submits role-appropriate KYC documentation:
+    - Property Owner: Strictly Nepalese Citizenship & Bank Account Proof (for 90% direct disbursements).
+    - Commercial Client: Company Registration, PAN/VAT certificate, Authorized Signatory.
+    - Fleet Partner: Transport operator registration & PAN/VAT.
+    """
+    profile = db.query(UserKycProfile).filter(UserKycProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = UserKycProfile(
+            user_id=current_user.id,
+            role=current_user.role.value,
+            kyc_status=KycStatus.UNDER_REVIEW
+        )
+        db.add(profile)
+    else:
+        profile.kyc_status = KycStatus.UNDER_REVIEW
+
+    # 1. PROPERTY OWNER (STRICTLY citizenship & bank account proof per user instruction)
+    if current_user.role == UserRole.PROPERTY_OWNER:
+        if payload.citizenship_number:
+            profile.citizenship_number = payload.citizenship_number.strip()
+        if payload.citizenship_front_url:
+            profile.citizenship_front_url = payload.citizenship_front_url.strip()
+        if payload.citizenship_back_url:
+            profile.citizenship_back_url = payload.citizenship_back_url.strip()
+        if payload.bank_name:
+            profile.bank_name = payload.bank_name.strip()
+        if payload.bank_account_number:
+            profile.bank_account_number = payload.bank_account_number.strip()
+        if payload.bank_account_name:
+            profile.bank_account_name = payload.bank_account_name.strip()
+        if payload.bank_branch:
+            profile.bank_branch = payload.bank_branch.strip()
+        if payload.bank_proof_doc_url:
+            profile.bank_proof_doc_url = payload.bank_proof_doc_url.strip()
+
+    # 2. COMMERCIAL CLIENT
+    elif current_user.role == UserRole.COMMERCIAL_CLIENT:
+        if payload.company_reg_number:
+            profile.company_reg_number = payload.company_reg_number.strip()
+        if payload.pan_vat_number or payload.company_pan_vat:
+            pan = (payload.company_pan_vat or payload.pan_vat_number).strip()
+            profile.company_pan_vat = pan
+            current_user.kyc_pan_vat = pan
+        if payload.company_reg_doc_url or payload.document_url:
+            profile.company_reg_doc_url = (payload.company_reg_doc_url or payload.document_url).strip()
+        if payload.company_pan_doc_url:
+            profile.company_pan_doc_url = payload.company_pan_doc_url.strip()
+        if payload.authorized_signatory_name:
+            profile.authorized_signatory_name = payload.authorized_signatory_name.strip()
+        if payload.authorized_signatory_doc_url:
+            profile.authorized_signatory_doc_url = payload.authorized_signatory_doc_url.strip()
+
+    # 3. FLEET PARTNER
+    elif current_user.role == UserRole.FLEET_PARTNER:
+        if payload.pan_vat_number or payload.fleet_operator_pan_vat:
+            pan = (payload.fleet_operator_pan_vat or payload.pan_vat_number).strip()
+            profile.fleet_operator_pan_vat = pan
+            current_user.kyc_pan_vat = pan
+        if payload.fleet_operator_reg_no:
+            profile.fleet_operator_reg_no = payload.fleet_operator_reg_no.strip()
+        if payload.fleet_operator_doc_url or payload.document_url:
+            profile.fleet_operator_doc_url = (payload.fleet_operator_doc_url or payload.document_url).strip()
+
+    # Generic fallbacks
+    if payload.pan_vat_number and not current_user.kyc_pan_vat:
+        current_user.kyc_pan_vat = payload.pan_vat_number.strip()
+    if payload.document_url and not current_user.kyc_document_url:
+        current_user.kyc_document_url = payload.document_url.strip()
+
     current_user.kyc_status = KycStatus.UNDER_REVIEW
     db.commit()
+
     return {
         "message": "KYC documentation submitted successfully for compliance review.",
         "kyc_status": current_user.kyc_status.value
@@ -184,6 +289,7 @@ def submit_kyc(
 def admin_verify_kyc(
     user_id: int,
     approve: bool = True,
+    admin_notes: str = None,
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
@@ -192,12 +298,26 @@ def admin_verify_kyc(
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
+    profile = db.query(UserKycProfile).filter(UserKycProfile.user_id == user.id).first()
+    now = datetime.now(timezone.utc)
+
     if approve:
         user.kyc_status = KycStatus.VERIFIED
-        user.kyc_verified_at = datetime.now(timezone.utc)
+        user.is_verified = True
+        user.kyc_verified_at = now
+        if profile:
+            profile.kyc_status = KycStatus.VERIFIED
+            profile.verified_at = now
+            if admin_notes:
+                profile.admin_review_notes = admin_notes
         msg = f"KYC for {user.full_name} ({user.role.value}) has been VERIFIED."
     else:
         user.kyc_status = KycStatus.REJECTED
+        user.is_verified = False
+        if profile:
+            profile.kyc_status = KycStatus.REJECTED
+            if admin_notes:
+                profile.admin_review_notes = admin_notes
         msg = f"KYC for {user.full_name} has been REJECTED."
 
     db.commit()

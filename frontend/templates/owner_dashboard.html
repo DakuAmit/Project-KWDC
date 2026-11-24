@@ -81,6 +81,11 @@
         <button type="button" onclick="switchTab('governance')" id="nav-governance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
           <i data-lucide="file-check-2" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_governance">Master Legal Covenant</span>
         </button>
+
+        <button type="button" onclick="switchTab('kyc')" id="nav-kyc" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_kyc">KYC &amp; Bank Verification</span></span>
+          <span id="badgeKycStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">Pending</span>
+        </button>
       </nav>
 
       <!-- Drawer Footer: User Profile & Sign Out -->
@@ -294,6 +299,116 @@
           </div>
         </section>
 
+        <!-- View 6: Space Owner KYC & Bank Account Verification -->
+        <section id="view-kyc" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+              <div class="flex items-start gap-3">
+                <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center font-bold shrink-0">
+                  <i data-lucide="shield-check" class="w-5 h-5"></i>
+                </span>
+                <div>
+                  <h3 class="text-base font-bold text-navy" data-i18n="kyc_title">Space Owner KYC &amp; Payout Bank Verification</h3>
+                  <p class="text-xs text-slate-500 mt-0.5" data-i18n="kyc_sub">
+                    Under KTM-WDC verified owner policy, property owners only need to provide <strong>Nepalese Citizenship</strong> and <strong>Bank Account Proof</strong> for direct 90% monthly rental settlements.
+                  </p>
+                </div>
+              </div>
+              <div id="kycStatusBadgeContainer" class="shrink-0">
+                <span id="kycStateBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  PENDING SUBMISSION
+                </span>
+              </div>
+            </div>
+
+            <!-- KYC Form -->
+            <form onsubmit="submitOwnerKyc(event)" class="mt-6 space-y-6 max-w-3xl">
+              <!-- Block 1: Citizenship Details -->
+              <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
+                <div class="flex items-center gap-2 text-xs font-bold text-navy uppercase tracking-wider">
+                  <i data-lucide="id-card" class="w-4 h-4 text-sky-600"></i>
+                  <span data-i18n="kyc_ctz_section">1. Nepalese Citizenship Document (नागरिकता प्रमाणपत्र)</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_no">Citizenship Certificate Number *</label>
+                    <input type="text" id="ownerCtzNo" required placeholder="e.g. 27-01-78-01234" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_front">Citizenship Front (Photo / Doc URL) *</label>
+                    <input type="text" id="ownerCtzFront" required placeholder="e.g. CTZ-FRONT-IMG-2083" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_back">Citizenship Back (Photo / Doc URL) *</label>
+                  <input type="text" id="ownerCtzBack" required placeholder="e.g. CTZ-BACK-IMG-2083" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                </div>
+              </div>
+
+              <!-- Block 2: Bank Account Details -->
+              <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
+                <div class="flex items-center gap-2 text-xs font-bold text-navy uppercase tracking-wider">
+                  <i data-lucide="building-2" class="w-4 h-4 text-emerald-600"></i>
+                  <span data-i18n="kyc_bank_section">2. Monthly 90% Disbursement Bank Account (मासिक भाडा भुक्तानी बैंक खाता)</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_bank_name">Commercial Bank Name *</label>
+                    <select id="ownerBankName" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+                      <option value="">Select Bank in Nepal...</option>
+                      <option value="Nabil Bank Limited">Nabil Bank Limited</option>
+                      <option value="NIC Asia Bank Limited">NIC Asia Bank Limited</option>
+                      <option value="Global IME Bank Limited">Global IME Bank Limited</option>
+                      <option value="Rastriya Banijya Bank Limited">Rastriya Banijya Bank Limited</option>
+                      <option value="Himalayan Bank Limited">Himalayan Bank Limited</option>
+                      <option value="Nepal Investment Mega Bank Limited">Nepal Investment Mega Bank Limited</option>
+                      <option value="Sanima Bank Limited">Sanima Bank Limited</option>
+                      <option value="Siddhartha Bank Limited">Siddhartha Bank Limited</option>
+                      <option value="Standard Chartered Bank Nepal">Standard Chartered Bank Nepal</option>
+                      <option value="Nepal SBI Bank Limited">Nepal SBI Bank Limited</option>
+                      <option value="Everest Bank Limited">Everest Bank Limited</option>
+                      <option value="Laxmi Sunrise Bank Limited">Laxmi Sunrise Bank Limited</option>
+                      <option value="Citizens Bank International">Citizens Bank International</option>
+                      <option value="Machhapuchchhre Bank Limited">Machhapuchchhre Bank Limited</option>
+                      <option value="NMB Bank Limited">NMB Bank Limited</option>
+                      <option value="Kumari Bank Limited">Kumari Bank Limited</option>
+                      <option value="Prabhu Bank Limited">Prabhu Bank Limited</option>
+                      <option value="Prime Commercial Bank Limited">Prime Commercial Bank Limited</option>
+                      <option value="Agricultural Development Bank">Agricultural Development Bank</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_account_name">Bank Account Holder Name *</label>
+                    <input type="text" id="ownerAccountName" required placeholder="Exact name matching bank records" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white">
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_account_no">Bank Account Number *</label>
+                    <input type="text" id="ownerAccountNo" required placeholder="e.g. 0180100029102901" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_branch">Branch Name *</label>
+                    <input type="text" id="ownerBranch" required placeholder="e.g. Balaju / New Road / Putalisadak" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_bank_proof">Cheque Leaf / Account Statement Proof (URL / Doc Ref) *</label>
+                  <input type="text" id="ownerBankProof" required placeholder="e.g. CHQ-LEAF-PROOF-2083" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                  <p class="text-[10px] text-slate-400 mt-1">Upload or provide image reference of crossed cheque or account statement header.</p>
+                </div>
+              </div>
+
+              <div class="pt-2 flex items-center justify-end">
+                <button type="submit" id="btnSubmitOwnerKyc" class="px-5 py-2.5 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center gap-2 transition">
+                  <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                  <span data-i18n="btn_submit_kyc">Submit Space Owner Verification</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -489,6 +604,20 @@
         nav_payouts: "Rental Payouts & Settlement",
         nav_maintenance: "Maintenance Hold Manager",
         nav_governance: "Master Legal Covenant",
+        nav_kyc: "KYC & Bank Verification",
+        kyc_title: "Space Owner KYC & Payout Bank Verification",
+        kyc_sub: "Under KTM-WDC verified owner policy, property owners only need to provide Nepalese Citizenship and Bank Account Proof for direct 90% monthly rental settlements.",
+        kyc_ctz_section: "1. Nepalese Citizenship Document",
+        kyc_label_ctz_no: "Citizenship Certificate Number *",
+        kyc_label_ctz_front: "Citizenship Front (Photo / Doc URL) *",
+        kyc_label_ctz_back: "Citizenship Back (Photo / Doc URL) *",
+        kyc_bank_section: "2. Monthly 90% Disbursement Bank Account",
+        kyc_label_bank_name: "Commercial Bank Name *",
+        kyc_label_account_name: "Bank Account Holder Name *",
+        kyc_label_account_no: "Bank Account Number *",
+        kyc_label_branch: "Branch Name *",
+        kyc_label_bank_proof: "Cheque Leaf / Account Statement Proof (URL / Doc Ref) *",
+        btn_submit_kyc: "Submit Space Owner Verification",
         header_title: "Property Owner Cockpit",
         header_sub: "Monetize Empty Space • Rs. 0 Holding Liability Covenant • Continuous Sq Ft Accounting",
         btn_list_new: "List New Storage",
@@ -567,6 +696,20 @@
         nav_payouts: "भाडा भुक्तानी तथा स्टेटमेन्ट",
         nav_maintenance: "मर्मत तथा होल्ड व्यवस्थापन",
         nav_governance: "शून्य होल्डिङ सम्झौता",
+        nav_kyc: "केवाइसी तथा बैंक खाता प्रमाणीकरण",
+        kyc_title: "जग्गाधनी केवाइसी तथा बैंक खाता प्रमाणीकरण",
+        kyc_sub: "केटीएम-डब्ल्युडीसी प्रमाणित जग्गाधनी नीति अनुसार, ९०% मासिक भाडा भुक्तानीका लागि जग्गाधनीले नेपाली नागरिकता र बैंक खाताको प्रमाण (चेक) मात्र उपलब्ध गराए पुग्छ।",
+        kyc_ctz_section: "१. नेपाली नागरिकता प्रमाणपत्र विवरण",
+        kyc_label_ctz_no: "नागरिकता प्रमाणपत्र नम्बर *",
+        kyc_label_ctz_front: "नागरिकता अगाडिको भाग (फोटो वा लिङ्क) *",
+        kyc_label_ctz_back: "नागरिकता पछाडिको भाग (फोटो वा लिङ्क) *",
+        kyc_bank_section: "२. मासिक ९०% भाडा भुक्तानी बैंक खाता विवरण",
+        kyc_label_bank_name: "वाणिज्य बैंकको नाम *",
+        kyc_label_account_name: "बैंक खातावालाको नाम *",
+        kyc_label_account_no: "बैंक खाता नम्बर *",
+        kyc_label_branch: "शाखाको नाम *",
+        kyc_label_bank_proof: "चेकको फोटो वा स्टेटमेन्ट प्रमाण *",
+        btn_submit_kyc: "जग्गाधनी केवाइसी पेस गर्नुहोस्",
         header_title: "जग्गाधनी ककपिट",
         header_sub: "खाली गोदामबाट आम्दानी • रु. ० शून्य होल्डिङ दायित्व सम्झौता • निरन्तर वर्ग फिट प्रणाली",
         btn_list_new: "नयाँ गोदाम दर्ता",
@@ -683,7 +826,7 @@
     }
 
     function switchTab(tabId) {
-      ['properties', 'leases', 'payouts', 'maintenance', 'governance'].forEach(id => {
+      ['properties', 'leases', 'payouts', 'maintenance', 'governance', 'kyc'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const nav = document.getElementById('nav-' + id);
         if (view) view.classList.toggle('hidden', id !== tabId);
@@ -703,9 +846,113 @@
       if (tabId === 'maintenance') loadMaintenanceListings();
       if (tabId === 'leases') loadActiveLeases();
       if (tabId === 'properties') loadMyListings();
+      if (tabId === 'kyc') loadOwnerKyc();
+    }
+
+    async function loadOwnerKyc() {
+      try {
+        const res = await fetch('/api/auth/kyc-profile', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const badgeEl = document.getElementById('badgeKycStatus');
+        const stateBadgeEl = document.getElementById('kycStateBadge');
+        const kycStatus = data.kyc_status || 'PENDING_SUBMISSION';
+
+        let badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+        let badgeText = 'PENDING SUBMISSION';
+        if (kycStatus === 'VERIFIED') {
+          badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-300';
+          badgeText = 'VERIFIED & APPROVED';
+        } else if (kycStatus === 'UNDER_REVIEW') {
+          badgeClass = 'bg-yellow-50 text-yellow-800 border-yellow-300';
+          badgeText = 'UNDER COMPLIANCE REVIEW';
+        } else if (kycStatus === 'REJECTED') {
+          badgeClass = 'bg-red-50 text-red-700 border-red-300';
+          badgeText = 'REJECTED (PLEASE RESUBMIT)';
+        }
+
+        if (stateBadgeEl) {
+          stateBadgeEl.className = `px-3 py-1 rounded-full text-xs font-bold border ${badgeClass}`;
+          stateBadgeEl.textContent = badgeText;
+        }
+        if (badgeEl) {
+          badgeEl.textContent = kycStatus === 'VERIFIED' ? 'Verified' : (kycStatus === 'UNDER_REVIEW' ? 'Review' : 'Pending');
+          badgeEl.className = `text-[10px] font-bold px-2 py-0.5 rounded-full ${kycStatus === 'VERIFIED' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`;
+        }
+
+        if (data.profile) {
+          const p = data.profile;
+          if (p.citizenship_number) document.getElementById('ownerCtzNo').value = p.citizenship_number;
+          if (p.citizenship_front_url) document.getElementById('ownerCtzFront').value = p.citizenship_front_url;
+          if (p.citizenship_back_url) document.getElementById('ownerCtzBack').value = p.citizenship_back_url;
+          if (p.bank_name) document.getElementById('ownerBankName').value = p.bank_name;
+          if (p.bank_account_name) document.getElementById('ownerAccountName').value = p.bank_account_name;
+          if (p.bank_account_number) document.getElementById('ownerAccountNo').value = p.bank_account_number;
+          if (p.bank_branch) document.getElementById('ownerBranch').value = p.bank_branch;
+          if (p.bank_proof_doc_url) document.getElementById('ownerBankProof').value = p.bank_proof_doc_url;
+
+          if (kycStatus === 'VERIFIED') {
+            const btn = document.getElementById('btnSubmitOwnerKyc');
+            if (btn) {
+              btn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i> KYC Verified &amp; Active`;
+              btn.classList.add('bg-emerald-700', 'cursor-default');
+              btn.classList.remove('bg-navy', 'hover:bg-slate-800');
+            }
+          }
+        }
+        lucide.createIcons();
+      } catch (err) {
+        console.error("Failed to load KYC dossier:", err);
+      }
+    }
+
+    async function submitOwnerKyc(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitOwnerKyc');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Submitting...`;
+
+      const payload = {
+        citizenship_number: document.getElementById('ownerCtzNo').value.trim(),
+        citizenship_front_url: document.getElementById('ownerCtzFront').value.trim(),
+        citizenship_back_url: document.getElementById('ownerCtzBack').value.trim(),
+        bank_name: document.getElementById('ownerBankName').value,
+        bank_account_name: document.getElementById('ownerAccountName').value.trim(),
+        bank_account_number: document.getElementById('ownerAccountNo').value.trim(),
+        bank_branch: document.getElementById('ownerBranch').value.trim(),
+        bank_proof_doc_url: document.getElementById('ownerBankProof').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/auth/submit-kyc', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast("Space owner verification submitted! Under SuperAdmin review.");
+          loadOwnerKyc();
+        } else {
+          showToast(formatToastMessage(data.detail) || "Failed to submit KYC.", true);
+        }
+      } catch (err) {
+        showToast("Network error submitting KYC details.", true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Submit Space Owner Verification`;
+        lucide.createIcons();
+      }
     }
 
     function openListingModal() {
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
+      if (!token) {
+        showToast("Please sign in as a Property Owner to register storage spaces.", true);
+        setTimeout(() => { window.location.href = '/login'; }, 1200);
+        return;
+      }
       document.getElementById('listSpaceModal').showModal();
       convertUnits();
       lucide.createIcons();
@@ -718,14 +965,36 @@
 
     function formatToastMessage(msg) {
       if (!msg) return 'Operation failed.';
-      if (typeof msg === 'string') return msg;
+      if (typeof msg === 'string') {
+        if (msg.startsWith('{') || msg.startsWith('[')) {
+          try {
+            return formatToastMessage(JSON.parse(msg));
+          } catch (_) {
+            return msg;
+          }
+        }
+        return msg;
+      }
       if (Array.isArray(msg)) {
-        return msg.map(item => item.msg || (item.loc ? `${item.loc.slice(-1)[0]}: ${item.msg}` : JSON.stringify(item))).join(' | ');
+        return msg.map(item => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object') {
+            const field = item.loc ? item.loc.slice(-1)[0] : '';
+            const message = item.msg || item.message || JSON.stringify(item);
+            return field ? `${field}: ${message}` : message;
+          }
+          return String(item);
+        }).join(' • ');
       }
       if (typeof msg === 'object') {
         if (msg.detail) return formatToastMessage(msg.detail);
         if (msg.message) return msg.message;
-        return JSON.stringify(msg);
+        if (msg.error) return typeof msg.error === 'string' ? msg.error : formatToastMessage(msg.error);
+        try {
+          return Object.entries(msg).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' • ');
+        } catch (_) {
+          return 'An error occurred. Please check your input.';
+        }
       }
       return String(msg);
     }
@@ -847,7 +1116,19 @@
         
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
-            grid.innerHTML = `<div class="col-span-full p-8 text-center bg-white rounded-2xl border border-red-200 text-red-600 text-xs">Session expired or unauthorized. Please <a href="/login" class="underline font-bold text-navy">sign in again</a>.</div>`;
+            grid.innerHTML = `
+              <div class="col-span-full p-8 text-center bg-white rounded-2xl border border-red-200 shadow-sm">
+                <span class="w-12 h-12 rounded-2xl bg-red-50 text-red-600 grid place-items-center mx-auto mb-3">
+                  <i data-lucide="lock" class="w-6 h-6"></i>
+                </span>
+                <h4 class="font-bold text-navy text-sm">Authentication Required</h4>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">Your session has expired or you are not signed in as a Property Owner.</p>
+                <a href="/login" class="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-navy text-white text-xs font-bold shadow hover:bg-slate-800 transition">
+                  <i data-lucide="log-in" class="w-4 h-4"></i> Sign In to KTM-WDC
+                </a>
+              </div>
+            `;
+            lucide.createIcons();
           } else {
             const errData = await res.json().catch(() => ({}));
             grid.innerHTML = `<div class="col-span-full p-8 text-center bg-white rounded-2xl border border-red-200 text-red-600 text-xs">${formatToastMessage(errData) || 'Failed to load properties.'}</div>`;
@@ -1007,7 +1288,6 @@
         btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Submit for Physical Audit`;
         lucide.createIcons();
       }
-    }
     }
 
     function openMaintenanceModal(id, title, isCurrentlyOnHold) {
@@ -1244,6 +1524,7 @@
 
       loadMyListings();
       loadActiveLeases();
+      loadOwnerKyc();
       lucide.createIcons();
     });
   </script>

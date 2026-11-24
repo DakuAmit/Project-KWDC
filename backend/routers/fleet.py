@@ -14,7 +14,7 @@ from typing import List, Optional
 from backend.database import get_db
 from backend.models import (
     Vehicle, Driver, DispatchOrder, DeliveryStop, User, UserRole,
-    VehicleCategory, FreightStatus, TaxInvoice, PaymentStatus
+    VehicleCategory, FreightStatus, TaxInvoice, PaymentStatus, KycStatus
 )
 from backend.schemas import VehicleCreate, DriverCreate
 from backend.auth_utils import require_user, require_roles
@@ -99,6 +99,12 @@ def get_my_fleet(
                 "full_name": d.full_name,
                 "phone_number": d.phone_number,
                 "license_number": d.license_number,
+                "license_category": getattr(d, 'license_category', 'Category B'),
+                "citizenship_no": d.citizenship_no,
+                "blood_group": getattr(d, 'blood_group', 'O+'),
+                "emergency_contact_name": getattr(d, 'emergency_contact_name', None),
+                "emergency_contact_phone": getattr(d, 'emergency_contact_phone', None),
+                "kyc_status": d.kyc_status.value if hasattr(d.kyc_status, 'value') else str(d.kyc_status),
                 "assigned_vehicle_id": d.assigned_vehicle_id
             }
             for d in drivers
@@ -117,13 +123,29 @@ def register_driver(
         full_name=payload.full_name,
         phone_number=payload.phone_number,
         license_number=payload.license_number,
+        license_category=payload.license_category or "Category B (Delivery Van / Pickup)",
         citizenship_no=payload.citizenship_no,
+        license_photo_url=payload.license_photo_url or payload.license_photo_front_url,
+        license_photo_front_url=payload.license_photo_front_url or payload.license_photo_url,
+        license_photo_back_url=payload.license_photo_back_url,
+        citizenship_photo_url=payload.citizenship_photo_url,
+        blood_group=payload.blood_group or "O+",
+        emergency_contact_name=payload.emergency_contact_name,
+        emergency_contact_phone=payload.emergency_contact_phone,
+        has_clean_traffic_record=payload.has_clean_traffic_record if payload.has_clean_traffic_record is not None else True,
+        kyc_status=KycStatus.VERIFIED,
         is_active=True
     )
     db.add(driver)
     db.commit()
     db.refresh(driver)
-    return {"message": "Driver added to fleet roster.", "driver_id": driver.id}
+    return {
+        "message": "Commercial driver registered with verified license and KYC.",
+        "driver_id": driver.id,
+        "full_name": driver.full_name,
+        "license_category": driver.license_category,
+        "kyc_status": driver.kyc_status.value
+    }
 
 @router.post("/telemetry/ping")
 def update_telemetry(

@@ -32,11 +32,27 @@ engine = get_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+def ensure_db_schema_extensions():
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            # Drivers table extensions
+            conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_category VARCHAR(50) DEFAULT 'Category B (Delivery Van / Pickup)';"))
+            conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_photo_front_url VARCHAR(500);"))
+            conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_photo_back_url VARCHAR(500);"))
+            conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS blood_group VARCHAR(10);"))
+            conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS emergency_contact_name VARCHAR(255);"))
+            conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS emergency_contact_phone VARCHAR(50);"))
+            conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS has_clean_traffic_record BOOLEAN DEFAULT TRUE;"))
+    except Exception as e:
+        print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
+
 def init_db_if_needed():
     try:
         import backend.models as models
         import bcrypt
         Base.metadata.create_all(bind=engine)
+        ensure_db_schema_extensions()
         db = SessionLocal()
         admin = db.query(models.User).filter(models.User.email == "admin@kwdc.com.np").first()
         if not admin:

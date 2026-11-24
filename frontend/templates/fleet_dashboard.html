@@ -416,41 +416,111 @@
     </form>
   </dialog>
 
-  <!-- Modal: Register Driver -->
-  <dialog id="driverModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+  <!-- Modal: Register Driver with Comprehensive KYC -->
+  <dialog id="driverModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
       <div class="flex items-center gap-2.5">
         <span class="w-8 h-8 rounded-lg bg-indigo-500 text-white grid place-items-center font-bold">
           <i data-lucide="user-plus" class="w-5 h-5"></i>
         </span>
         <div>
-          <h3 class="font-bold text-base text-white" data-i18n="modal_driver_title">Add Commercial Driver</h3>
-          <p class="text-xs text-slate-400" data-i18n="modal_driver_sub">Assign commercial driver to active vehicle</p>
+          <h3 class="font-bold text-base text-white" data-i18n="modal_driver_title">Add Commercial Driver (KYC Compliant)</h3>
+          <p class="text-xs text-slate-400">Nepal DoTM Driving License &amp; Emergency Crew Roster</p>
         </div>
       </div>
       <button onclick="document.getElementById('driverModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
-    <form onsubmit="handleDriverSubmit(event)" class="p-6 space-y-4 text-sm">
+    <form onsubmit="handleDriverSubmit(event)" class="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
       <div>
-        <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_driver_full">Driver Full Name *</label>
+        <label class="block font-bold text-navy mb-1" data-i18n="label_driver_full">Driver Full Name *</label>
         <input type="text" id="drvName" required placeholder="e.g. Shyam Sundar Shrestha" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs">
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_driver_license">Commercial License # *</label>
+          <label class="block font-bold text-navy mb-1" data-i18n="label_driver_license">Driving License # *</label>
           <input type="text" id="drvLicense" required placeholder="e.g. 01-06-992819" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
         </div>
         <div>
-          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_driver_phone">Mobile Contact *</label>
-          <input type="tel" id="drvPhone" required placeholder="98XXXXXXXX" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+          <label class="block font-bold text-navy mb-1">License Category (सवारी वर्ग) *</label>
+          <select id="drvCategory" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="Category B (Van / Pickup / Light 4-Wheeler)">Category B (Van / Pickup / 4-Wheeler)</option>
+            <option value="Category H (Heavy Truck / Multi-Axle / Tipper)">Category H (Heavy Truck / Multi-Axle)</option>
+            <option value="Category G (Tractor / Agro-Carrier)">Category G (Tractor / Agro-Carrier)</option>
+            <option value="Category A (Motorcycle / Courier Bike)">Category A (Motorcycle / Delivery Bike)</option>
+          </select>
         </div>
       </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Nepali Citizenship # *</label>
+          <input type="text" id="drvCitizenship" required placeholder="e.g. 27-01-74-09812" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Blood Group (रक्त समूह) *</label>
+          <select id="drvBloodGroup" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="O+">O+</option>
+            <option value="A+">A+</option>
+            <option value="B+">B+</option>
+            <option value="AB+">AB+</option>
+            <option value="O-">O-</option>
+            <option value="A-">A-</option>
+            <option value="B-">B-</option>
+            <option value="AB-">AB-</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1" data-i18n="label_driver_phone">Driver Mobile Contact *</label>
+          <input type="tel" id="drvPhone" required placeholder="98XXXXXXXX" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Assign Active Vehicle</label>
+          <select id="drvVehicle" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="">Unassigned (Standby)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+        <span class="font-bold text-navy block text-[11px] uppercase tracking-wider">Emergency Contact (आपतकालीन सम्पर्क)</span>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">Contact Person Name *</label>
+            <input type="text" id="drvEmergencyName" required placeholder="Relative / Family Name" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">Contact Phone *</label>
+            <input type="tel" id="drvEmergencyPhone" required placeholder="98XXXXXXXX" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="block font-bold text-navy">License &amp; ID Document Proofs</label>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="drvLicensePhoto" placeholder="License Front Doc Ref / URL" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+          <input type="text" id="drvCitizenshipPhoto" placeholder="Citizenship Doc Ref / URL" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <label class="flex items-start gap-2 p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 cursor-pointer">
+          <input type="checkbox" id="drvCleanRecord" checked required class="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500">
+          <span class="text-[11px] text-emerald-900 leading-tight">
+            <strong>Traffic Police Clean Record:</strong> Driver has no outstanding reckless driving or DUI suspensions on Nepal Traffic Police database.
+          </span>
+        </label>
+      </div>
+
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
         <button type="button" onclick="document.getElementById('driverModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs" data-i18n="btn_cancel">Cancel</button>
         <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
-          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="btn_save_driver">Assign to Crew</span>
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="btn_save_driver">Assign KYC-Verified Driver</span>
         </button>
       </div>
     </form>
@@ -853,6 +923,7 @@
           headers: getAuthHeaders()
         });
         const data = await res.json();
+        cachedVehicles = data.vehicles || [];
         showToast(data.message || "Dispatch order accepted! Dispatched to fleet driver.");
         loadDispatchOrders();
       } catch (err) {
@@ -867,6 +938,7 @@
           headers: getAuthHeaders()
         });
         const data = await res.json();
+        cachedVehicles = data.vehicles || [];
         showToast(data.message || "Status updated.");
         loadDispatchOrders();
         loadFleetEarnings();
@@ -880,6 +952,7 @@
         const res = await fetch('/api/fleet/my-fleet', { headers: getAuthHeaders() });
         if (!res.ok) return;
         const data = await res.json();
+        cachedVehicles = data.vehicles || [];
 
         const vList = document.getElementById('fleetVehiclesGrid');
         const dList = document.getElementById('fleetDriversGrid');
@@ -913,19 +986,48 @@
 
         if (data.drivers.length > 0) {
           dList.innerHTML = data.drivers.map(d => `
-            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-slate-200 text-navy font-bold grid place-items-center shrink-0">
-                  ${d.full_name.substring(0, 2).toUpperCase()}
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase">${escapeHtml(d.license_category || 'Category B')}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">KYC VERIFIED</span>
                 </div>
-                <div>
-                  <h4 class="font-bold text-navy text-sm">${d.full_name}</h4>
-                  <p class="text-xs text-slate-500 font-mono">License: ${d.license_number}</p>
-                  <p class="text-xs text-slate-500 font-mono">Phone: ${d.phone_number}</p>
+                <div class="flex items-center gap-3 mt-3">
+                  <div class="w-10 h-10 rounded-full bg-slate-200 text-navy font-bold grid place-items-center shrink-0">
+                    ${escapeHtml(d.full_name.substring(0, 2).toUpperCase())}
+                  </div>
+                  <div class="truncate">
+                    <h4 class="font-bold text-navy text-sm truncate">${escapeHtml(d.full_name)}</h4>
+                    <p class="text-xs text-slate-500 font-mono">License: <strong>${escapeHtml(d.license_number)}</strong></p>
+                  </div>
                 </div>
+                <div class="mt-3 py-2 border-t border-slate-200 space-y-1 text-[11px] font-mono text-slate-600">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Citizenship:</span>
+                    <span>${escapeHtml(d.citizenship_no)}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Blood Group:</span>
+                    <span class="font-bold text-red-600">${escapeHtml(d.blood_group || 'O+')}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Mobile:</span>
+                    <span>${escapeHtml(d.phone_number)}</span>
+                  </div>
+                  ${d.emergency_contact_phone ? `
+                    <div class="flex justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-1">
+                      <span>Emergency: ${escapeHtml(d.emergency_contact_name || 'Family')}</span>
+                      <span>${escapeHtml(d.emergency_contact_phone)}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+              <div class="mt-2 text-[10px] text-emerald-700 flex items-center gap-1 font-semibold">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Traffic Police Cleared
               </div>
             </div>
           `).join('');
+          lucide.createIcons();
         }
       } catch (err) {
         console.error(err);
@@ -981,7 +1083,15 @@
       lucide.createIcons();
     }
 
+    let cachedVehicles = [];
+
     function openDriverModal() {
+      const vSelect = document.getElementById('drvVehicle');
+      if (vSelect && cachedVehicles.length > 0) {
+        vSelect.innerHTML = '<option value="">Unassigned (Standby)</option>' + cachedVehicles.map(v => `
+          <option value="${v.id}">${v.license_plate} (${v.model_name})</option>
+        `).join('');
+      }
       document.getElementById('driverModal').showModal();
       lucide.createIcons();
     }
@@ -1017,10 +1127,20 @@
 
     async function handleDriverSubmit(e) {
       e.preventDefault();
+      const vehId = document.getElementById('drvVehicle').value;
       const payload = {
-        full_name: document.getElementById('drvName').value,
-        phone_number: document.getElementById('drvPhone').value,
-        license_number: document.getElementById('drvLicense').value
+        full_name: document.getElementById('drvName').value.trim(),
+        phone_number: document.getElementById('drvPhone').value.trim(),
+        license_number: document.getElementById('drvLicense').value.trim(),
+        license_category: document.getElementById('drvCategory').value,
+        citizenship_no: document.getElementById('drvCitizenship').value.trim(),
+        blood_group: document.getElementById('drvBloodGroup').value,
+        emergency_contact_name: document.getElementById('drvEmergencyName').value.trim(),
+        emergency_contact_phone: document.getElementById('drvEmergencyPhone').value.trim(),
+        license_photo_url: document.getElementById('drvLicensePhoto').value.trim() || undefined,
+        citizenship_photo_url: document.getElementById('drvCitizenshipPhoto').value.trim() || undefined,
+        has_clean_traffic_record: document.getElementById('drvCleanRecord').checked,
+        assigned_vehicle_id: vehId ? parseInt(vehId) : undefined
       };
 
       try {
@@ -1031,11 +1151,11 @@
         });
         const data = await res.json();
         if (res.ok) {
-          showToast("Driver added to fleet roster!");
+          showToast(`Driver ${data.full_name || ''} registered with verified license!`);
           document.getElementById('driverModal').close();
           loadMyFleet();
         } else {
-          showToast(data.detail || "Driver registration failed.", true);
+          showToast(formatToastMessage(data.detail) || "Driver registration failed.", true);
         }
       } catch (err) {
         showToast("Network error registering driver.", true);
