@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Commercial Client Hub | KTM-WDC Nepal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#0f172a',
+            amber: '#f59e0b',
+            nepal: '#dc2626'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased font-sans pb-16 lg:pb-0">
+  <!-- Mobile Drawer Backdrop -->
+  <div id="drawerBackdrop" onclick="toggleDrawer()" class="fixed inset-0 bg-slate-950/60 z-40 hidden lg:hidden transition-opacity"></div>
+
+  <div class="flex h-screen overflow-hidden">
+    <!-- Left Drawer (Sidebar) -->
+    <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-navy text-slate-300 flex flex-col border-r border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
+      <!-- Brand & Role Header -->
+      <div class="p-5 border-b border-white/10 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2.5">
+          <span class="w-10 h-10 rounded-xl bg-amber text-navy grid place-items-center font-bold shadow-md shadow-amber-500/20">
+            <i data-lucide="shopping-cart" class="w-6 h-6"></i>
+          </span>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
+              <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
+            </div>
+            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">Commercial Client Hub</p>
+          </div>
+        </a>
+        <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Navigation Drawer Items -->
+      <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm">
+        <button type="button" onclick="switchTab('catalog')" id="nav-catalog" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-white bg-white/10">
+          <span class="flex items-center gap-3"><i data-lucide="search" class="w-4 h-4 text-amber-400"></i> Available Storage Catalog</span>
+          <span id="badgeCatalogCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
+        </button>
+
+        <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> My Active Leases</span>
+          <span id="badgeActiveLeaseCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
+        </button>
+
+        <button type="button" onclick="switchTab('calculator')" id="nav-calculator" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="calculator" class="w-4 h-4 text-sky-400"></i> Area & Tariff Estimator
+        </button>
+
+        <button type="button" onclick="switchTab('gatepass')" id="nav-gatepass" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="qr-code" class="w-4 h-4 text-indigo-400"></i> Digital Gate Passes
+        </button>
+
+        <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> IRD Tax Invoices
+        </button>
+      </nav>
+
+      <!-- Drawer Footer: User Profile & Sign Out -->
+      <div class="p-4 border-t border-white/10 bg-black/20">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <div class="w-9 h-9 rounded-full bg-slate-700 text-white font-bold grid place-items-center text-sm shrink-0" id="clientAvatar">
+              CC
+            </div>
+            <div class="truncate">
+              <p class="text-xs font-bold text-white truncate" id="clientName">Commercial Client</p>
+              <p class="text-[11px] text-slate-400 truncate" id="clientEmail">client@kwdc.com.np</p>
+            </div>
+          </div>
+          <button onclick="handleLogout()" title="Sign Out" class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/5 transition">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Workspace -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <!-- Top Workspace Bar -->
+      <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleDrawer()" class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle">Commercial Storage Exchange</h1>
+            <p class="text-xs text-slate-500 hidden sm:block">Contract Exact Square Footage • 13% IRD VAT Audited • Digital Gate Clearances</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Instant Allocation
+          </span>
+        </div>
+      </header>
+
+      <!-- Toast Container -->
+      <div id="toastContainer" class="fixed top-20 right-6 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
+
+      <!-- Main Panels -->
+      <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+        <!-- View 1: Available Storage Catalog -->
+        <section id="view-catalog" class="space-y-6">
+          <!-- Filter Controls Card -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 class="font-bold text-navy text-sm sm:text-base flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-amber-600"></i> Search Verified Inventory
+              </h3>
+              <span class="text-xs text-slate-500">Continuous square footage allocation</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Space Classification</label>
+                <select id="filterType" onchange="loadCatalog()" class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white text-xs focus:ring-2 focus:ring-navy">
+                  <option value="">All Space Types</option>
+                  <option value="residential_basement">Residential Basement</option>
+                  <option value="commercial_shutter">Ground Shutter</option>
+                  <option value="covered_godown">Covered Godown</option>
+                  <option value="walled_land_plot">Walled Open Compound</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Minimum Space Needed</label>
+                <div class="relative">
+                  <input type="number" id="filterMinSqft" placeholder="e.g. 1500" oninput="loadCatalog()" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-navy">
+                  <span class="absolute right-3 top-2.5 text-xs text-slate-400">sq ft</span>
+                </div>
+              </div>
+
+              <div class="flex items-center pt-5">
+                <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 w-full hover:bg-slate-50 cursor-pointer text-xs">
+                  <input type="checkbox" id="filterColdOnly" onchange="loadCatalog()" class="rounded text-navy focus:ring-navy">
+                  <span class="font-medium text-slate-700">Cold Chain / Chilled Storage</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Catalog Cards Grid -->
+          <div id="clientCatalogGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full py-12 text-center text-slate-400">
+              <div class="inline-block w-8 h-8 border-2 border-navy border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p class="text-sm">Loading verified storage spaces...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 2: My Active Leases -->
+        <section id="view-bookings" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h3 class="text-base font-bold text-navy">My Contracted Storage Facilities</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Real-time status of your reserved square footage, leased rates, and IRD invoices.</p>
+            <div id="clientBookingsList" class="mt-4 divide-y divide-slate-100 text-sm">
+              <p class="text-slate-400 text-center py-8 text-xs">Loading active reservations...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 3: Calculator -->
+        <section id="view-calculator" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm max-w-2xl mx-auto space-y-5">
+            <h3 class="text-base font-bold text-navy flex items-center gap-2">
+              <i data-lucide="calculator" class="w-5 h-5 text-amber"></i> Quick Tariff & Tax Estimator
+            </h3>
+            <p class="text-xs text-slate-600">Calculates exact commercial rent based on contracted square feet, 10% platform/facility margin, and 13% statutory Nepal IRD VAT.</p>
+            
+            <div>
+              <div class="flex justify-between text-xs font-bold mb-1">
+                <span>Contracted Area</span>
+                <span id="quickCalcSqft" class="text-emerald-700 font-mono">2,000 sq ft</span>
+              </div>
+              <input type="range" id="quickSlider" min="500" max="20000" step="100" value="2000" oninput="runQuickCalc()" class="w-full accent-navy">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold mb-1">Rate per sq ft (Rs.)</label>
+              <input type="number" id="quickRate" value="25" oninput="runQuickCalc()" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono text-sm">
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono space-y-2">
+              <div class="flex justify-between"><span class="text-slate-500">Base Rent:</span><span id="resBase" class="font-bold">Rs. 50,000</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">KTM-WDC Margin (10%):</span><span id="resMargin">Rs. 5,000</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">IRD VAT (13%):</span><span id="resVat">Rs. 7,150</span></div>
+              <div class="flex justify-between text-sm font-bold border-t border-slate-200 pt-2"><span class="text-navy">Total Monthly:</span><span id="resTotal" class="text-emerald-700">Rs. 62,150</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 4: Digital Gate Passes -->
+        <section id="view-gatepass" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h3 class="text-base font-bold text-navy">Digital Gate Clearance Tokens</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Generate Inward / Outward clearance passes for incoming freight deliveries.</p>
+            <div class="mt-4 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-xs text-emerald-800 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600"></i>
+                <span>All active leases automatically grant digitally signed gate-in permissions for your assigned fleet trucks.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 5: IRD Tax Invoices -->
+        <section id="view-invoices" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-navy">Nepal IRD Schedule 13 Electronic Tax Invoices</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Download and verify your monthly tax invoices for IRD input tax deductions.</p>
+              </div>
+              <a href="/invoice" target="_blank" class="px-4 py-2 rounded-xl text-xs font-bold text-navy bg-amber hover:bg-amber-400 shadow transition flex items-center gap-1.5">
+                <i data-lucide="external-link" class="w-4 h-4"></i> View Sample VAT Invoice
+              </a>
+            </div>
+            <div id="invoicesList" class="divide-y divide-slate-100 text-xs">
+              <p class="text-slate-400 py-6 text-center">Tax invoices generated automatically once commercial lease is activated by SuperAdmin.</p>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Navigation Bar (For Clients on Mobile) -->
+  <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-navy text-slate-300 border-t border-slate-800 z-40 flex items-center justify-around h-14 text-[10px]">
+    <button onclick="switchTab('catalog')" class="flex flex-col items-center justify-center w-full h-full text-amber-400">
+      <i data-lucide="search" class="w-5 h-5"></i>
+      <span class="mt-0.5">Catalog</span>
+    </button>
+    <button onclick="switchTab('bookings')" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-white">
+      <i data-lucide="calendar" class="w-5 h-5"></i>
+      <span class="mt-0.5">My Spaces</span>
+    </button>
+    <button onclick="switchTab('calculator')" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-white">
+      <i data-lucide="calculator" class="w-5 h-5"></i>
+      <span class="mt-0.5">Calculator</span>
+    </button>
+    <button onclick="switchTab('invoices')" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-white">
+      <i data-lucide="receipt" class="w-5 h-5"></i>
+      <span class="mt-0.5">Invoices</span>
+    </button>
+  </nav>
+
+  <!-- Modal: Book Storage in Exact Sq Ft -->
+  <dialog id="bookStorageModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i>
+        </span>
+        <h3 class="font-bold text-base">Book Commercial Storage Space</h3>
+      </div>
+      <button onclick="document.getElementById('bookStorageModal').close()" class="text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form id="clientBookingForm" onsubmit="handleBookSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
+      <input type="hidden" id="bWarehouseId">
+      <input type="hidden" id="bRate">
+      <input type="hidden" id="bMaxAvailable">
+
+      <div>
+        <h4 id="bTitle" class="font-bold text-navy text-base">Facility Title</h4>
+        <p id="bLocation" class="text-xs text-slate-500 mt-0.5">Location</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold text-navy">Contracted Area (sq ft)</label>
+          <span class="font-mono text-base font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200" id="bSqftDisplay">1,000 sq ft</span>
+        </div>
+        <input type="range" id="bSqftSlider" min="100" max="10000" step="50" value="1000" oninput="recalcModalBooking()" class="w-full accent-navy">
+        <div class="flex justify-between text-[11px] font-mono text-slate-400">
+          <span>Min: 100 sq ft</span>
+          <span id="bMaxLabel">Max: 10,000 sq ft</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Company PAN / VAT Number (Optional for Invoice)</label>
+        <input type="text" id="bPan" placeholder="e.g. 600123456" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-navy">
+      </div>
+
+      <!-- Financial Summary Box -->
+      <div class="rounded-xl bg-navy p-4 text-white text-xs space-y-2 font-mono">
+        <div class="flex justify-between text-slate-300"><span>Base Rent:</span><span id="mBaseRent">Rs. 0</span></div>
+        <div class="flex justify-between text-slate-300"><span>KWDC Margin (10%):</span><span id="mMargin">Rs. 0</span></div>
+        <div class="flex justify-between text-slate-300"><span>Nepal IRD VAT (13%):</span><span id="mVat">Rs. 0</span></div>
+        <div class="flex justify-between text-sm font-bold border-t border-white/10 pt-2 text-amber"><span>Total Monthly Bill:</span><span id="mTotal">Rs. 0</span></div>
+      </div>
+
+      <div class="pt-2 flex justify-end gap-3">
+        <button type="button" onclick="document.getElementById('bookStorageModal').close()" class="px-4 py-2.5 rounded-xl text-slate-600 font-semibold hover:bg-slate-100">
+          Cancel
+        </button>
+        <button type="submit" id="bookSubmitBtn" class="px-5 py-2.5 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold shadow transition flex items-center gap-2">
+          <i data-lucide="check" class="w-4 h-4"></i> Submit Booking
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    function toggleDrawer(force) {
+      const drawer = document.getElementById('leftDrawer');
+      const backdrop = document.getElementById('drawerBackdrop');
+      const isOpen = force !== undefined ? force : drawer.classList.contains('-translate-x-full');
+      if (isOpen) {
+        drawer.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        drawer.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function switchTab(tabId) {
+      ['catalog', 'bookings', 'calculator', 'gatepass', 'invoices'].forEach(id => {
+        const view = document.getElementById('view-' + id);
+        const nav = document.getElementById('nav-' + id);
+        if (view) view.classList.toggle('hidden', id !== tabId);
+        if (nav) {
+          nav.classList.toggle('bg-white/10', id === tabId);
+          nav.classList.toggle('text-white', id === tabId);
+          nav.classList.toggle('text-slate-300', id !== tabId);
+        }
+      });
+      if (window.innerWidth < 1024) toggleDrawer(false);
+      lucide.createIcons();
+    }
+
+    function showToast(msg, isError = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold pointer-events-auto transition-all transform duration-300 ${
+        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+      }`;
+      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4"></i> <span>${msg}</span></div>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => { toast.remove(); }, 4000);
+    }
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem('kwdc_token');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      };
+    }
+
+    let catalogItems = [];
+
+    async function loadCatalog() {
+      const grid = document.getElementById('clientCatalogGrid');
+      const type = document.getElementById('filterType').value;
+      const minSqft = document.getElementById('filterMinSqft').value;
+      const coldOnly = document.getElementById('filterColdOnly').checked;
+
+      let url = '/api/warehouses/catalog?';
+      if (type) url += `space_type=${type}&`;
+      if (minSqft) url += `min_sqft=${minSqft}&`;
+      if (coldOnly) url += `cold_storage_only=true&`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        catalogItems = data;
+        document.getElementById('badgeCatalogCount').textContent = data.length;
+
+        if (data.length === 0) {
+          grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-400">No storage spaces currently match your filters.</div>';
+          return;
+        }
+
+        grid.innerHTML = data.map(w => `
+          <article class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-3">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Verified & Live
+                </span>
+                <span class="font-mono text-xs font-bold text-navy">Rs. ${w.monthly_rate_per_sqft}/sq ft</span>
+              </div>
+              <h4 class="font-bold text-navy text-base">${w.title}</h4>
+              <p class="text-xs text-slate-500 mt-1">${w.neighborhood_landmark || w.district || 'Kathmandu'}</p>
+
+              <div class="grid grid-cols-2 gap-2 mt-4 p-3 rounded-xl bg-slate-50 text-xs text-center font-mono">
+                <div><p class="text-[10px] text-slate-400 uppercase">Total Space</p><p class="font-bold text-navy">${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</p></div>
+                <div><p class="text-[10px] text-slate-400 uppercase">Available</p><p class="font-bold text-emerald-700">${Number(w.available_sqft).toLocaleString('en-IN')} sq ft</p></div>
+              </div>
+
+              <div class="flex flex-wrap gap-1.5 mt-3 text-[11px] text-slate-600">
+                ${w.road_access_ft ? `<span class="bg-slate-100 px-2 py-0.5 rounded">${w.road_access_ft} ft road</span>` : ''}
+                ${w.has_three_phase_power ? `<span class="bg-slate-100 px-2 py-0.5 rounded">3-Phase</span>` : ''}
+                ${w.has_cctv ? `<span class="bg-slate-100 px-2 py-0.5 rounded">CCTV</span>` : ''}
+                ${w.has_cold_storage ? `<span class="bg-sky-50 text-sky-700 font-semibold px-2 py-0.5 rounded">Cold Chain</span>` : ''}
+              </div>
+            </div>
+
+            <div class="mt-5 pt-4 border-t border-slate-100">
+              <button onclick="openBookingModal(${w.id}, '${w.title.replace(/'/g, "\\'")}', '${w.neighborhood_landmark || ''}', ${w.monthly_rate_per_sqft}, ${w.available_sqft})" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold flex items-center justify-center gap-2 shadow-sm transition">
+                <i data-lucide="calendar-check" class="w-4 h-4"></i> Book Space in Sq Ft
+              </button>
+            </div>
+          </article>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        grid.innerHTML = `<div class="col-span-full py-8 text-center text-red-500">Error loading catalog: ${err.message}</div>`;
+      }
+    }
+
+    function openBookingModal(id, title, location, rate, available) {
+      document.getElementById('bWarehouseId').value = id;
+      document.getElementById('bRate').value = rate;
+      document.getElementById('bMaxAvailable').value = available;
+      document.getElementById('bTitle').textContent = title;
+      document.getElementById('bLocation').textContent = location;
+      
+      const slider = document.getElementById('bSqftSlider');
+      slider.max = available;
+      slider.value = Math.min(available, 1000);
+      document.getElementById('bMaxLabel').textContent = `Max Available: ${Number(available).toLocaleString('en-IN')} sq ft`;
+
+      recalcModalBooking();
+      document.getElementById('bookStorageModal').showModal();
+      lucide.createIcons();
+    }
+
+    function recalcModalBooking() {
+      const slider = document.getElementById('bSqftSlider');
+      const sqft = parseInt(slider.value) || 500;
+      const rate = parseFloat(document.getElementById('bRate').value) || 20;
+
+      document.getElementById('bSqftDisplay').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+
+      const baseRent = sqft * rate;
+      const margin = Math.round(baseRent * 0.10);
+      const taxable = baseRent + margin;
+      const vat = Math.round(taxable * 0.13);
+      const total = taxable + vat;
+
+      document.getElementById('mBaseRent').textContent = 'Rs. ' + baseRent.toLocaleString('en-IN');
+      document.getElementById('mMargin').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
+      document.getElementById('mVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+      document.getElementById('mTotal').textContent = 'Rs. ' + total.toLocaleString('en-IN');
+    }
+
+    async function handleBookSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('bookSubmitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Processing Booking...';
+
+      const payload = {
+        warehouse_id: parseInt(document.getElementById('bWarehouseId').value),
+        requested_sqft: parseFloat(document.getElementById('bSqftSlider').value),
+        buyer_pan: document.getElementById('bPan').value || '301245678'
+      };
+
+      try {
+        const res = await fetch('/api/warehouses/book', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Booking submitted for ${data.requested_sqft.toLocaleString('en-IN')} sq ft! Invoice ${data.invoice_number} created.`);
+          document.getElementById('bookStorageModal').close();
+          loadCatalog();
+          switchTab('bookings');
+        } else {
+          showToast(data.detail || 'Booking failed.', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Submit Booking';
+        lucide.createIcons();
+      }
+    }
+
+    function runQuickCalc() {
+      const sqft = parseInt(document.getElementById('quickSlider').value) || 1000;
+      const rate = parseFloat(document.getElementById('quickRate').value) || 25;
+      document.getElementById('quickCalcSqft').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+
+      const base = sqft * rate;
+      const margin = Math.round(base * 0.10);
+      const vat = Math.round((base + margin) * 0.13);
+      const total = base + margin + vat;
+
+      document.getElementById('resBase').textContent = 'Rs. ' + base.toLocaleString('en-IN');
+      document.getElementById('resMargin').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
+      document.getElementById('resVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+      document.getElementById('resTotal').textContent = 'Rs. ' + total.toLocaleString('en-IN');
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('kwdc_token');
+      localStorage.removeItem('kwdc_user');
+      window.location.href = '/';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
+      if (user) {
+        document.getElementById('clientName').textContent = user.full_name || 'Commercial Client';
+        document.getElementById('clientEmail').textContent = user.email || 'client@kwdc.com.np';
+        document.getElementById('clientAvatar').textContent = (user.full_name || 'CC').substring(0, 2).toUpperCase();
+      }
+      loadCatalog();
+      runQuickCalc();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

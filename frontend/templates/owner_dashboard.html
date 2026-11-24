@@ -1,437 +1,565 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Property Owner Cockpit | KTM-WDC Nepal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#0f172a',
+            amber: '#f59e0b',
+            nepal: '#dc2626'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased font-sans">
+  <!-- Mobile Drawer Backdrop -->
+  <div id="drawerBackdrop" onclick="toggleDrawer()" class="fixed inset-0 bg-slate-950/60 z-40 hidden lg:hidden transition-opacity"></div>
 
-{% block title %}Property Owner Cockpit | KTM-WDC{% endblock %}
-
-{% block content %}
-<div class="container py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-house-door-fill text-primary me-2"></i>Property Owner Cockpit</h2>
-            <p class="text-muted mb-0">Register idle basements, shutters, and godowns. Zero holding liability until commercial lease assignment.</p>
-        </div>
-        <button class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#listSpaceModal">
-            <i class="bi bi-plus-circle me-1"></i> List New Property
+  <div class="flex h-screen overflow-hidden">
+    <!-- Left Drawer (Sidebar) -->
+    <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-navy text-slate-300 flex flex-col border-r border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
+      <!-- Brand & Role Header -->
+      <div class="p-5 border-b border-white/10 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2.5">
+          <span class="w-10 h-10 rounded-xl bg-amber text-navy grid place-items-center font-bold shadow-md shadow-amber-500/20">
+            <i data-lucide="home" class="w-6 h-6"></i>
+          </span>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
+              <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
+            </div>
+            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">Space Owner Cockpit</p>
+          </div>
+        </a>
+        <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
         </button>
+      </div>
+
+      <!-- Left Drawer Navigation -->
+      <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm">
+        <button type="button" onclick="switchTab('properties')" id="nav-properties" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-white bg-white/10">
+          <span class="flex items-center gap-3"><i data-lucide="building" class="w-4 h-4 text-amber-400"></i> My Registered Spaces</span>
+          <span id="badgePropertyCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
+        </button>
+
+        <button type="button" onclick="openListingModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> List New Storage Space
+        </button>
+
+        <button type="button" onclick="switchTab('leases')" id="nav-leases" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="calendar" class="w-4 h-4 text-sky-400"></i> Active Tenant Leases</span>
+          <span id="badgeLeaseCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
+        </button>
+
+        <button type="button" onclick="switchTab('payouts')" id="nav-payouts" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="wallet" class="w-4 h-4 text-amber-400"></i> Rental Payouts & Statements
+        </button>
+
+        <button type="button" onclick="switchTab('governance')" id="nav-governance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="file-check-2" class="w-4 h-4 text-indigo-400"></i> Master Legal Agreement
+        </button>
+      </nav>
+
+      <!-- Drawer Footer: User Profile & Sign Out -->
+      <div class="p-4 border-t border-white/10 bg-black/20">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <div class="w-9 h-9 rounded-full bg-slate-700 text-white font-bold grid place-items-center text-sm shrink-0" id="ownerAvatar">
+              PO
+            </div>
+            <div class="truncate">
+              <p class="text-xs font-bold text-white truncate" id="ownerName">Property Owner</p>
+              <p class="text-[11px] text-slate-400 truncate" id="ownerEmail">owner@kwdc.com.np</p>
+            </div>
+          </div>
+          <button onclick="handleLogout()" title="Sign Out" class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/5 transition">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Workspace -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <!-- Top Workspace Bar -->
+      <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleDrawer()" class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle">Property Owner Cockpit</h1>
+            <p class="text-xs text-slate-500 hidden sm:block">Monetize Empty Space • Rs. 0 Holding Liability Covenant • Continuous Sq Ft Accounting</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button onclick="openListingModal()" class="inline-flex items-center gap-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold px-4 py-2 text-xs shadow transition">
+            <i data-lucide="plus" class="w-4 h-4"></i> List New Storage
+          </button>
+        </div>
+      </header>
+
+      <!-- Toast Container -->
+      <div id="toastContainer" class="fixed top-20 right-6 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
+
+      <!-- Main Panels -->
+      <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+        <!-- Zero Holding Liability Covenant Banner -->
+        <div class="rounded-2xl border border-blue-200 bg-blue-50/70 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <span class="w-9 h-9 rounded-xl bg-blue-600 text-white grid place-items-center shrink-0 mt-0.5">
+              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </span>
+            <div>
+              <h4 class="font-bold text-navy text-sm">KWDC Zero Holding Liability Covenant</h4>
+              <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                When you list empty basements, shutters, or godowns, your property is verified by SuperAdmin. <strong>Holding liability is Rs. 0</strong> until a commercial tenant contracts the space. Once leased, monthly disbursements are deposited directly to your bank account.
+              </p>
+            </div>
+          </div>
+          <span class="px-3 py-1.5 rounded-full text-xs font-bold bg-white text-blue-700 border border-blue-200 shadow-sm shrink-0">
+            Audit Guarantee
+          </span>
+        </div>
+
+        <!-- View 1: Properties List -->
+        <section id="view-properties" class="space-y-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-navy">Your Physical Warehouse Facilities</h3>
+            <button onclick="loadMyListings()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+            </button>
+          </div>
+
+          <div id="ownerPropertiesGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full py-12 text-center text-slate-400">
+              <div class="inline-block w-8 h-8 border-2 border-navy border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p class="text-sm">Loading your registered properties...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 2: Active Tenant Leases -->
+        <section id="view-leases" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h3 class="text-base font-bold text-navy">Active Commercial Tenant Leases</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Contracted spaces currently occupied by verified commercial clients.</p>
+            <div id="activeLeasesList" class="mt-4 divide-y divide-slate-100 text-sm">
+              <p class="text-slate-400 text-center py-8 text-xs">No active tenant contracts currently running. Newly approved spaces will appear in the public catalog.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 3: Payouts & Statements -->
+        <section id="view-payouts" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h3 class="text-base font-bold text-navy">Rental Disbursement Statements</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Automated monthly rent transfers deposited directly via Nepal Clearing House / ConnectIPS.</p>
+            <div class="mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono text-slate-700 space-y-2">
+              <p><strong>Payment Cycle:</strong> Monthly on the 1st of each Bikram Sambat calendar month.</p>
+              <p><strong>Disbursement Mode:</strong> Direct Bank Deposit (verified PAN linked).</p>
+              <p><strong>Deductions:</strong> 0% deduction on base contracted rate. KWDC margin is billed directly to the tenant.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 4: Master Legal Agreement -->
+        <section id="view-governance" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h3 class="text-base font-bold text-navy">Master Commercial Lease Agreement Terms</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Standard legal covenants executed with KTM-WDC Pvt. Ltd. upon physical facility verification.</p>
+            <div class="mt-4 text-xs text-slate-600 space-y-3 leading-relaxed border-t border-slate-100 pt-4">
+              <p>1. <strong>Exclusivity & Lockout:</strong> Once a property is audited and approved, feature modifications, capacity alterations, and tenant assignments are governed by KTM-WDC to prevent arbitrary evictions or unexpected tariff hikes.</p>
+              <p>2. <strong>Maintenance Hold Protocol:</strong> If urgent structural repairs, electrical rewiring, or shutter maintenance are needed, the owner can trigger a <em>Maintenance Hold</em> with a mandatory 10+ character explanation note.</p>
+              <p>3. <strong>Holding Covenant:</strong> Prior to lease assignment, KTM-WDC bears Rs. 0 holding liability. The owner is free to request delisting with 15 days written notice if unleased.</p>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal: List New Property -->
+  <dialog id="listSpaceModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-2xl border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+        </span>
+        <h3 class="font-bold text-base">List Empty Storage Space</h3>
+      </div>
+      <button onclick="document.getElementById('listSpaceModal').close()" class="text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
     </div>
 
-    <!-- Operating Rules Banner -->
-    <div class="alert alert-info border-start border-4 border-info shadow-sm d-flex align-items-center gap-3">
-        <i class="bi bi-info-circle-fill fs-3 text-info"></i>
+    <form id="listingForm" onsubmit="handleListSpace(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs sm:text-sm">
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Facility Title / Identifier *</label>
+        <input type="text" id="wTitle" required placeholder="e.g. Teku Main Road Overhead Dry Basement Storage" class="w-full h-10 px-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-            <strong>KWDC Governance Protocol:</strong>
-            New listings enter <span class="badge bg-secondary">Pending Admin Review</span>. Once inspected and approved, a Master Commercial Lease Agreement is executed via email, locking specifications from tampering. KWDC assumes <strong>Rs. 0 holding liability</strong> while spaces are awaiting tenant assignment.
+          <label class="block text-xs font-bold text-navy mb-1">Space Classification *</label>
+          <select id="wSpaceType" required class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-navy">
+            <option value="residential_basement">Residential Basement</option>
+            <option value="commercial_shutter">Ground Floor Shutter</option>
+            <option value="covered_godown">Covered Commercial Godown</option>
+            <option value="walled_land_plot">Walled Open Compound</option>
+          </select>
         </div>
-    </div>
 
-    <!-- Properties Container -->
-    <div id="ownerPropertiesList" class="row g-4 mt-1">
-        <div class="col-12 text-center py-5 text-muted">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2">Loading your registered properties...</p>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Expected Monthly Rate (Rs./sq ft) *</label>
+          <div class="relative">
+            <input type="number" id="wRate" step="0.5" required placeholder="25.0" class="w-full h-10 pl-3 pr-16 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy">
+            <span class="absolute right-3 top-2.5 text-xs font-semibold text-slate-500">/ sq ft</span>
+          </div>
         </div>
-    </div>
-</div>
+      </div>
 
-<!-- Modal: List New Property -->
-<div class="modal fade" id="listSpaceModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="bi bi-building-add me-2"></i>List Empty Storage Space</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="spaceListingForm" onsubmit="handleListSpace(event)">
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Facility Title / Identifier</label>
-                            <input type="text" id="wTitle" class="form-control" required placeholder="e.g. Koteshwor Overhead Dry Basement Storage">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Space Classification</label>
-                            <select id="wSpaceType" class="form-select" required>
-                                <option value="residential_basement">Residential Basement</option>
-                                <option value="commercial_shutter">Ground Floor Shutter Shop</option>
-                                <option value="covered_godown">Covered Commercial Godown</option>
-                                <option value="walled_land_plot">Walled Open Compound Plot</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Expected Monthly Tariff (NPR per sq ft)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">NPR</span>
-                                <input type="number" id="wRate" class="form-control" step="0.5" required placeholder="35.0">
-                                <span class="input-group-text">/sq ft</span>
-                            </div>
-                        </div>
-
-                        <!-- Multi-Unit Area Inputs -->
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Input Measurement Unit</label>
-                            <select id="wInputUnit" class="form-select" onchange="convertPreview()">
-                                <option value="sqft">Square Feet (sq ft)</option>
-                                <option value="aana">Aana (342.25 sq ft)</option>
-                                <option value="ropani">Ropani (5,476 sq ft)</option>
-                                <option value="bigha">Bigha (72,900 sq ft)</option>
-                                <option value="kattha">Kattha (3,645 sq ft)</option>
-                                <option value="sqm">Square Meters (sq m)</option>
-                                <option value="cuft">Cubic Feet (Volume)</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Total Area / Volume</label>
-                            <input type="number" id="wInputValue" class="form-control" step="0.1" required placeholder="10000" oninput="convertPreview()">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Clear Ceiling Height</label>
-                            <div class="input-group">
-                                <input type="number" id="wCeiling" class="form-control" step="0.5" value="11.0" oninput="convertPreview()">
-                                <span class="input-group-text">ft</span>
-                            </div>
-                        </div>
-
-                        <!-- Normalized Preview -->
-                        <div class="col-12">
-                            <div class="p-2 bg-light rounded border text-muted small d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-calculator me-1"></i> Normalized Storage Area:</span>
-                                <strong id="normalizedPreview" class="text-primary fs-6">10,000 sq ft</strong>
-                            </div>
-                        </div>
-
-                        <!-- Location & GPS -->
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">District & Municipality</label>
-                            <input type="text" id="wMunicipality" class="form-control" required placeholder="Kathmandu Metropolitan - 32">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Road Access Width</label>
-                            <div class="input-group">
-                                <input type="number" id="wRoadAccess" class="form-control" step="1" value="20">
-                                <span class="input-group-text">ft (Truck Road)</span>
-                            </div>
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Neighborhood Landmark / Address</label>
-                            <input type="text" id="wLandmark" class="form-control" required placeholder="e.g. Near Koteshwor Chowk overhead bridge, 150m inside Mahadevsthan road">
-                        </div>
-
-                        <!-- Draggable Map & 1-Tap GPS -->
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label small fw-bold mb-0">Pin Exact Warehouse Location (No raw typing required)</label>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="getCurrentLocation()">
-                                    <i class="bi bi-geo-alt-fill me-1"></i> Pin My Current GPS
-                                </button>
-                            </div>
-                            <div id="pickerMap" style="height: 250px; border-radius: 8px; border: 1px solid #cbd5e1;"></div>
-                            <input type="hidden" id="wLat" value="27.6754">
-                            <input type="hidden" id="wLng" value="85.3458">
-                        </div>
-
-                        <!-- Amenities -->
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Facility Amenities</label>
-                            <div class="d-flex flex-wrap gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="w3Phase">
-                                    <label class="form-check-label small" for="w3Phase">3-Phase Power</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="wRamp">
-                                    <label class="form-check-label small" for="wRamp">Forklift Loading Ramp</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="wCCTV">
-                                    <label class="form-check-label small" for="wCCTV">CCTV Security</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="wCold">
-                                    <label class="form-check-label small" for="wCold">Cold Storage / Chiller</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary fw-bold">
-                        <i class="bi bi-check2-circle me-1"></i> Submit for Admin Audit
-                    </button>
-                </div>
-            </form>
+      <!-- Area Unit Input with Live Multi-Unit Converter -->
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+        <p class="text-xs font-bold text-navy flex items-center gap-1.5">
+          <i data-lucide="scale" class="w-4 h-4 text-amber-600"></i> Nepali Multi-Unit Area Converter
+        </p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Input Value *</label>
+            <input type="number" id="wInputValue" step="0.1" value="2000" required oninput="convertUnits()" class="w-full h-9 px-3 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-navy">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Unit *</label>
+            <select id="wInputUnit" onchange="convertUnits()" class="w-full h-9 px-2 rounded-lg border border-slate-300 bg-white text-xs focus:ring-2 focus:ring-navy">
+              <option value="sqft">Square Feet (sq ft)</option>
+              <option value="aana">Aana (342.25 sq ft)</option>
+              <option value="ropani">Ropani (5,476 sq ft)</option>
+              <option value="kattha">Kattha (3,645 sq ft)</option>
+              <option value="bigha">Bigha (72,900 sq ft)</option>
+              <option value="sqm">Square Meters (sq m)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Ceiling Height (ft)</label>
+            <input type="number" id="wCeilingHeight" value="10.0" step="0.5" class="w-full h-9 px-3 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-navy">
+          </div>
         </div>
-    </div>
-</div>
-
-<!-- Modal: Maintenance Hold Reason -->
-<div class="modal fade" id="holdModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Maintenance Hold Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="holdForm" onsubmit="handleHoldSubmit(event)">
-                <div class="modal-body p-4">
-                    <input type="hidden" id="holdWarehouseId">
-                    <input type="hidden" id="holdToggleValue">
-                    <p class="small text-muted">
-                        Rule 5: To protect network reliability and active commercial bookings, pausing space availability requires a formal Hold Reason Note recorded in the SuperAdmin audit log.
-                    </p>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Reason for Maintenance / Availability Pause</label>
-                        <textarea id="holdReasonNote" class="form-control" rows="3" required placeholder="e.g. Fixing drainage seepage and ceiling waterproofing ahead of monsoon..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning fw-bold">Transmit Note to Admin</button>
-                </div>
-            </form>
+        <div class="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-mono text-emerald-800 flex justify-between items-center">
+          <span>Standardized Area:</span>
+          <strong id="standardSqftPreview" class="text-sm font-bold">2,000 sq ft</strong>
         </div>
-    </div>
-</div>
-{% endblock %}
+      </div>
 
-{% block scripts %}
-<script>
-    let pickerMap, pickerMarker;
+      <!-- Location & Road Clearance -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">District *</label>
+          <input type="text" id="wDistrict" required value="Kathmandu" class="w-full h-10 px-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Vehicle Road Access (ft width) *</label>
+          <input type="number" id="wRoadAccess" required value="16" placeholder="e.g. 16 ft road" class="w-full h-10 px-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy">
+        </div>
+      </div>
 
-    // Unit conversion factors
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Neighborhood / Landmark *</label>
+        <input type="text" id="wLandmark" required placeholder="e.g. Opposite Bishnumati Bridge, Teku" class="w-full h-10 px-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy">
+      </div>
+
+      <!-- Amenities Checkboxes -->
+      <div>
+        <label class="block text-xs font-bold text-navy mb-2">Facility Specifications & Amenities</label>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" id="w3Phase" checked class="rounded text-navy focus:ring-navy">
+            <span>3-Phase Industrial Power</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" id="wCctv" checked class="rounded text-navy focus:ring-navy">
+            <span>CCTV Security Surveillance</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" id="wForklift" class="rounded text-navy focus:ring-navy">
+            <span>Forklift Loading Ramp</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" id="wCold" class="rounded text-navy focus:ring-navy">
+            <span>Cold Storage / Chilled Insulation</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
+        <button type="button" onclick="document.getElementById('listSpaceModal').close()" class="px-4 py-2.5 rounded-xl text-slate-600 font-semibold hover:bg-slate-100">
+          Cancel
+        </button>
+        <button type="submit" id="submitListingBtn" class="px-5 py-2.5 rounded-xl bg-navy text-white font-bold hover:bg-slate-800 shadow transition flex items-center gap-2">
+          <i data-lucide="check" class="w-4 h-4"></i> Submit for Verification
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    function toggleDrawer(force) {
+      const drawer = document.getElementById('leftDrawer');
+      const backdrop = document.getElementById('drawerBackdrop');
+      const isOpen = force !== undefined ? force : drawer.classList.contains('-translate-x-full');
+      if (isOpen) {
+        drawer.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        drawer.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function switchTab(tabId) {
+      ['properties', 'leases', 'payouts', 'governance'].forEach(id => {
+        const view = document.getElementById('view-' + id);
+        const nav = document.getElementById('nav-' + id);
+        if (view) view.classList.toggle('hidden', id !== tabId);
+        if (nav) {
+          nav.classList.toggle('bg-white/10', id === tabId);
+          nav.classList.toggle('text-white', id === tabId);
+          nav.classList.toggle('text-slate-300', id !== tabId);
+        }
+      });
+      if (window.innerWidth < 1024) toggleDrawer(false);
+      lucide.createIcons();
+    }
+
+    function openListingModal() {
+      document.getElementById('listSpaceModal').showModal();
+      convertUnits();
+      lucide.createIcons();
+    }
+
+    function showToast(msg, isError = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold pointer-events-auto transition-all transform duration-300 ${
+        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+      }`;
+      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4"></i> <span>${msg}</span></div>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => { toast.remove(); }, 4000);
+    }
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem('kwdc_token');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      };
+    }
+
+    // Nepali Unit Conversion Factors
     const CONVERSIONS = {
-        sqft: 1.0,
-        sqm: 10.7639,
-        aana: 342.25,
-        ropani: 5476.0,
-        kattha: 3645.0,
-        bigha: 72900.0,
-        cuft: 0.1
+      sqft: 1.0,
+      aana: 342.25,
+      ropani: 5476.0,
+      kattha: 3645.0,
+      bigha: 72900.0,
+      sqm: 10.7639
     };
 
-    function convertPreview() {
-        const val = parseFloat(document.getElementById('wInputValue').value || 0);
-        const unit = document.getElementById('wInputUnit').value;
-        const ceiling = parseFloat(document.getElementById('wCeiling').value || 10);
-
-        let sqft = val;
-        if (unit === 'cuft') {
-            sqft = val / Math.max(ceiling, 1);
-        } else {
-            sqft = val * (CONVERSIONS[unit] || 1);
-        }
-        document.getElementById('normalizedPreview').innerText = Math.round(sqft).toLocaleString() + ' sq ft';
+    function convertUnits() {
+      const val = parseFloat(document.getElementById('wInputValue').value) || 0;
+      const unit = document.getElementById('wInputUnit').value;
+      const factor = CONVERSIONS[unit] || 1.0;
+      const sqft = Math.round(val * factor);
+      document.getElementById('standardSqftPreview').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+      return sqft;
     }
 
-    function initPickerMap() {
-        if (pickerMap) return;
-        const defaultLat = 27.6754, defaultLng = 85.3458;
-        pickerMap = L.map('pickerMap').setView([defaultLat, defaultLng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(pickerMap);
+    // Load Owner Listings
+    async function loadMyListings() {
+      const grid = document.getElementById('ownerPropertiesGrid');
+      try {
+        const res = await fetch('/api/warehouses/my-listings', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load listings');
+        const data = await res.json();
 
-        pickerMarker = L.marker([defaultLat, defaultLng], {draggable: true}).addTo(pickerMap);
-        pickerMarker.on('dragend', function (e) {
-            const coord = e.target.getLatLng();
-            document.getElementById('wLat').value = coord.lat;
-            document.getElementById('wLng').value = coord.lng;
-        });
+        document.getElementById('badgePropertyCount').textContent = data.length;
 
-        pickerMap.on('click', function (e) {
-            pickerMarker.setLatLng(e.latlng);
-            document.getElementById('wLat').value = e.latlng.lat;
-            document.getElementById('wLng').value = e.latlng.lng;
-        });
-    }
-
-    function getCurrentLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                pickerMarker.setLatLng([lat, lng]);
-                pickerMap.setView([lat, lng], 15);
-                document.getElementById('wLat').value = lat;
-                document.getElementById('wLng').value = lng;
-            }, err => {
-                alert('GPS location unavailable: ' + err.message);
-            });
-        }
-    }
-
-    document.getElementById('listSpaceModal').addEventListener('shown.bs.modal', function () {
-        initPickerMap();
-        pickerMap.invalidateSize();
-    });
-
-    async function loadOwnerProperties() {
-        const token = localStorage.getItem('kwdc_token');
-        if (!token) {
-            document.getElementById('ownerPropertiesList').innerHTML = `
-                <div class="col-12 text-center py-5">
-                    <p class="text-muted">Please sign in as a Property Owner to manage your facilities.</p>
-                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#loginModal">Sign In</button>
-                </div>
-            `;
-            return;
+        if (data.length === 0) {
+          grid.innerHTML = `
+            <div class="col-span-full py-16 text-center bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+              <span class="w-12 h-12 rounded-2xl bg-amber/10 text-amber-600 grid place-items-center mx-auto mb-3">
+                <i data-lucide="building" class="w-6 h-6"></i>
+              </span>
+              <h4 class="font-bold text-navy text-base">No Spaces Listed Yet</h4>
+              <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">Monetize your idle basement, ground shutter, or godown with zero holding liability.</p>
+              <button onclick="openListingModal()" class="mt-4 px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow hover:bg-slate-800 transition">
+                List Empty Storage Space
+              </button>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
         }
 
-        try {
-            const res = await fetch('/api/warehouses/my-listings', {
-                headers: {'Authorization': 'Bearer ' + token}
-            });
-            const data = await res.json();
-            const container = document.getElementById('ownerPropertiesList');
+        grid.innerHTML = data.map(w => `
+          <article class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-3">
+                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold ${
+                  w.is_approved ? (w.is_on_maintenance_hold ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200') : 'bg-slate-100 text-slate-600 border border-slate-200'
+                }">
+                  ${w.is_on_maintenance_hold ? 'Maintenance Hold' : (w.is_approved ? 'Audited & Approved' : 'Pending Admin Audit')}
+                </span>
+                <span class="font-mono text-xs font-bold text-navy">Rs. ${w.monthly_rate_per_sqft}/sq ft</span>
+              </div>
+              <h4 class="font-bold text-navy text-base">${w.title}</h4>
+              <p class="text-xs text-slate-500 mt-1">${w.neighborhood_landmark || 'Kathmandu Valley'}</p>
 
-            if (!data || data.length === 0) {
-                container.innerHTML = `
-                    <div class="col-12 text-center py-5">
-                        <div class="fs-1 text-muted mb-2"><i class="bi bi-inbox"></i></div>
-                        <h5>No properties listed yet</h5>
-                        <p class="text-muted small">Click "List New Property" above to monetize your empty basement or shutter.</p>
-                    </div>
-                `;
-                return;
-            }
+              <div class="grid grid-cols-2 gap-2 mt-4 p-3 rounded-xl bg-slate-50 text-xs text-center font-mono">
+                <div><p class="text-[10px] text-slate-400 uppercase">Total Space</p><p class="font-bold text-navy">${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</p></div>
+                <div><p class="text-[10px] text-slate-400 uppercase">Available</p><p class="font-bold text-emerald-700">${Number(w.available_sqft).toLocaleString('en-IN')} sq ft</p></div>
+              </div>
 
-            container.innerHTML = data.map(w => `
-                <div class="col-md-6 col-lg-4">
-                    <div class="card card-kwdc h-100 p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge ${w.is_approved ? 'bg-success' : 'bg-warning text-dark'}">
-                                ${w.is_approved ? '✓ Verified & Approved' : '⏳ Pending Admin Audit'}
-                            </span>
-                            <span class="badge bg-light text-dark border">${w.space_type}</span>
-                        </div>
-                        <h5 class="fw-bold mb-1">${w.title}</h5>
-                        <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>${w.neighborhood_landmark}</p>
-                        
-                        <div class="bg-light p-2 rounded mb-3 small">
-                            <div class="d-flex justify-content-between">
-                                <span>Audited Area:</span>
-                                <strong>${w.total_sqft.toLocaleString()} sq ft</strong>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <span>Monthly Rate:</span>
-                                <strong class="text-primary">NPR ${w.monthly_rate_per_sqft}/sq ft</strong>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <span>Gross Yield:</span>
-                                <strong>NPR ${(w.total_sqft * w.monthly_rate_per_sqft).toLocaleString()}/mo</strong>
-                            </div>
-                        </div>
+              ${w.hold_reason_note ? `<p class="mt-3 text-[11px] text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200"><strong>Hold Reason:</strong> ${w.hold_reason_note}</p>` : ''}
+            </div>
 
-                        ${w.is_approved ? `
-                            <div class="alert alert-secondary p-2 small mb-2">
-                                <i class="bi bi-lock-fill text-danger me-1"></i> <strong>Specs Locked:</strong> Feature edits and tenant assignments are governed by SuperAdmin.
-                            </div>
-                        ` : `
-                            <div class="alert alert-warning p-2 small mb-2">
-                                <i class="bi bi-pencil me-1"></i> Awaiting admin review. Specs remain editable.
-                            </div>
-                        `}
-
-                        <div class="d-flex gap-2 mt-auto">
-                            <button class="btn btn-sm btn-outline-warning w-100" onclick="openHoldModal(${w.id}, ${!w.is_on_maintenance_hold})">
-                                <i class="bi bi-tools me-1"></i> ${w.is_on_maintenance_hold ? 'Resume Availability' : 'Maintenance Hold'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        } catch (err) {
-            console.error(err);
-        }
+            <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-[11px] text-slate-400">
+                ${w.is_approved ? '🔒 Specs locked by contract' : 'Awaiting physical review'}
+              </span>
+              ${w.is_approved ? `
+                <button onclick="toggleMaintenanceHold(${w.id}, ${w.is_on_maintenance_hold})" class="px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                  w.is_on_maintenance_hold ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' : 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                } transition">
+                  ${w.is_on_maintenance_hold ? 'Resume Availability' : 'Request Maintenance Hold'}
+                </button>
+              ` : ''}
+            </div>
+          </article>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        grid.innerHTML = `<div class="col-span-full py-8 text-center text-red-500">Error loading properties: ${err.message}. Please sign in.</div>`;
+      }
     }
 
+    // Handle Form Submit
     async function handleListSpace(e) {
-        e.preventDefault();
-        const token = localStorage.getItem('kwdc_token');
-        if (!token) {
-            alert('Please sign in first.');
-            return;
-        }
+      e.preventDefault();
+      const btn = document.getElementById('submitListingBtn');
+      btn.disabled = true;
+      btn.innerHTML = 'Submitting...';
 
-        const payload = {
-            title: document.getElementById('wTitle').value,
-            space_type: document.getElementById('wSpaceType').value,
-            input_unit: document.getElementById('wInputUnit').value,
-            input_value: parseFloat(document.getElementById('wInputValue').value),
-            ceiling_height_ft: parseFloat(document.getElementById('wCeiling').value),
-            monthly_rate_per_sqft: parseFloat(document.getElementById('wRate').value),
-            municipality: document.getElementById('wMunicipality').value,
-            neighborhood_landmark: document.getElementById('wLandmark').value,
-            latitude: parseFloat(document.getElementById('wLat').value),
-            longitude: parseFloat(document.getElementById('wLng').value),
-            road_access_ft: parseFloat(document.getElementById('wRoadAccess').value),
-            has_three_phase_power: document.getElementById('w3Phase').checked,
-            has_forklift_ramp: document.getElementById('wRamp').checked,
-            has_cctv: document.getElementById('wCCTV').checked,
-            has_cold_storage: document.getElementById('wCold').checked
-        };
+      const payload = {
+        title: document.getElementById('wTitle').value,
+        space_type: document.getElementById('wSpaceType').value,
+        input_value: parseFloat(document.getElementById('wInputValue').value),
+        input_unit: document.getElementById('wInputUnit').value,
+        ceiling_height_ft: parseFloat(document.getElementById('wCeilingHeight').value),
+        monthly_rate_per_sqft: parseFloat(document.getElementById('wRate').value),
+        min_lease_months: 3,
+        province: 'Bagmati',
+        district: document.getElementById('wDistrict').value,
+        municipality: 'Kathmandu Metro',
+        ward_no: 12,
+        neighborhood_landmark: document.getElementById('wLandmark').value,
+        latitude: 27.6980,
+        longitude: 85.3110,
+        road_access_ft: parseFloat(document.getElementById('wRoadAccess').value),
+        has_three_phase_power: document.getElementById('w3Phase').checked,
+        has_forklift_ramp: document.getElementById('wForklift').checked,
+        has_cctv: document.getElementById('wCctv').checked,
+        has_cold_storage: document.getElementById('wCold').checked
+      };
 
-        try {
-            const res = await fetch('/api/warehouses/list-space', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert('Property listed successfully! Initial state: Pending Admin Audit.');
-                bootstrap.Modal.getInstance(document.getElementById('listSpaceModal')).hide();
-                loadOwnerProperties();
-            } else {
-                alert('Error: ' + (data.detail || 'Could not list property.'));
-            }
-        } catch (err) {
-            alert('Connection error: ' + err.message);
+      try {
+        const res = await fetch('/api/warehouses/list-space', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Property submitted! Admin will audit and dispatch contract.');
+          document.getElementById('listSpaceModal').close();
+          document.getElementById('listingForm').reset();
+          loadMyListings();
+        } else {
+          showToast(data.detail || 'Submission failed.', true);
         }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Submit for Verification';
+        lucide.createIcons();
+      }
     }
 
-    function openHoldModal(warehouseId, targetState) {
-        document.getElementById('holdWarehouseId').value = warehouseId;
-        document.getElementById('holdToggleValue').value = targetState;
-        new bootstrap.Modal(document.getElementById('holdModal')).show();
-    }
-
-    async function handleHoldSubmit(e) {
-        e.preventDefault();
-        const token = localStorage.getItem('kwdc_token');
-        const warehouseId = document.getElementById('holdWarehouseId').value;
-        const is_on_hold = document.getElementById('holdToggleValue').value === 'true';
-        const hold_reason_note = document.getElementById('holdReasonNote').value;
-
-        try {
-            const res = await fetch(`/api/warehouses/${warehouseId}/request-maintenance-hold`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({warehouse_id: parseInt(warehouseId), is_on_hold, hold_reason_note})
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert('Maintenance status updated and audit note sent to Admin.');
-                bootstrap.Modal.getInstance(document.getElementById('holdModal')).hide();
-                loadOwnerProperties();
-            } else {
-                alert('Error: ' + (data.detail || 'Update failed'));
-            }
-        } catch (err) {
-            alert('Error: ' + err.message);
+    // Toggle Maintenance Hold
+    async function toggleMaintenanceHold(id, currentHold) {
+      let note = '';
+      if (!currentHold) {
+        note = prompt('Mandatory: Enter Hold Reason Note (minimum 10 characters explaining repair/leak/work):');
+        if (!note || note.trim().length < 10) {
+          alert('A detailed Hold Reason Note (minimum 10 characters) is required to alert SuperAdmin.');
+          return;
         }
+      }
+
+      try {
+        const res = await fetch(`/api/warehouses/${id}/request-maintenance-hold`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            is_on_hold: !currentHold,
+            hold_reason_note: note || 'Maintenance completed, property resumed.'
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          loadMyListings();
+        } else {
+          showToast(data.detail || 'Failed to update hold status.', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', loadOwnerProperties);
-</script>
-{% endblock %}
+    function handleLogout() {
+      localStorage.removeItem('kwdc_token');
+      localStorage.removeItem('kwdc_user');
+      window.location.href = '/';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
+      if (user) {
+        document.getElementById('ownerName').textContent = user.full_name || 'Property Owner';
+        document.getElementById('ownerEmail').textContent = user.email || 'owner@kwdc.com.np';
+        document.getElementById('ownerAvatar').textContent = (user.full_name || 'PO').substring(0, 2).toUpperCase();
+      }
+      loadMyListings();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

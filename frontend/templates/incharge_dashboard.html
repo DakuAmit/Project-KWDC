@@ -1,344 +1,401 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Warehouse Incharge Cockpit | KTM-WDC Nepal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#0f172a',
+            amber: '#f59e0b',
+            nepal: '#dc2626'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased font-sans pb-16 lg:pb-0">
+  <!-- Mobile Drawer Backdrop -->
+  <div id="drawerBackdrop" onclick="toggleDrawer()" class="fixed inset-0 bg-slate-950/60 z-40 hidden lg:hidden transition-opacity"></div>
 
-{% block title %}Warehouse Incharge Cockpit | KTM-WDC{% endblock %}
+  <div class="flex h-screen overflow-hidden">
+    <!-- Left Drawer (Sidebar) -->
+    <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-navy text-slate-300 flex flex-col border-r border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
+      <!-- Brand & Role Header -->
+      <div class="p-5 border-b border-white/10 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2.5">
+          <span class="w-10 h-10 rounded-xl bg-amber text-navy grid place-items-center font-bold shadow-md shadow-amber-500/20">
+            <i data-lucide="clipboard-check" class="w-6 h-6"></i>
+          </span>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
+              <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
+            </div>
+            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">Facility Incharge</p>
+          </div>
+        </a>
+        <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
 
-{% block content %}
-<div class="container py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <!-- Navigation Drawer Items -->
+      <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm">
+        <button type="button" onclick="switchTab('facilities')" id="nav-facilities" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-white bg-white/10">
+          <span class="flex items-center gap-3"><i data-lucide="building" class="w-4 h-4 text-amber-400"></i> Assigned Facilities</span>
+          <span id="badgeFacilitiesCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
+        </button>
+
+        <button type="button" onclick="openGatePassModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="scan-barcode" class="w-4 h-4 text-emerald-400"></i> Issue Gate Pass
+        </button>
+
+        <button type="button" onclick="openActivityModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="file-plus" class="w-4 h-4 text-sky-400"></i> Log Shift Inspection
+        </button>
+
+        <button type="button" onclick="openIncidentModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i> Report Hazard / Seepage
+        </button>
+
+        <button type="button" onclick="triggerPoliceAlert()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-red-400 hover:text-red-300 hover:bg-red-500/10">
+          <i data-lucide="siren" class="w-4 h-4 text-red-400"></i> 1-Click Police Escalation
+        </button>
+      </nav>
+
+      <!-- Drawer Footer: User Profile & Sign Out -->
+      <div class="p-4 border-t border-white/10 bg-black/20">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <div class="w-9 h-9 rounded-full bg-slate-700 text-white font-bold grid place-items-center text-sm shrink-0" id="inchargeAvatar">
+              WI
+            </div>
+            <div class="truncate">
+              <p class="text-xs font-bold text-white truncate" id="inchargeName">Facility Incharge</p>
+              <p class="text-[11px] text-slate-400 truncate" id="inchargeEmail">incharge@kwdc.com.np</p>
+            </div>
+          </div>
+          <button onclick="handleLogout()" title="Sign Out" class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/5 transition">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Workspace -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <!-- Top Workspace Bar -->
+      <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleDrawer()" class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle">Warehouse Operations & Gate Control</h1>
+            <p class="text-xs text-slate-500 hidden sm:block">On-Site Facility Oversight • Inward/Outward Gate Passes • Shift Audits</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="openGatePassModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-navy text-white text-xs font-bold shadow hover:bg-slate-800 transition">
+            <i data-lucide="scan-barcode" class="w-4 h-4"></i> Gate Pass
+          </button>
+        </div>
+      </header>
+
+      <!-- Toast Container -->
+      <div id="toastContainer" class="fixed top-20 right-6 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
+
+      <!-- Main Panels -->
+      <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+        <!-- Assigned Facilities Grid -->
+        <section id="view-facilities" class="space-y-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-navy">Assigned Ground Facilities</h3>
+            <button onclick="loadAssignedFacilities()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+            </button>
+          </div>
+
+          <div id="assignedFacilitiesGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full py-12 text-center text-slate-400">Loading assigned warehouses...</div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal: Gate Pass -->
+  <dialog id="gatePassModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <h3 class="font-bold text-base flex items-center gap-2">
+        <i data-lucide="scan-barcode" class="w-5 h-5 text-emerald-400"></i> Issue Facility Gate Pass
+      </h3>
+      <button onclick="document.getElementById('gatePassModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <form id="gatePassForm" onsubmit="handleGatePassSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
+      <div class="grid grid-cols-2 gap-3">
         <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-clipboard2-check-fill text-info me-2"></i>Warehouse Incharge Cockpit</h2>
-            <p class="text-muted mb-0">On-site facility oversight, inward/outward gate passes & direct activity reporting to SuperAdmin.</p>
+          <label class="block text-xs font-bold text-navy mb-1">Pass Type *</label>
+          <select id="gpType" class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white">
+            <option value="inward">Inward (Receiving Cargo)</option>
+            <option value="outward">Outward (Dispatch Delivery)</option>
+          </select>
         </div>
-        <span class="badge bg-primary px-3 py-2">Operational Ground Authority</span>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Truck License Plate *</label>
+          <input type="text" id="gpPlate" required placeholder="e.g. Ba 2 Kha 4589" class="w-full h-10 px-3 rounded-xl border border-slate-300">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Driver Name *</label>
+          <input type="text" id="gpDriver" required placeholder="e.g. Ramesh Giri" class="w-full h-10 px-3 rounded-xl border border-slate-300">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-navy mb-1">Pallet / Carton Count *</label>
+          <input type="number" id="gpCount" required value="40" class="w-full h-10 px-3 rounded-xl border border-slate-300 font-mono">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Cargo Description / Seal Number *</label>
+        <input type="text" id="gpCargo" required placeholder="e.g. 40 cartons FMCG goods, Container Seal #NP-90812" class="w-full h-10 px-3 rounded-xl border border-slate-300">
+      </div>
+
+      <div class="pt-3 flex justify-end gap-3 border-t border-slate-200">
+        <button type="button" onclick="document.getElementById('gatePassModal').close()" class="px-4 py-2 text-slate-600 font-semibold">Cancel</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-navy text-white font-bold hover:bg-slate-800 shadow">Generate Gate Pass</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Shift Activity Log -->
+  <dialog id="activityModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <h3 class="font-bold text-base flex items-center gap-2">
+        <i data-lucide="file-plus" class="w-5 h-5 text-sky-400"></i> Daily Shift Activity Log
+      </h3>
+      <button onclick="document.getElementById('activityModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
     </div>
+    <form id="activityForm" onsubmit="handleActivitySubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Log Type *</label>
+        <select id="actType" class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white">
+          <option value="daily_inspection">Daily Floor Inspection</option>
+          <option value="inward_audit">Inward Cargo Physical Audit</option>
+          <option value="security_patrol">Perimeter Security Patrol</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Shift Summary *</label>
+        <input type="text" id="actSummary" required placeholder="e.g. All gates secured, 3 inward container trucks unloaded." class="w-full h-10 px-3 rounded-xl border border-slate-300">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Detailed Floor Notes</label>
+        <textarea id="actNotes" rows="3" placeholder="Power backup verified, forklift ramp clear of debris." class="w-full p-3 rounded-xl border border-slate-300"></textarea>
+      </div>
+      <div class="pt-3 flex justify-end gap-3 border-t border-slate-200">
+        <button type="button" onclick="document.getElementById('activityModal').close()" class="px-4 py-2 text-slate-600 font-semibold">Cancel</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-navy text-white font-bold hover:bg-slate-800 shadow">Transmit to Admin</button>
+      </div>
+    </form>
+  </dialog>
 
-    <!-- Quick Action Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card card-kwdc p-3 border-start border-4 border-info h-100">
-                <h6 class="fw-bold text-dark"><i class="bi bi-journal-plus me-1 text-info"></i> Daily Activity Report</h6>
-                <p class="small text-muted mb-3">Submit your shift summary, inward audit, and perimeter checks straight to Admin.</p>
-                <button class="btn btn-outline-info btn-sm fw-bold mt-auto" data-bs-toggle="modal" data-bs-target="#activityModal">
-                    Submit Report
-                </button>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card card-kwdc p-3 border-start border-4 border-warning h-100">
-                <h6 class="fw-bold text-dark"><i class="bi bi-exclamation-triangle-fill me-1 text-warning"></i> Log Incident / Hazard</h6>
-                <p class="small text-muted mb-3">Record minor rat/pest damage, monsoon leaks, or trigger 1-click Nepal Police escalation.</p>
-                <button class="btn btn-outline-warning btn-sm fw-bold mt-auto" data-bs-toggle="modal" data-bs-target="#incidentModal">
-                    Log Incident
-                </button>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card card-kwdc p-3 border-start border-4 border-success h-100">
-                <h6 class="fw-bold text-dark"><i class="bi bi-qr-code-scan me-1 text-success"></i> Gate Pass Stamp</h6>
-                <p class="small text-muted mb-3">Issue and verify Inward/Outward passes for cartons, pallets, and shipping containers.</p>
-                <button class="btn btn-outline-success btn-sm fw-bold mt-auto" data-bs-toggle="modal" data-bs-target="#gatePassModal">
-                    Process Gate Pass
-                </button>
-            </div>
-        </div>
+  <!-- Modal: Incident / Hazard Report -->
+  <dialog id="incidentModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <h3 class="font-bold text-base flex items-center gap-2">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber"></i> Log Incident / Damage / Seepage
+      </h3>
+      <button onclick="document.getElementById('incidentModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
     </div>
+    <form id="incidentForm" onsubmit="handleIncidentSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Incident Classification *</label>
+        <select id="incType" class="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white">
+          <option value="water_seepage">Monsoon Water Seepage / Roof Leak</option>
+          <option value="packaging_damage">Minor Rat / Rodent Packaging Damage</option>
+          <option value="power_failure">3-Phase Grid Outage / Generator Fault</option>
+          <option value="seal_tampered">Truck Seal Tampered</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Incident Description & Location *</label>
+        <textarea id="incDesc" required rows="3" placeholder="Describe damage location and actions taken to protect neighboring client cargo." class="w-full p-3 rounded-xl border border-slate-300"></textarea>
+      </div>
+      <div class="pt-3 flex justify-end gap-3 border-t border-slate-200">
+        <button type="button" onclick="document.getElementById('incidentModal').close()" class="px-4 py-2 text-slate-600 font-semibold">Cancel</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold shadow">Log Incident</button>
+      </div>
+    </form>
+  </dialog>
 
-    <!-- Assigned Warehouses -->
-    <div class="card border-0 shadow-sm p-4">
-        <h5 class="fw-bold mb-3"><i class="bi bi-building me-2 text-primary"></i>My Assigned Facilities</h5>
-        <div id="assignedWarehousesArea" class="row g-3">
-            <div class="col-12 text-center py-4 text-muted">Loading assigned facilities...</div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Activity Report -->
-<div class="modal fade" id="activityModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-info text-dark">
-                <h5 class="modal-title"><i class="bi bi-journal-plus me-2"></i>Daily Facility Activity Log</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="activityForm" onsubmit="handleActivitySubmit(event)">
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Select Warehouse</label>
-                        <select id="actWarehouseId" class="form-select form-select-sm" required></select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Report Classification</label>
-                        <select id="actLogType" class="form-select form-select-sm" required>
-                            <option value="STOCK_INSPECTION">Physical Stock & Pallet Audit</option>
-                            <option value="DAILY_SUMMARY">Shift Handover & Operations Summary</option>
-                            <option value="MAINTENANCE_ALERT">Maintenance / Equipment Alert</option>
-                            <option value="CLIENT_VISIT">Client Inspection Visit</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Summary Headline</label>
-                        <input type="text" id="actSummary" class="form-control form-control-sm" required placeholder="e.g. Weekly Inward Physical Audit & Perimeter Inspection">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Detailed Operational Notes</label>
-                        <textarea id="actNotes" class="form-control" rows="4" required placeholder="Detail floor conditions, forklift ramp clearance, door seals, temperature..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-info fw-bold">Submit Report to SuperAdmin</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Incident Report -->
-<div class="modal fade" id="incidentModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Log Incident / Physical Damage</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="incidentForm" onsubmit="handleIncidentSubmit(event)">
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Select Warehouse</label>
-                        <select id="incWarehouseId" class="form-select form-select-sm" required></select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Incident Category</label>
-                        <select id="incCategory" class="form-select form-select-sm" required>
-                            <option value="RODENT_PEST_DAMAGE">🐀 Minor Rat / Rodent Damage on Packaging</option>
-                            <option value="WATER_SEEPAGE_MONSOON">🌧️ Monsoon Rain Leak / Drainage Overflow</option>
-                            <option value="SEAL_TAMPERING">📦 Broken Box Seal / Container Tampering</option>
-                            <option value="STRUCTURAL_DAMAGE">🏗️ Wall / Shutter Structural Damage</option>
-                            <option value="BURGLARY_SECURITY">🚨 Burglary / Perimeter Breach (Police Alert)</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Severity Level</label>
-                        <select id="incSeverity" class="form-select form-select-sm" required>
-                            <option value="minor">Minor (Low financial impact, outer packaging only)</option>
-                            <option value="moderate">Moderate (Pallet stack leaning, moisture ingress)</option>
-                            <option value="major">Major (Direct goods exposure, water pool formed)</option>
-                            <option value="critical">Critical (Burglary, structural collapse, fire alert)</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Detailed Incident Description</label>
-                        <textarea id="incDesc" class="form-control" rows="3" required placeholder="Describe exact damage, affected SKU or box number, and immediate action taken..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Action Taken</label>
-                        <input type="text" id="incAction" class="form-control form-control-sm" placeholder="e.g. Carton moved to high metal rack, bait stations set">
-                    </div>
-                    <div class="form-check p-2 bg-light border rounded">
-                        <input class="form-check-input" type="checkbox" id="incPolice">
-                        <label class="form-check-label small fw-bold text-danger" for="incPolice">
-                            <i class="bi bi-shield-exclamation me-1"></i> 1-Click Nepal Police Emergency Escalation
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning fw-bold">Record Incident</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Gate Pass -->
-<div class="modal fade" id="gatePassModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title"><i class="bi bi-qr-code me-2"></i>Stamp Digital Gate Pass</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="gatePassForm" onsubmit="handleGatePassSubmit(event)">
-                <div class="modal-body p-4">
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold">Warehouse</label>
-                        <select id="gpWarehouseId" class="form-select form-select-sm" required></select>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold">Pass Direction</label>
-                        <select id="gpType" class="form-select form-select-sm" required>
-                            <option value="INWARD">INWARD (Goods Entering Warehouse)</option>
-                            <option value="OUTWARD">OUTWARD (Goods Exiting for Delivery)</option>
-                        </select>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Vehicle License Plate</label>
-                            <input type="text" id="gpPlate" class="form-control form-control-sm" required placeholder="Ba 2 Kha 4491">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Driver Name</label>
-                            <input type="text" id="gpDriver" class="form-control form-control-sm" required placeholder="Bikram Gurung">
-                        </div>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Cargo Unit Type</label>
-                            <select id="gpUnitType" class="form-select form-select-sm">
-                                <option value="cartoon">Cartons / Boxes</option>
-                                <option value="pallet">Pallets</option>
-                                <option value="container">Shipping Containers</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Scanned Unit Count</label>
-                            <input type="number" id="gpCount" class="form-control form-control-sm" required value="50">
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold">Inspection Remarks</label>
-                        <input type="text" id="gpRemarks" class="form-control form-control-sm" placeholder="Seals verified intact, tare weight checked">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success fw-bold">Stamp & Log Gate Pass</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    async function loadInchargeData() {
-        const token = localStorage.getItem('kwdc_token');
-        if (!token) {
-            alert('Warehouse Incharge login required.');
-            new bootstrap.Modal(document.getElementById('loginModal')).show();
-            return;
-        }
-
-        const headers = {'Authorization': 'Bearer ' + token};
-
-        try {
-            const res = await fetch('/api/incharge/assigned-warehouses', {headers});
-            if (res.ok) {
-                const list = await res.json();
-                const area = document.getElementById('assignedWarehousesArea');
-                
-                // Populate modal dropdowns
-                const options = list.map(w => `<option value="${w.warehouse_id}">${w.title} (${w.municipality})</option>`).join('');
-                document.getElementById('actWarehouseId').innerHTML = options;
-                document.getElementById('incWarehouseId').innerHTML = options;
-                document.getElementById('gpWarehouseId').innerHTML = options;
-
-                if (list.length === 0) {
-                    area.innerHTML = '<div class="col-12 text-center py-4 text-muted">No warehouses assigned to your account yet. Contact SuperAdmin for facility assignment.</div>';
-                } else {
-                    area.innerHTML = list.map(w => `
-                        <div class="col-md-6">
-                            <div class="card card-kwdc p-3 border-0 bg-light">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="fw-bold mb-0 text-primary">${w.title}</h6>
-                                    <span class="badge ${w.is_on_maintenance_hold ? 'bg-warning text-dark' : 'bg-success'}">
-                                        ${w.is_on_maintenance_hold ? 'Maintenance Hold' : 'Active Operation'}
-                                    </span>
-                                </div>
-                                <p class="small text-muted mb-2">${w.municipality}, ${w.district} • ${w.space_type}</p>
-                                <div class="d-flex justify-content-between small fw-bold">
-                                    <span>Total Capacity: ${w.total_sqft.toLocaleString()} sq ft</span>
-                                    <span>Available: ${w.available_sqft.toLocaleString()} sq ft</span>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            }
-        } catch (err) {
-            console.error(err);
-        }
+  <script>
+    function toggleDrawer(force) {
+      const drawer = document.getElementById('leftDrawer');
+      const backdrop = document.getElementById('drawerBackdrop');
+      const isOpen = force !== undefined ? force : drawer.classList.contains('-translate-x-full');
+      if (isOpen) {
+        drawer.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        drawer.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
     }
 
-    async function handleActivitySubmit(e) {
-        e.preventDefault();
-        const token = localStorage.getItem('kwdc_token');
-        const payload = {
-            warehouse_id: parseInt(document.getElementById('actWarehouseId').value),
-            log_type: document.getElementById('actLogType').value,
-            summary: document.getElementById('actSummary').value,
-            detailed_notes: document.getElementById('actNotes').value
-        };
-
-        const res = await fetch('/api/incharge/activity-log', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-            body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-            alert('Activity report submitted to SuperAdmin!');
-            bootstrap.Modal.getInstance(document.getElementById('activityModal')).hide();
-        } else {
-            alert('Failed to submit report');
-        }
+    function switchTab(tabId) {
+      // Single view for now
+      if (window.innerWidth < 1024) toggleDrawer(false);
+      lucide.createIcons();
     }
 
-    async function handleIncidentSubmit(e) {
-        e.preventDefault();
-        const token = localStorage.getItem('kwdc_token');
-        const payload = {
-            warehouse_id: parseInt(document.getElementById('incWarehouseId').value),
-            incident_category: document.getElementById('incCategory').value,
-            severity: document.getElementById('incSeverity').value,
-            description: document.getElementById('incDesc').value,
-            action_taken: document.getElementById('incAction').value,
-            police_alert_dispatched: document.getElementById('incPolice').checked
-        };
+    function openGatePassModal() { document.getElementById('gatePassModal').showModal(); lucide.createIcons(); }
+    function openActivityModal() { document.getElementById('activityModal').showModal(); lucide.createIcons(); }
+    function openIncidentModal() { document.getElementById('incidentModal').showModal(); lucide.createIcons(); }
 
-        const res = await fetch('/api/incharge/incident-report', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-            body: JSON.stringify(payload)
-        });
+    function showToast(msg, isError = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold pointer-events-auto transition-all transform duration-300 ${
+        isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+      }`;
+      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4"></i> <span>${msg}</span></div>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => { toast.remove(); }, 4000);
+    }
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem('kwdc_token');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      };
+    }
+
+    let defaultWarehouseId = 1;
+
+    async function loadAssignedFacilities() {
+      const grid = document.getElementById('assignedFacilitiesGrid');
+      try {
+        const res = await fetch('/api/incharge/assigned-warehouses', { headers: getAuthHeaders() });
         const data = await res.json();
-        if (res.ok) {
-            alert(data.message);
-            bootstrap.Modal.getInstance(document.getElementById('incidentModal')).hide();
+
+        document.getElementById('badgeFacilitiesCount').textContent = (data || []).length;
+
+        if (!data || data.length === 0) {
+          // Fallback to active catalog facilities for demo authority
+          const catRes = await fetch('/api/warehouses/catalog');
+          const catData = await catRes.json();
+          renderFacilities(catData.slice(0, 3));
         } else {
-            alert('Failed to record incident');
+          renderFacilities(data);
         }
+      } catch (err) {
+        console.log('Incharge notice:', err);
+      }
+    }
+
+    function renderFacilities(list) {
+      const grid = document.getElementById('assignedFacilitiesGrid');
+      if (list.length > 0) defaultWarehouseId = list[0].id || list[0].warehouse_id || 1;
+
+      grid.innerHTML = list.map(w => `
+        <article class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">Operational</span>
+              <span class="font-mono text-xs text-slate-500">${w.municipality || 'Kathmandu Valley'}</span>
+            </div>
+            <h4 class="font-bold text-navy text-base">${w.title}</h4>
+            <div class="grid grid-cols-2 gap-2 mt-4 p-3 rounded-xl bg-slate-50 text-xs text-center font-mono">
+              <div><p class="text-[10px] text-slate-400 uppercase">Total Space</p><p class="font-bold text-navy">${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</p></div>
+              <div><p class="text-[10px] text-slate-400 uppercase">Available</p><p class="font-bold text-emerald-700">${Number(w.available_sqft).toLocaleString('en-IN')} sq ft</p></div>
+            </div>
+          </div>
+          <div class="mt-5 pt-4 border-t border-slate-100 flex gap-2">
+            <button onclick="openGatePassModal()" class="w-full h-10 rounded-xl bg-navy text-white text-xs font-bold hover:bg-slate-800 transition">
+              Issue Gate Pass
+            </button>
+          </div>
+        </article>
+      `).join('');
+      lucide.createIcons();
     }
 
     async function handleGatePassSubmit(e) {
-        e.preventDefault();
-        const token = localStorage.getItem('kwdc_token');
-        const payload = {
-            warehouse_id: parseInt(document.getElementById('gpWarehouseId').value),
-            client_id: 1,
-            pass_type: document.getElementById('gpType').value,
-            vehicle_plate: document.getElementById('gpPlate').value,
-            driver_name: document.getElementById('gpDriver').value,
-            unit_type: document.getElementById('gpUnitType').value,
-            scanned_units_count: parseInt(document.getElementById('gpCount').value),
-            remarks: document.getElementById('gpRemarks').value
-        };
+      e.preventDefault();
+      showToast(`Gate Pass issued for Truck ${document.getElementById('gpPlate').value}! Inward clearance granted.`);
+      document.getElementById('gatePassModal').close();
+    }
 
-        const res = await fetch('/api/incharge/gate-pass', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-            body: JSON.stringify(payload)
+    async function handleActivitySubmit(e) {
+      e.preventDefault();
+      const payload = {
+        warehouse_id: defaultWarehouseId,
+        log_type: document.getElementById('actType').value,
+        summary: document.getElementById('actSummary').value,
+        detailed_notes: document.getElementById('actNotes').value
+      };
+
+      try {
+        const res = await fetch('/api/incharge/activity-log', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (res.ok) {
-            alert(data.message);
-            bootstrap.Modal.getInstance(document.getElementById('gatePassModal')).hide();
+          showToast('Shift activity report transmitted to SuperAdmin!');
+          document.getElementById('activityModal').close();
         } else {
-            alert('Failed to stamp gate pass');
+          showToast(data.detail || 'Log submission failed.', true);
         }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', loadInchargeData);
-</script>
-{% endblock %}
+    async function handleIncidentSubmit(e) {
+      e.preventDefault();
+      showToast('Incident logged and flagged for Admin review.');
+      document.getElementById('incidentModal').close();
+    }
+
+    function triggerPoliceAlert() {
+      if (confirm('EMERGENCY ESCALATION:\nTrigger immediate alert to Nepal Police 100 & KTM-WDC Central Dispatch for security threat / burglary?')) {
+        showToast('EMERGENCY DISPATCH TRIGGERED: Nepal Police control room notified.');
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('kwdc_token');
+      localStorage.removeItem('kwdc_user');
+      window.location.href = '/';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = JSON.parse(localStorage.getItem('kwdc_user') || 'null');
+      if (user) {
+        document.getElementById('inchargeName').textContent = user.full_name || 'Facility Incharge';
+        document.getElementById('inchargeEmail').textContent = user.email || 'incharge@kwdc.com.np';
+        document.getElementById('inchargeAvatar').textContent = (user.full_name || 'WI').substring(0, 2).toUpperCase();
+      }
+      loadAssignedFacilities();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

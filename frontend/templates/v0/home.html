@@ -76,7 +76,7 @@
 
       <nav aria-label="Primary" class="hidden lg:flex items-center gap-2 text-sm">
         <a href="#available-storage" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="building-2" class="h-4 w-4"></i> Available Storage</a>
-        <a href="#floorplan" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="layout-grid" class="h-4 w-4"></i> Corridor Accounting</a>
+        <a href="#calculator" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="calculator" class="h-4 w-4"></i> Storage Calculator</a>
         <a href="#map-section" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i> Logistics Network</a>
       </nav>
 
@@ -97,7 +97,7 @@
   <nav id="mobileNav" aria-label="Mobile" class="hidden lg:hidden border-t border-white/10 bg-navy">
     <div class="mx-auto max-w-7xl px-4 py-3 flex flex-col text-sm gap-1">
       <a href="#available-storage" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Available Storage</a>
-      <a href="#floorplan" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Corridor Accounting</a>
+      <a href="#calculator" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Storage Calculator</a>
       <a href="#map-section" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Logistics Network</a>
       <div id="mobileAuthArea" class="pt-2 border-t border-white/10 flex flex-col gap-2 mt-2">
         <button type="button" onclick="openPartnerModal()" class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber px-4 py-2.5 font-semibold text-navy">
@@ -130,7 +130,7 @@
         <a href="#available-storage" class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber px-6 py-3.5 font-semibold text-navy hover:bg-amber-400 shadow-lg shadow-amber-500/20">
           <i data-lucide="building-2" class="h-5 w-5"></i> Browse Available Storage
         </a>
-        <a href="#floorplan" class="inline-flex items-center justify-center gap-2 rounded-lg border border-white/30 px-6 py-3.5 font-semibold text-white hover:bg-white/10">
+        <a href="#" onclick="openPartnerModal(); return false;" class="inline-flex items-center justify-center gap-2 rounded-lg border border-white/30 px-6 py-3.5 font-semibold text-white hover:bg-white/10">
           <i data-lucide="plus-square" class="h-5 w-5"></i> List Empty Space
         </a>
       </div>
@@ -178,7 +178,7 @@
         Verified Storage Spaces in Nepal
       </h2>
       <p class="mt-2 text-slate-600 text-pretty leading-relaxed">
-        Reserve partitioned commercial floor space in discrete 10% blocks. Every space is verified for vehicle access, power reliability, and 13% IRD VAT audit compliance.
+        Explore verified commercial basements, shutters, and godowns across Nepal. Every space is verified for heavy vehicle access, 3-phase power, CCTV security, and 13% IRD VAT audit compliance.
       </p>
     </div>
     <div class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm shrink-0">
@@ -194,7 +194,7 @@
           <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
             <i data-lucide="arrow-down-to-line" class="w-5 h-5"></i>
           </span>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">8/10 blocks free</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available Now</span>
         </div>
         <h3 class="font-bold text-lg text-navy leading-snug">Dry Basement, Teku Bazaar</h3>
         <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
@@ -212,7 +212,7 @@
       <div class="mt-5 pt-4 border-t border-slate-100">
         <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">1,369 sq ft</p></div>
-          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">137 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Available</p><p class="font-mono text-xs font-bold text-navy">1,369 sq ft</p></div>
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 22/sq ft</p></div>
         </div>
         <button type="button" onclick="bookStorageSpace('KW-2081-0142', 'Dry Basement, Teku Bazaar', 1369, 22)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
@@ -228,7 +228,7 @@
           <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
             <i data-lucide="store" class="w-5 h-5"></i>
           </span>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">6/10 blocks free</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available Now</span>
         </div>
         <h3 class="font-bold text-lg text-navy leading-snug">Twin Shutters, Balkhu Ring Road</h3>
         <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
@@ -246,7 +246,7 @@
       <div class="mt-5 pt-4 border-t border-slate-100">
         <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">2,200 sq ft</p></div>
-          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">220 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Available</p><p class="font-mono text-xs font-bold text-navy">2,200 sq ft</p></div>
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 18/sq ft</p></div>
         </div>
         <button type="button" onclick="bookStorageSpace('KW-2081-0177', 'Twin Shutters, Balkhu Ring Road', 2200, 18)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
@@ -262,7 +262,7 @@
           <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
             <i data-lucide="snowflake" class="w-5 h-5"></i>
           </span>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">3/10 blocks free</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available Now</span>
         </div>
         <h3 class="font-bold text-lg text-navy leading-snug">Cold Chain Godown, Kalimati</h3>
         <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
@@ -280,7 +280,7 @@
       <div class="mt-5 pt-4 border-t border-slate-100">
         <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">4,800 sq ft</p></div>
-          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">480 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Available</p><p class="font-mono text-xs font-bold text-navy">4,800 sq ft</p></div>
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 34/sq ft</p></div>
         </div>
         <button type="button" onclick="bookStorageSpace('KW-2081-0203', 'Cold Chain Godown, Kalimati', 4800, 34)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
@@ -296,7 +296,7 @@
           <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
             <i data-lucide="warehouse" class="w-5 h-5"></i>
           </span>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">5/10 blocks free</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available Now</span>
         </div>
         <h3 class="font-bold text-lg text-navy leading-snug">Bonded Godown, Birgunj ICD</h3>
         <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
@@ -314,7 +314,7 @@
       <div class="mt-5 pt-4 border-t border-slate-100">
         <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">10,950 sq ft</p></div>
-          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">1,095 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Available</p><p class="font-mono text-xs font-bold text-navy">10,950 sq ft</p></div>
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 12/sq ft</p></div>
         </div>
         <button type="button" onclick="bookStorageSpace('KW-2081-0219', 'Bonded Godown, Birgunj ICD', 10950, 12)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
@@ -330,7 +330,7 @@
           <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
             <i data-lucide="store" class="w-5 h-5"></i>
           </span>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">10/10 blocks free</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available Now</span>
         </div>
         <h3 class="font-bold text-lg text-navy leading-snug">Corner Shutter, Satdobato</h3>
         <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
@@ -347,7 +347,7 @@
       <div class="mt-5 pt-4 border-t border-slate-100">
         <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">684 sq ft</p></div>
-          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">68 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Available</p><p class="font-mono text-xs font-bold text-navy">684 sq ft</p></div>
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 26/sq ft</p></div>
         </div>
         <button type="button" onclick="bookStorageSpace('KW-2081-0231', 'Corner Shutter, Satdobato', 684, 26)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
@@ -363,7 +363,7 @@
           <span class="w-10 h-10 rounded-xl bg-navy text-amber-400 grid place-items-center">
             <i data-lucide="arrow-down-to-line" class="w-5 h-5"></i>
           </span>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">2/10 blocks free</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available Now</span>
         </div>
         <h3 class="font-bold text-lg text-navy leading-snug">Pharma Basement, Maharajgunj</h3>
         <p class="text-sm text-slate-600 flex items-start gap-1.5 mt-1.5">
@@ -382,7 +382,7 @@
       <div class="mt-5 pt-4 border-t border-slate-100">
         <div class="grid grid-cols-3 gap-2 text-center py-2 mb-3 bg-slate-50 rounded-xl">
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Total</p><p class="font-mono text-xs font-bold text-navy">1,711 sq ft</p></div>
-          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">1 Block</p><p class="font-mono text-xs font-bold text-navy">171 sq ft</p></div>
+          <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Available</p><p class="font-mono text-xs font-bold text-navy">1,711 sq ft</p></div>
           <div><p class="text-[10px] uppercase tracking-wider text-slate-500">Tariff</p><p class="font-mono text-xs font-bold text-emerald-700">Rs. 38/sq ft</p></div>
         </div>
         <button type="button" onclick="bookStorageSpace('KW-2081-0248', 'Pharma Basement, Maharajgunj', 1711, 38)" class="w-full h-11 rounded-xl bg-amber hover:bg-amber-400 text-navy font-semibold flex items-center justify-center gap-2 shadow-sm transition">
@@ -411,10 +411,10 @@
     </article>
 
     <article class="group rounded-2xl border border-slate-200 bg-white p-7 hover:border-brand hover:shadow-xl hover:shadow-slate-200/60 transition">
-      <span class="grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-brand"><i data-lucide="layout-grid" class="h-6 w-6"></i></span>
-      <h3 class="mt-6 text-xl font-semibold tracking-tight">The 10% Floor Space Partition Rule</h3>
-      <p class="mt-3 text-slate-600 leading-relaxed">Space is allocated in 10% blocks of the total floor, keeping forklift and access corridors clear for every tenant.</p>
-      <code class="mt-6 block rounded-lg bg-navy px-4 py-3 font-mono text-[13px] leading-relaxed text-blue-200 overflow-x-auto whitespace-nowrap">Ceil(Req / (Tot × 0.10)) × (Tot × 0.10)</code>
+      <span class="grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-brand"><i data-lucide="scale" class="h-6 w-6"></i></span>
+      <h3 class="mt-6 text-xl font-semibold tracking-tight">Continuous Square Footage Contracting</h3>
+      <p class="mt-3 text-slate-600 leading-relaxed">Contract the exact commercial floor space you need in continuous square feet. Transparent monthly tariffs, clear pickup access, and no arbitrary minimum block lock-in.</p>
+      <code class="mt-6 block rounded-lg bg-navy px-4 py-3 font-mono text-[13px] leading-relaxed text-blue-200 overflow-x-auto whitespace-nowrap">Gross Rent = Required Sq Ft × Base Tariff / Month</code>
     </article>
 
     <article class="group rounded-2xl border border-slate-200 bg-white p-7 hover:border-nepal hover:shadow-xl hover:shadow-slate-200/60 transition">
@@ -432,66 +432,122 @@
   </div>
 </section>
 
-<!-- Floor plan widget -->
-<section id="floorplan" class="bg-white border-y border-slate-200">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 sm:py-24">
-    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+<!-- Storage Area & Tariff Calculator -->
+<section id="calculator" class="bg-white border-y border-slate-200 py-20 sm:py-24">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12">
       <div class="max-w-2xl">
-        <p class="text-sm font-semibold uppercase tracking-widest text-brand">Interactive Floor Plan</p>
-        <h2 class="mt-3 text-3xl sm:text-4xl font-bold tracking-tight text-balance">See exactly what you&apos;re renting</h2>
-        <p class="mt-4 text-slate-600 leading-relaxed">Teku Community Warehouse, Kathmandu — 10,000 sq ft split into 10 partition blocks. Drag the slider or tap a block.</p>
+        <p class="text-sm font-semibold uppercase tracking-widest text-amber-600 flex items-center gap-1.5">
+          <i data-lucide="calculator" class="w-4 h-4"></i> Real-Time Commercial Tariff Estimator
+        </p>
+        <h2 class="mt-3 text-3xl sm:text-4xl font-bold tracking-tight text-navy">
+          Estimate Storage Costs in Exact Square Feet
+        </h2>
+        <p class="mt-3 text-slate-600 leading-relaxed">
+          No artificial block constraints or roundups. Adjust required area and baseline tariff to calculate monthly base rent, 10% platform/facility ops, and 13% statutory Nepal IRD VAT.
+        </p>
       </div>
-      <div class="flex items-center gap-4 text-xs text-slate-600">
-        <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded bg-brand"></span>Allocated</span>
-        <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded border border-slate-300 bg-slate-50"></span>Available</span>
-        <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded bg-amber/30 border border-amber/50"></span>Corridor</span>
+      <div class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm shrink-0">
+        <span class="h-2 w-2 rounded-full bg-emerald-500"></span> IRD Schedule 13 Compliant
       </div>
     </div>
 
-    <div class="mt-10 grid lg:grid-cols-[1.6fr_1fr] gap-8">
-      <!-- Plan -->
-      <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
-        <div class="flex items-center justify-between text-xs text-slate-500 mb-3">
-          <span class="inline-flex items-center gap-1.5"><i data-lucide="door-open" class="h-4 w-4"></i> Loading Dock A</span>
-          <span class="font-mono">10,000 sq ft</span>
-          <span class="inline-flex items-center gap-1.5">Loading Dock B <i data-lucide="door-open" class="h-4 w-4"></i></span>
-        </div>
-        <div class="rounded-xl border-2 border-slate-800 bg-white p-2 sm:p-3">
-          <div id="rowA" class="grid grid-cols-5 gap-2 sm:gap-3"></div>
-          <div class="my-2 sm:my-3 flex items-center justify-center rounded-md border border-dashed border-amber/60 bg-amber/15 py-2 sm:py-3 text-[11px] sm:text-xs font-medium text-amber-700 tracking-wide">
-            <i data-lucide="move-horizontal" class="h-4 w-4 mr-1.5"></i> ACCESS CORRIDOR · PRESERVED
+    <div class="grid lg:grid-cols-[1.5fr_1fr] gap-8 items-start">
+      <!-- Calculator Inputs -->
+      <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-6 sm:p-8 space-y-6">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label for="calcSqft" class="text-sm font-bold text-navy">Required Storage Area</label>
+            <span class="font-mono text-base font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200" id="calcSqftDisplay">2,500 sq ft</span>
           </div>
-          <div id="rowB" class="grid grid-cols-5 gap-2 sm:gap-3"></div>
+          <input type="range" id="calcSqftSlider" min="500" max="25000" step="100" value="2500" oninput="updateStorageCalc()" class="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-navy">
+          <div class="flex justify-between font-mono text-[11px] text-slate-500 mt-1">
+            <span>500 sq ft</span>
+            <span>5,000 sq ft</span>
+            <span>10,000 sq ft</span>
+            <span>25,000 sq ft</span>
+          </div>
         </div>
 
-        <div class="mt-6">
-          <div class="flex items-center justify-between">
-            <label for="space" class="text-sm font-medium text-slate-900">Space required</label>
-            <output id="reqOut" for="space" class="font-mono text-sm font-semibold text-brand">3,400 sq ft</output>
+        <div>
+          <label class="block text-sm font-bold text-navy mb-2">Or Type Exact Square Footage</label>
+          <div class="relative">
+            <input type="number" id="calcSqftInput" min="100" max="100000" step="50" value="2500" oninput="syncSqftInput(this.value)" class="w-full h-11 px-4 rounded-xl border border-slate-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-navy">
+            <span class="absolute right-4 top-3 text-xs font-semibold text-slate-500">sq ft</span>
           </div>
-          <input id="space" type="range" min="0" max="10000" step="100" value="3400" class="mt-3 w-full" aria-describedby="allocNote" />
-          <div class="mt-2 flex justify-between font-mono text-[11px] text-slate-400"><span>0</span><span>2,500</span><span>5,000</span><span>7,500</span><span>10,000</span></div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-navy mb-2">Select Benchmark Facility Tariff</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button type="button" onclick="setBenchmarkTariff(22, 'Dry Basement (Teku)')" class="tariff-preset-btn p-3 rounded-xl border border-slate-200 bg-white hover:border-navy text-left text-xs transition active-preset" data-rate="22">
+              <p class="font-bold text-navy">Rs. 22<span class="font-normal text-[10px] text-slate-500">/sq ft</span></p>
+              <p class="text-[11px] text-slate-500 truncate mt-0.5">Dry Basement</p>
+            </button>
+            <button type="button" onclick="setBenchmarkTariff(18, 'Twin Shutter (Balkhu)')" class="tariff-preset-btn p-3 rounded-xl border border-slate-200 bg-white hover:border-navy text-left text-xs transition" data-rate="18">
+              <p class="font-bold text-navy">Rs. 18<span class="font-normal text-[10px] text-slate-500">/sq ft</span></p>
+              <p class="text-[11px] text-slate-500 truncate mt-0.5">Ground Shutter</p>
+            </button>
+            <button type="button" onclick="setBenchmarkTariff(34, 'Cold Storage (Kalimati)')" class="tariff-preset-btn p-3 rounded-xl border border-slate-200 bg-white hover:border-navy text-left text-xs transition" data-rate="34">
+              <p class="font-bold text-navy">Rs. 34<span class="font-normal text-[10px] text-slate-500">/sq ft</span></p>
+              <p class="text-[11px] text-slate-500 truncate mt-0.5">Cold Chain</p>
+            </button>
+            <button type="button" onclick="setBenchmarkTariff(12, 'Bonded Godown (Birgunj)')" class="tariff-preset-btn p-3 rounded-xl border border-slate-200 bg-white hover:border-navy text-left text-xs transition" data-rate="12">
+              <p class="font-bold text-navy">Rs. 12<span class="font-normal text-[10px] text-slate-500">/sq ft</span></p>
+              <p class="text-[11px] text-slate-500 truncate mt-0.5">Dry Port ICD</p>
+            </button>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-amber/30 bg-amber/10 p-3.5 text-xs text-navy flex items-start gap-2.5">
+          <i data-lucide="shield-check" class="w-4 h-4 text-amber-700 shrink-0 mt-0.5"></i>
+          <div>
+            <strong>100% Usable Area Covenant:</strong> Facility access aisles and perimeter walking clearances are preserved on-site without inflating your billed square footage.
+          </div>
         </div>
       </div>
 
-      <!-- Summary -->
-      <aside class="rounded-2xl bg-navy p-6 text-slate-200 flex flex-col" aria-live="polite">
-        <p class="text-xs uppercase tracking-widest text-slate-400">Allocation summary</p>
-        <p class="mt-3 text-4xl font-bold text-white"><span id="allocOut">4,000</span> <span class="text-base font-normal text-slate-400">sq ft</span></p>
-        <p id="allocNote" class="mt-2 text-sm text-slate-400">Rounded up to <span id="blocksOut" class="text-white font-medium">4 blocks</span> of 1,000 sq ft</p>
+      <!-- Financial Calculation Summary Card -->
+      <aside class="rounded-2xl bg-navy p-7 text-slate-200 flex flex-col shadow-xl">
+        <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold flex items-center gap-1.5">
+          <i data-lucide="receipt" class="w-4 h-4 text-amber"></i> Monthly Billing Breakdown
+        </p>
+        <div class="mt-4 pb-4 border-b border-white/10">
+          <p class="text-3xl sm:text-4xl font-extrabold text-white font-mono" id="calcGrossTotal">Rs. 62,150</p>
+          <p class="text-xs text-slate-400 mt-1" id="calcTotalSubtitle">Inclusive of 13% statutory VAT and ops margin</p>
+        </div>
 
-        <div class="mt-5 rounded-lg bg-ink/60 border border-white/5 px-4 py-3 font-mono text-xs text-blue-200 overflow-x-auto whitespace-nowrap" id="formulaOut">Ceil(3400 / 1000) × 1000 = 4000</div>
-
-        <dl class="mt-6 space-y-3 text-sm border-t border-white/10 pt-5">
-          <div class="flex justify-between"><dt class="text-slate-400">Rate</dt><dd>Rs. 18 / sq ft / month</dd></div>
-          <div class="flex justify-between"><dt class="text-slate-400">Subtotal</dt><dd id="subOut" class="font-mono">Rs. 72,000</dd></div>
-          <div class="flex justify-between"><dt class="text-slate-400">IRD VAT (13%)</dt><dd id="vatOut" class="font-mono">Rs. 9,360</dd></div>
-          <div class="flex justify-between border-t border-white/10 pt-3 text-base"><dt class="font-semibold text-white">Monthly total</dt><dd id="totOut" class="font-mono font-semibold text-amber">Rs. 81,360</dd></div>
+        <dl class="space-y-3.5 text-sm py-5 border-b border-white/10">
+          <div class="flex justify-between items-center">
+            <dt class="text-slate-400">Contracted Floor Space</dt>
+            <dd class="font-mono font-bold text-white" id="calcContractedSqft">2,500 sq ft</dd>
+          </div>
+          <div class="flex justify-between items-center">
+            <dt class="text-slate-400">Base Tariff Rate</dt>
+            <dd class="font-mono text-slate-200" id="calcRateLabel">Rs. 22.00 / sq ft</dd>
+          </div>
+          <div class="flex justify-between items-center">
+            <dt class="text-slate-400">Monthly Base Rent</dt>
+            <dd class="font-mono text-slate-200" id="calcBaseRent">Rs. 55,000.00</dd>
+          </div>
+          <div class="flex justify-between items-center">
+            <dt class="text-slate-400">KTM-WDC Ops & Incharge (10%)</dt>
+            <dd class="font-mono text-slate-200" id="calcMargin">Rs. 5,500.00</dd>
+          </div>
+          <div class="flex justify-between items-center">
+            <dt class="text-slate-400">Nepal IRD VAT (13%)</dt>
+            <dd class="font-mono text-slate-200" id="calcVat">Rs. 7,865.00</dd>
+          </div>
         </dl>
 
-        <p id="blockInfo" class="mt-5 rounded-lg bg-white/5 px-4 py-3 text-xs text-slate-300">Tip: tap any block to allocate up to that zone.</p>
-
-        <a href="#" class="mt-auto pt-6"><span class="flex items-center justify-center gap-2 rounded-lg bg-amber px-5 py-3 font-semibold text-navy hover:bg-amber-400"><i data-lucide="calendar-check" class="h-5 w-5"></i> Reserve these blocks</span></a>
+        <div class="mt-6 pt-2">
+          <button type="button" onclick="bookFromCalculator()" class="w-full h-12 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold flex items-center justify-center gap-2 shadow-lg transition">
+            <i data-lucide="calendar-check" class="w-5 h-5"></i> Book Space at This Rate
+          </button>
+          <p class="text-center text-[11px] text-slate-400 mt-2.5">
+            Instant Schedule 13 electronic tax invoice with IRD QR generated upon activation.
+          </p>
+        </div>
       </aside>
     </div>
   </div>
@@ -692,49 +748,55 @@
   });
   mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { mobileNav.classList.add('hidden'); menuBtn.setAttribute('aria-expanded', 'false'); }));
 
-  // Floor plan
-  const TOTAL = 10000, BLOCK = TOTAL * 0.10, RATE = 18;
-  const fmt = n => n.toLocaleString('en-IN');
-  const slider = document.getElementById('space');
-  const blocks = [];
-  ['rowA', 'rowB'].forEach((rowId, r) => {
-    const row = document.getElementById(rowId);
-    for (let i = 0; i < 5; i++) {
-      const idx = r * 5 + i;
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'block-zone aspect-[4/3] sm:aspect-square rounded-lg border-2 border-slate-200 bg-slate-50 text-slate-500 flex flex-col items-center justify-center text-center focus:outline-none focus-visible:ring-4 focus-visible:ring-amber/60';
-      b.innerHTML = `<span class="text-sm sm:text-base font-semibold">B${idx + 1}</span><span class="hidden sm:block text-[11px] opacity-80 font-mono">1,000 ft²</span>`;
-      b.setAttribute('aria-label', `Block B${idx + 1}, 1,000 square feet`);
-      b.addEventListener('click', () => {
-        slider.value = (idx + 1) * BLOCK;
-        update();
-        blocks.forEach(x => x.classList.remove('focus'));
-        b.classList.add('focus');
-        document.getElementById('blockInfo').textContent = `Block B${idx + 1} · Row ${r ? 'B' : 'A'} · nearest Dock ${i < 3 ? 'A' : 'B'} · allocating B1–B${idx + 1}.`;
-      });
-      row.appendChild(b);
-      blocks.push(b);
-    }
-  });
+  // Continuous Square Footage Calculator
+  let selectedTariffRate = 22;
+  let selectedBenchmarkName = "Dry Basement (Teku)";
 
-  function update() {
-    const req = +slider.value;
-    const n = Math.ceil(req / BLOCK);
-    const alloc = n * BLOCK;
-    const sub = alloc * RATE, vat = Math.round(sub * 0.13);
-    slider.style.setProperty('--p', (req / TOTAL * 100) + '%');
-    document.getElementById('reqOut').textContent = `${fmt(req)} sq ft`;
-    document.getElementById('allocOut').textContent = fmt(alloc);
-    document.getElementById('blocksOut').textContent = `${n} block${n === 1 ? '' : 's'}`;
-    document.getElementById('formulaOut').textContent = `Ceil(${req} / (${TOTAL} × 0.10)) × ${BLOCK} = ${alloc}`;
-    document.getElementById('subOut').textContent = `Rs. ${fmt(sub)}`;
-    document.getElementById('vatOut').textContent = `Rs. ${fmt(vat)}`;
-    document.getElementById('totOut').textContent = `Rs. ${fmt(sub + vat)}`;
-    blocks.forEach((b, i) => { const on = i < n; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
-  }
-  slider.addEventListener('input', () => { blocks.forEach(x => x.classList.remove('focus')); update(); });
-  update();
+  window.syncSqftInput = function(val) {
+    let num = parseInt(val) || 500;
+    num = Math.max(100, Math.min(100000, num));
+    document.getElementById('calcSqftSlider').value = Math.min(25000, num);
+    updateStorageCalc(num);
+  };
+
+  window.setBenchmarkTariff = function(rate, name) {
+    selectedTariffRate = rate;
+    selectedBenchmarkName = name;
+    document.querySelectorAll('.tariff-preset-btn').forEach(btn => {
+      btn.classList.toggle('border-navy', parseInt(btn.dataset.rate) === rate);
+      btn.classList.toggle('bg-navy/5', parseInt(btn.dataset.rate) === rate);
+    });
+    updateStorageCalc();
+  };
+
+  window.updateStorageCalc = function(explicitSqft) {
+    const slider = document.getElementById('calcSqftSlider');
+    const sqft = explicitSqft !== undefined ? explicitSqft : parseInt(slider.value) || 2500;
+    
+    document.getElementById('calcSqftDisplay').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+    document.getElementById('calcSqftInput').value = sqft;
+    document.getElementById('calcContractedSqft').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+    document.getElementById('calcRateLabel').textContent = 'Rs. ' + selectedTariffRate.toFixed(2) + ' / sq ft';
+
+    const baseRent = sqft * selectedTariffRate;
+    const margin = Math.round(baseRent * 0.10);
+    const taxable = baseRent + margin;
+    const vat = Math.round(taxable * 0.13);
+    const grossTotal = taxable + vat;
+
+    document.getElementById('calcBaseRent').textContent = 'Rs. ' + baseRent.toLocaleString('en-IN');
+    document.getElementById('calcMargin').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
+    document.getElementById('calcVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+    document.getElementById('calcGrossTotal').textContent = 'Rs. ' + grossTotal.toLocaleString('en-IN');
+  };
+
+  window.bookFromCalculator = function() {
+    const sqft = parseInt(document.getElementById('calcSqftInput').value) || 2500;
+    bookStorageSpace('CALC-CUSTOM', selectedBenchmarkName, sqft, selectedTariffRate);
+  };
+
+  // Initial calculation trigger
+  setTimeout(updateStorageCalc, 100);
 
   // Map
   const map = L.map('map', { zoomControl: true, scrollWheelZoom: false, attributionControl: true, minZoom: 6, maxZoom: 15 });
@@ -796,7 +858,7 @@
   let currentRegisteredEmail = '';
 
   const ROLE_HINTS = {
-    owner: 'Earn from idle basements, shutters or land. We inspect, partition in 10% blocks, and pay out only when rented.',
+    owner: 'Monetize empty basements, shutters or godowns. We inspect and verify specifications with Rs. 0 holding liability until rented.',
     fleet: 'Add trucks, pickups and 2-wheelers with drivers. Get matched to freight loads with live telemetry.',
     client: 'Book exactly the partitioned space you need and schedule freight, with IRD-compliant 13% VAT invoices.',
     incharge: 'Run facility inspections, gate check-in/out and stock movement logs for assigned warehouses.'
@@ -1178,7 +1240,7 @@
                 Total ${sqft.toLocaleString()} sq ft &bull; Rs. ${rate}/sq ft &bull; 13% IRD VAT Audited
               </p>
               <p class="text-[11px] text-amber-900 font-medium mt-1">
-                Please sign in or register your commercial account to finalize block reservation.
+                Please sign in or register your commercial account to finalize space reservation.
               </p>
             </div>
           </div>
