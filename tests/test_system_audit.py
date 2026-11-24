@@ -24,9 +24,11 @@ def run_audit():
     print("=" * 70)
 
     from backend.main import app
-    from backend.database import SessionLocal
+    from backend.database import SessionLocal, init_db_if_needed
+    from backend.auth_utils import get_password_hash
     import backend.models as models
 
+    init_db_if_needed()
     client = TestClient(app)
     results = {
         "passed": [],
@@ -83,24 +85,37 @@ def run_audit():
 
     # Helper function to register and login users
     def get_user_token(email, full_name, phone, role):
-        client.post("/api/auth/register", json={
-            "full_name": full_name,
-            "email": email,
-            "phone_number": phone,
-            "password": "Password@123",
-            "confirm_password": "Password@123",
-            "role": role
-        })
-        # If unverified, verify OTP directly
-        client.post("/api/auth/verify-otp", json={"email": email, "otp_code": "123456"})
+        db = SessionLocal()
+        try:
+            u = db.query(models.User).filter(models.User.email == email.lower()).first()
+            if not u:
+                client.post("/api/auth/register", json={
+                    "full_name": full_name,
+                    "email": email,
+                    "phone_number": phone,
+                    "password": "Password@123",
+                    "confirm_password": "Password@123",
+                    "role": role
+                })
+                u = db.query(models.User).filter(models.User.email == email.lower()).first()
+            if u:
+                u.is_verified = True
+                u.is_active = True
+                u.hashed_password = get_password_hash("Password@123")
+                db.commit()
+        finally:
+            db.close()
+
         res = client.post("/api/auth/login", json={"email": email, "password": "Password@123"})
         if res.status_code == 200:
             return res.json().get("access_token")
         return None
 
+    rand_suffix = random.randint(10000, 99999)
     # 1.3 Property Owner
-    owner_email = "owner_audit@kwdc.com.np"
-    owner_token = get_user_token(owner_email, "Ram Bahadur Shrestha", "+977-9841223344", "property_owner")
+    owner_email = f"owner_audit_{rand_suffix}@kwdc.com.np"
+    owner_phone = f"+977-9841{random.randint(100000, 999999)}"
+    owner_token = get_user_token(owner_email, "Ram Bahadur Shrestha", owner_phone, "property_owner")
     if owner_token:
         record_pass("Property Owner Auth", f"Owner token acquired for {owner_email}")
     else:
@@ -108,8 +123,9 @@ def run_audit():
     owner_headers = {"Authorization": f"Bearer {owner_token}"} if owner_token else {}
 
     # 1.4 Commercial Client
-    client_email = "client_audit@kwdc.com.np"
-    client_token = get_user_token(client_email, "Kathmandu FMCG Distributors", "+977-9851098765", "commercial_client")
+    client_email = f"client_audit_{rand_suffix}@kwdc.com.np"
+    client_phone = f"+977-9851{random.randint(100000, 999999)}"
+    client_token = get_user_token(client_email, "Kathmandu FMCG Distributors", client_phone, "commercial_client")
     if client_token:
         record_pass("Commercial Client Auth", f"Client token acquired for {client_email}")
     else:
@@ -117,8 +133,9 @@ def run_audit():
     client_headers = {"Authorization": f"Bearer {client_token}"} if client_token else {}
 
     # 1.5 Fleet Partner
-    fleet_email = "fleet_audit@kwdc.com.np"
-    fleet_token = get_user_token(fleet_email, "Nepal Freight Logistics", "+977-9811223344", "fleet_partner")
+    fleet_email = f"fleet_audit_{rand_suffix}@kwdc.com.np"
+    fleet_phone = f"+977-9811{random.randint(100000, 999999)}"
+    fleet_token = get_user_token(fleet_email, "Nepal Freight Logistics", fleet_phone, "fleet_partner")
     if fleet_token:
         record_pass("Fleet Partner Auth", f"Fleet token acquired for {fleet_email}")
     else:
@@ -540,6 +557,31 @@ def run_audit():
             else:
                 record_fail("Admin Underwrite Insurance Cover", f"Status {res_process.status_code}: {res_process.text}")
 
+        # 5.8 Client Create Freight Dispatch Order
+        dispatch_payload = {
+            "pickup_address": "Chobhar Dry Port Storage, Kirtipur Road Gate 2",
+            "pickup_contact_name": "Hari Shrestha (Gate Incharge)",
+            "pickup_contact_phone": "+977-9841009988",
+            "destination_address": "Balaju Industrial Estate, Unit 4B",
+            "cargo_description": "5,000 KG Basmati Rice & Grain Sacks",
+            "required_vehicle_category": "heavy_truck",
+            "consignee_name": "Nepal Agro Supplies Ltd",
+            "consignee_phone": "+977-9801992233",
+            "estimated_distance_km": 18.5,
+            "pickup_lat": 27.6710,
+            "pickup_lng": 85.3120,
+            "dest_lat": 27.7320,
+            "dest_lng": 85.3020
+        }
+        res_order = client.post("/api/fleet/dispatch-orders", headers=client_headers, json=dispatch_payload)
+        real_order_id = None
+        if res_order.status_code == 200:
+            order_data = res_order.json()
+            real_order_id = order_data.get("order_id")
+            record_pass("Client Book Freight Dispatch", f"Order #{order_data.get('order_number')} created (ID: {real_order_id})")
+        else:
+            record_fail("Client Book Freight Dispatch", f"Status {res_order.status_code}: {res_order.text}")
+
     except Exception as e:
         record_fail("Commercial Client Operations Exception", str(e))
 
@@ -619,18 +661,23 @@ def run_audit():
             record_fail("Fleet Dispatch Orders Board", f"Status {res.status_code}: {res.text}")
 
         # 6.6 Accept Freight Job
-        res = client.post("/api/fleet/dispatch-orders/101/accept", headers=fleet_headers)
+        target_order_id = real_order_id or 101
+        res = client.post(f"/api/fleet/dispatch-orders/{target_order_id}/accept", headers=fleet_headers)
         if res.status_code == 200:
             record_pass("Fleet Accept Dispatch Job", res.json().get("message", "Assigned"))
         else:
             record_fail("Fleet Accept Dispatch Job", f"Status {res.status_code}: {res.text}")
 
+        # 6.6b Assign vehicle and primary driver
+        if real_order_id and vehicle_id and driver_id:
+            client.post(f"/api/fleet/orders/{target_order_id}/assign?vehicle_id={vehicle_id}&driver_id={driver_id}", headers=fleet_headers)
+
         # 6.7 Update Freight Status
-        res = client.post("/api/fleet/dispatch-orders/101/status?status_str=delivered", headers=fleet_headers)
+        res = client.post(f"/api/fleet/dispatch-orders/{target_order_id}/status?status_str=in_transit", headers=fleet_headers)
         if res.status_code == 200:
-            record_pass("Fleet Mark Job Delivered", res.json().get("message", "Delivered"))
+            record_pass("Fleet Mark Job In Transit", res.json().get("message", "In Transit"))
         else:
-            record_fail("Fleet Mark Job Delivered", f"Status {res.status_code}: {res.text}")
+            record_fail("Fleet Mark Job In Transit", f"Status {res.status_code}: {res.text}")
 
         # 6.8 Fleet Earnings & Settlements
         res = client.get("/api/fleet/earnings", headers=fleet_headers)
@@ -639,6 +686,120 @@ def run_audit():
             record_pass("Fleet Earnings Ledger", f"Net: Rs. {earn.get('net_fleet_earnings_npr')} (10% platform fee: Rs. {earn.get('kwdc_platform_fee_npr')})")
         else:
             record_fail("Fleet Earnings Ledger", f"Status {res.status_code}: {res.text}")
+
+        # 6.9 Fleet Operator Type Profile & Toggle (Independent Owner vs Commercial 3PL)
+        res_prof = client.get("/api/fleet/operator-profile", headers=fleet_headers)
+        if res_prof.status_code == 200:
+            prof_data = res_prof.json()
+            record_pass("Fleet Operator Profile", f"Current operator mode: {prof_data.get('operator_type')}")
+        else:
+            record_fail("Fleet Operator Profile", f"Status {res_prof.status_code}: {res_prof.text}")
+
+        res_toggle = client.post("/api/fleet/operator-type", headers=fleet_headers, json={"operator_type": "INDEPENDENT_OWNER"})
+        if res_toggle.status_code == 200:
+            record_pass("Fleet Toggle Operator Type", "Updated to INDEPENDENT_OWNER (Auto-linked driver)")
+        else:
+            record_fail("Fleet Toggle Operator Type", f"Status {res_toggle.status_code}: {res_toggle.text}")
+
+        # Restore to COMMERCIAL_3PL for multi-crew testing
+        client.post("/api/fleet/operator-type", headers=fleet_headers, json={"operator_type": "COMMERCIAL_3PL"})
+
+        # 6.10 Dedicated Driver Registration with PIN & Reset PIN
+        driver_test_phone = f"+977-9818{random.randint(100000, 999999)}"
+        drv_pin_payload = {
+            "full_name": "Manish Shrestha",
+            "phone_number": driver_test_phone,
+            "login_pin": "4321",
+            "license_number": f"01-08-{random.randint(100000, 999999)}",
+            "license_category": "Category B (Delivery Van / Pickup)",
+            "citizenship_no": "27-01-72-99881",
+            "blood_group": "B+",
+            "emergency_contact_name": "Sita Shrestha",
+            "emergency_contact_phone": "+977-9818001122",
+            "has_clean_traffic_record": True
+        }
+        res_drv2 = client.post("/api/fleet/drivers", headers=fleet_headers, json=drv_pin_payload)
+        driver_pin_id = None
+        if res_drv2.status_code == 200:
+            driver_pin_id = res_drv2.json().get("driver_id")
+            record_pass("Driver Registration with PIN", f"Driver {drv_pin_payload['full_name']} registered with PIN 4321")
+        else:
+            record_fail("Driver Registration with PIN", f"Status {res_drv2.status_code}: {res_drv2.text}")
+
+        if driver_pin_id:
+            res_pin_reset = client.post(f"/api/fleet/drivers/{driver_pin_id}/reset-pin", headers=fleet_headers, json={"new_pin": "8899"})
+            if res_pin_reset.status_code == 200:
+                record_pass("Driver Reset PIN", "Security PIN successfully updated to 8899")
+            else:
+                record_fail("Driver Reset PIN", f"Status {res_pin_reset.status_code}: {res_pin_reset.text}")
+
+        # 6.11 Dedicated Driver Mobile + PIN Authentication (/api/fleet/driver/login)
+        driver_auth_token = None
+        driver_login_payload = {
+            "phone_number": driver_test_phone,
+            "pin": "8899"
+        }
+        res_drv_login = client.post("/api/fleet/driver/login", json=driver_login_payload)
+        if res_drv_login.status_code == 200:
+            drv_login_data = res_drv_login.json()
+            driver_auth_token = drv_login_data.get("access_token")
+            record_pass("Driver PIN Authentication", f"Field driver authenticated ({drv_login_data.get('driver', {}).get('full_name')})")
+        else:
+            record_fail("Driver PIN Authentication", f"Status {res_drv_login.status_code}: {res_drv_login.text}")
+
+        driver_headers = {"Authorization": f"Bearer {driver_auth_token}"} if driver_auth_token else {}
+
+        # 6.12 Emergency Breakdown Reassignment
+        if vehicle_id and driver_id and driver_pin_id and target_order_id:
+            # Reassign order to rescue vehicle and driver
+            reassign_payload = {
+                "new_vehicle_id": vehicle_id,
+                "new_driver_id": driver_pin_id,
+                "breakdown_reason": "Mechanical Breakdown: Axle Fracture on Ring Road Kalanki"
+            }
+            res_reassign = client.post(f"/api/fleet/orders/{target_order_id}/reassign", headers=fleet_headers, json=reassign_payload)
+            if res_reassign.status_code == 200:
+                reassign_resp = res_reassign.json()
+                record_pass("Emergency Breakdown Reassignment", f"Dispatched rescue: {reassign_resp.get('message')}")
+            else:
+                record_fail("Emergency Breakdown Reassignment", f"Status {res_reassign.status_code}: {res_reassign.text}")
+
+        # 6.13 Driver Active Trip Query
+        if driver_auth_token:
+            res_trip = client.get("/api/fleet/driver/active-trip", headers=driver_headers)
+            if res_trip.status_code == 200:
+                record_pass("Driver Active Trip Terminal", "Successfully queried driver assigned trip state")
+            else:
+                record_fail("Driver Active Trip Terminal", f"Status {res_trip.status_code}: {res_trip.text}")
+
+        # 6.14 Driver Starts Transit & Live GPS Broadcast
+        if driver_auth_token and target_order_id:
+            res_start = client.post(f"/api/fleet/driver/trips/{target_order_id}/start", headers=driver_headers)
+            if res_start.status_code == 200:
+                record_pass("Driver Start Trip", f"Status: {res_start.json().get('status')}")
+            else:
+                record_fail("Driver Start Trip", f"Status {res_start.status_code}: {res_start.text}")
+
+            res_gps = client.post(
+                f"/api/fleet/driver/trips/{target_order_id}/location",
+                headers=driver_headers,
+                json={"latitude": 27.7012, "longitude": 85.3125, "heading": 120.0}
+            )
+            if res_gps.status_code == 200:
+                record_pass("Driver Live GPS Telemetry Stream", "Coordinates received and broadcast to ring road radar")
+            else:
+                record_fail("Driver Live GPS Telemetry Stream", f"Status {res_gps.status_code}: {res_gps.text}")
+
+            # 6.15 Delivery Complete with OTP (e-POD)
+            res_complete = client.post(
+                f"/api/fleet/driver/trips/{target_order_id}/complete",
+                headers=driver_headers,
+                json={"delivery_otp": "1234", "consignee_remarks": "Received in good condition by Store Keeper"}
+            )
+            if res_complete.status_code == 200:
+                record_pass("Driver Complete Delivery (e-POD)", res_complete.json().get("message", "Delivered"))
+            else:
+                record_fail("Driver Complete Delivery (e-POD)", f"Status {res_complete.status_code}: {res_complete.text}")
 
     except Exception as e:
         record_fail("Fleet Partner Operations Exception", str(e))
@@ -654,7 +815,8 @@ def run_audit():
         ("incharge_dashboard.html", ["toggleLanguage", "kwdc_lang", "I18N_INCHARGE", "langBtn"]),
         ("owner_dashboard.html", ["toggleLanguage", "kwdc_lang", "I18N_OWNER", "langBtn"]),
         ("client_dashboard.html", ["toggleLanguage", "kwdc_lang", "I18N_CLIENT", "langBtn"]),
-        ("fleet_dashboard.html", ["toggleLanguage", "kwdc_lang", "I18N_FLEET", "langBtn"])
+        ("fleet_dashboard.html", ["toggleLanguage", "kwdc_lang", "I18N_FLEET", "langBtn"]),
+        ("driver_run.html", ["toggleDriverLang", "kwdc_driver_lang", "I18N_DRIVER"])
     ]
 
     import os

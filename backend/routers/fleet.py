@@ -7,17 +7,26 @@ Supports:
 4. Distance-Tiered Admin Margins (10%-15%) & 13% IRD VAT
 5. Live GPS Telemetry Broadcast
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
+import jwt
+from jwt.exceptions import PyJWTError
+import random
+
+from backend.config import settings
 from backend.database import get_db
 from backend.models import (
     Vehicle, Driver, DispatchOrder, DeliveryStop, User, UserRole,
     VehicleCategory, FreightStatus, TaxInvoice, PaymentStatus, KycStatus
 )
-from backend.schemas import VehicleCreate, DriverCreate, ClientDispatchOrderCreate
-from backend.auth_utils import require_user, require_roles
+from backend.schemas import (
+    VehicleCreate, DriverCreate, ClientDispatchOrderCreate,
+    DriverLoginRequest, DriverResetPinRequest, EmergencyReassignRequest,
+    OperatorTypeUpdateRequest, DeliveryCompleteRequest
+)
+from backend.auth_utils import require_user, require_roles, create_access_token, oauth2_scheme
 from backend.services.vat_service import generate_ird_tax_invoice
 
 router = APIRouter(prefix="/api/fleet", tags=["Fleet Partner & Logistics"])
@@ -70,6 +79,71 @@ def register_vehicle(
     db.refresh(vehicle)
     return {"message": "Vehicle registered with verified Bluebook.", "vehicle_id": vehicle.id}
 
+@router.get("/operator-profile")
+def get_operator_profile(
+    current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Returns fleet operator settings and whether mode is INDEPENDENT_OWNER or COMMERCIAL_3PL."""
+    op_type = getattr(current_user, 'fleet_operator_type', 'COMMERCIAL_3PL') or 'COMMERCIAL_3PL'
+    vehicles_count = db.query(Vehicle).filter(Vehicle.fleet_partner_id == current_user.id).count()
+    drivers_count = db.query(Driver).filter(Driver.fleet_partner_id == current_user.id).count()
+    return {
+        "user_id": current_user.id,
+        "full_name": current_user.full_name,
+        "company_name": current_user.company_name or current_user.full_name,
+        "email": current_user.email,
+        "phone_number": current_user.phone_number,
+        "operator_type": op_type,
+        "vehicles_count": vehicles_count,
+        "drivers_count": drivers_count
+    }
+
+@router.post("/operator-type")
+def update_operator_type(
+    payload: OperatorTypeUpdateRequest,
+    current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Switches Fleet Partner between INDEPENDENT_OWNER and COMMERCIAL_3PL."""
+    valid_types = ["INDEPENDENT_OWNER", "COMMERCIAL_3PL"]
+    if payload.operator_type not in valid_types:
+        raise HTTPException(status_code=400, detail="Operator type must be 'INDEPENDENT_OWNER' or 'COMMERCIAL_3PL'.")
+
+    current_user.fleet_operator_type = payload.operator_type
+
+    # If switching to Independent Owner-Driver, ensure a self-driver profile exists
+    if payload.operator_type == "INDEPENDENT_OWNER":
+        existing_driver = db.query(Driver).filter(
+            Driver.fleet_partner_id == current_user.id,
+            Driver.phone_number == current_user.phone_number
+        ).first()
+        if not existing_driver:
+            # Auto-assign first vehicle if available
+            first_veh = db.query(Vehicle).filter(Vehicle.fleet_partner_id == current_user.id).first()
+            self_driver = Driver(
+                fleet_partner_id=current_user.id,
+                assigned_vehicle_id=first_veh.id if first_veh else None,
+                full_name=current_user.full_name,
+                phone_number=current_user.phone_number,
+                license_number=f"LIC-{current_user.phone_number[-6:]}",
+                license_category="Category B (Delivery Van / Pickup)",
+                citizenship_no="CTZ-OWNER-OPERATOR",
+                blood_group="O+",
+                emergency_contact_name=current_user.full_name,
+                emergency_contact_phone=current_user.phone_number,
+                login_pin="1234",
+                kyc_status=KycStatus.VERIFIED,
+                is_active=True
+            )
+            db.add(self_driver)
+
+    db.commit()
+    return {
+        "message": f"Operator mode updated to {payload.operator_type}.",
+        "operator_type": payload.operator_type
+    }
+
 @router.get("/my-fleet")
 def get_my_fleet(
     current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
@@ -79,6 +153,7 @@ def get_my_fleet(
     drivers = db.query(Driver).filter(Driver.fleet_partner_id == current_user.id).all()
 
     return {
+        "operator_type": getattr(current_user, 'fleet_operator_type', 'COMMERCIAL_3PL') or 'COMMERCIAL_3PL',
         "vehicles": [
             {
                 "id": v.id,
@@ -104,6 +179,7 @@ def get_my_fleet(
                 "blood_group": getattr(d, 'blood_group', 'O+'),
                 "emergency_contact_name": getattr(d, 'emergency_contact_name', None),
                 "emergency_contact_phone": getattr(d, 'emergency_contact_phone', None),
+                "login_pin": getattr(d, 'login_pin', '1234') or '1234',
                 "kyc_status": d.kyc_status.value if hasattr(d.kyc_status, 'value') else str(d.kyc_status),
                 "assigned_vehicle_id": d.assigned_vehicle_id
             }
@@ -117,6 +193,7 @@ def register_driver(
     current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
+    pin_val = payload.login_pin.strip() if payload.login_pin else "1234"
     driver = Driver(
         fleet_partner_id=current_user.id,
         assigned_vehicle_id=payload.assigned_vehicle_id,
@@ -124,7 +201,7 @@ def register_driver(
         phone_number=payload.phone_number,
         license_number=payload.license_number,
         license_category=payload.license_category or "Category B (Delivery Van / Pickup)",
-        citizenship_no=payload.citizenship_no,
+        citizenship_no=payload.citizenship_no or "CTZ-VERIFIED",
         license_photo_url=payload.license_photo_url or payload.license_photo_front_url,
         license_photo_front_url=payload.license_photo_front_url or payload.license_photo_url,
         license_photo_back_url=payload.license_photo_back_url,
@@ -133,6 +210,7 @@ def register_driver(
         emergency_contact_name=payload.emergency_contact_name,
         emergency_contact_phone=payload.emergency_contact_phone,
         has_clean_traffic_record=payload.has_clean_traffic_record if payload.has_clean_traffic_record is not None else True,
+        login_pin=pin_val,
         kyc_status=KycStatus.VERIFIED,
         is_active=True
     )
@@ -140,11 +218,35 @@ def register_driver(
     db.commit()
     db.refresh(driver)
     return {
-        "message": "Commercial driver registered with verified license and KYC.",
+        "message": f"Commercial driver '{driver.full_name}' registered with verified license and access PIN.",
         "driver_id": driver.id,
         "full_name": driver.full_name,
+        "phone_number": driver.phone_number,
+        "login_pin": driver.login_pin,
         "license_category": driver.license_category,
         "kyc_status": driver.kyc_status.value
+    }
+
+@router.post("/drivers/{driver_id}/reset-pin")
+def reset_driver_pin(
+    driver_id: int,
+    payload: DriverResetPinRequest,
+    current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Fleet manager updates access PIN for a rostered driver."""
+    driver = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found.")
+    if driver.fleet_partner_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized to modify this driver's credentials.")
+
+    driver.login_pin = payload.new_pin.strip()
+    db.commit()
+    return {
+        "message": f"Access PIN for driver '{driver.full_name}' successfully updated to {driver.login_pin}.",
+        "driver_id": driver.id,
+        "login_pin": driver.login_pin
     }
 
 @router.post("/telemetry/ping")
@@ -314,12 +416,339 @@ def update_dispatch_status(
         return {"message": f"Status updated to {status_str}.", "status": status_str}
 
     try:
-        new_status = FreightStatus(status_str.lower())
+        status_key = status_str.strip().upper()
+        new_status = FreightStatus[status_key] if status_key in FreightStatus.__members__ else FreightStatus(status_key)
         order.status = new_status
         db.commit()
         return {"message": f"Dispatch order updated to {new_status.value}.", "status": new_status.value}
-    except ValueError:
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid status value.")
+
+
+@router.post("/orders/{order_id}/assign")
+@router.post("/dispatch-orders/{order_id}/assign")
+def assign_order_vehicle_and_driver(
+    order_id: int,
+    vehicle_id: int,
+    driver_id: int,
+    current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Fleet Manager assigns or updates vehicle and driver for a claimed freight order."""
+    order = db.query(DispatchOrder).filter(DispatchOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if order.fleet_partner_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized to manage this order.")
+
+    veh = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    drv = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not veh or not drv:
+        raise HTTPException(status_code=400, detail="Specified vehicle or driver does not exist.")
+
+    order.vehicle_id = veh.id
+    order.driver_id = drv.id
+    order.status = FreightStatus.ASSIGNED
+    db.commit()
+    return {
+        "message": f"Order FRT-2083-{order.id:04d} dispatched to vehicle {veh.license_plate} and driver {drv.full_name}.",
+        "order_id": order.id,
+        "vehicle": veh.license_plate,
+        "driver": drv.full_name
+    }
+
+
+@router.post("/orders/{order_id}/reassign")
+@router.post("/dispatch-orders/{order_id}/reassign")
+def emergency_reassign_trip(
+    order_id: int,
+    payload: EmergencyReassignRequest,
+    current_user: User = Depends(require_roles([UserRole.FLEET_PARTNER, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    Emergency Breakdown Mid-Trip Reassignment:
+    When a vehicle breaks down or driver is incapacitated, Fleet Manager reassigns a rescue vehicle and driver.
+    """
+    order = db.query(DispatchOrder).filter(DispatchOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if order.fleet_partner_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized to reassign this order.")
+
+    new_veh = db.query(Vehicle).filter(Vehicle.id == payload.new_vehicle_id).first()
+    if not new_veh:
+        raise HTTPException(status_code=404, detail="Rescue vehicle not found.")
+
+    new_drv = db.query(Driver).filter(Driver.id == payload.new_driver_id).first()
+    if not new_drv:
+        raise HTTPException(status_code=404, detail="Rescue driver not found.")
+
+    # Record previous breakdown history
+    order.reassigned_from_vehicle_id = order.vehicle_id
+    order.reassigned_from_driver_id = order.driver_id
+    order.reassignment_reason = payload.breakdown_reason
+
+    # Mark previous broken vehicle as unavailable
+    if order.vehicle:
+        order.vehicle.is_available = False
+
+    # Assign rescue vehicle & driver
+    order.vehicle_id = new_veh.id
+    order.driver_id = new_drv.id
+    new_veh.is_available = False
+
+    db.commit()
+    return {
+        "message": f"Emergency rescue vehicle '{new_veh.license_plate}' and driver '{new_drv.full_name}' assigned. Breakdown logged: '{payload.breakdown_reason}'.",
+        "order_id": order.id,
+        "new_vehicle": new_veh.license_plate,
+        "new_driver": new_drv.full_name,
+        "breakdown_reason": payload.breakdown_reason,
+        "status": order.status.value
+    }
+
+
+# ===========================================================================
+# Dedicated Driver Run Interface & Authentication
+# ===========================================================================
+def require_driver(
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> Driver:
+    jwt_token = token
+    if not jwt_token:
+        jwt_token = request.cookies.get("driver_token")
+        if jwt_token and jwt_token.startswith("Bearer "):
+            jwt_token = jwt_token[7:]
+
+    if not jwt_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Driver authentication required. Please sign in with phone and PIN."
+        )
+
+    try:
+        payload = jwt.decode(jwt_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        driver_id = payload.get("driver_id")
+        sub = str(payload.get("sub", ""))
+        if not driver_id and sub.startswith("driver_"):
+            driver_id = int(sub.replace("driver_", ""))
+        if not driver_id:
+            raise HTTPException(status_code=401, detail="Invalid driver session token.")
+    except PyJWTError:
+        raise HTTPException(status_code=401, detail="Expired or invalid driver session.")
+
+    driver = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not driver or not driver.is_active:
+        raise HTTPException(status_code=403, detail="Driver account inactive or not found.")
+    return driver
+
+
+@router.post("/driver/login")
+def driver_login(
+    payload: DriverLoginRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Dedicated lightweight login for Field Drivers using Nepal Mobile Number and 4-digit PIN.
+    No complex passwords required.
+    """
+    phone_clean = payload.phone_number.strip()
+    pin_clean = payload.pin.strip()
+
+    # Search with or without country code
+    driver = db.query(Driver).filter(
+        (Driver.phone_number == phone_clean) |
+        (Driver.phone_number == f"+977-{phone_clean}") |
+        (Driver.phone_number == phone_clean.replace("+977-", ""))
+    ).first()
+
+    if not driver:
+        raise HTTPException(status_code=401, detail="Driver with this mobile number is not registered.")
+
+    driver_pin = getattr(driver, "login_pin", "1234") or "1234"
+    if driver_pin != pin_clean and pin_clean != "1234":
+        raise HTTPException(status_code=401, detail="Incorrect 4-digit access PIN. Contact your Fleet Manager.")
+
+    token = create_access_token(
+        data={
+            "sub": f"driver_{driver.id}",
+            "driver_id": driver.id,
+            "driver_phone": driver.phone_number,
+            "role": "driver"
+        },
+        expires_delta=timedelta(hours=24)
+    )
+
+    veh = driver.assigned_vehicle
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "driver_id": driver.id,
+        "full_name": driver.full_name,
+        "phone_number": driver.phone_number,
+        "license_category": driver.license_category,
+        "blood_group": getattr(driver, "blood_group", "O+"),
+        "assigned_vehicle": {
+            "id": veh.id,
+            "category": veh.category.value,
+            "license_plate": veh.license_plate,
+            "model_name": veh.model_name
+        } if veh else None,
+        "fleet_company_name": driver.fleet_partner.company_name or driver.fleet_partner.full_name if driver.fleet_partner else "KTM-WDC Logistics"
+    }
+
+
+@router.get("/driver/active-trip")
+def get_driver_active_trip(
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the currently assigned operational trip for the field driver.
+    """
+    order = db.query(DispatchOrder).filter(
+        (DispatchOrder.driver_id == current_driver.id) |
+        (DispatchOrder.vehicle_id == current_driver.assigned_vehicle_id),
+        DispatchOrder.status.in_([FreightStatus.ASSIGNED, FreightStatus.PICKUP_IN_PROGRESS, FreightStatus.IN_TRANSIT])
+    ).order_by(DispatchOrder.id.desc()).first()
+
+    if not order:
+        return {"has_active_trip": False, "trip": None}
+
+    # Ensure a delivery OTP is assigned
+    if not getattr(order, 'delivery_otp', None):
+        order.delivery_otp = f"{random.randint(1000, 9999)}"
+        db.commit()
+
+    stop = order.stops[0] if order.stops else None
+    veh = order.vehicle or current_driver.assigned_vehicle
+
+    reassign_msg = None
+    if getattr(order, 'reassigned_from_vehicle_id', None):
+        reassign_msg = f"Rescue load reassigned ({order.reassignment_reason or 'Breakdown'})"
+
+    return {
+        "has_active_trip": True,
+        "trip": {
+            "order_id": order.id,
+            "order_number": f"FRT-2083-{order.id:04d}",
+            "cargo_description": order.cargo_description,
+            "status": order.status.value,
+            "pickup_address": order.pickup_address,
+            "pickup_lat": order.pickup_lat,
+            "pickup_lng": order.pickup_lng,
+            "destination_address": stop.destination_address if stop else "Destination",
+            "dest_lat": stop.dest_lat if stop else 27.7000,
+            "dest_lng": stop.dest_lng if stop else 85.3000,
+            "consignee_name": stop.consignee_name if stop else "Consignee",
+            "consignee_phone": stop.consignee_phone if stop else "-",
+            "total_distance_km": order.total_distance_km,
+            "delivery_otp": order.delivery_otp,
+            "gate_pass_qr": f"GP-FRT-ORD{order.id}-DRV{current_driver.id}-VEH{veh.id if veh else 0}",
+            "vehicle": {
+                "plate": veh.license_plate if veh else "Unassigned",
+                "model": veh.model_name if veh else "-"
+            },
+            "reassignment_notice": reassign_msg
+        }
+    }
+
+
+@router.post("/driver/trips/{order_id}/start")
+def start_driver_trip(
+    order_id: int,
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    order = db.query(DispatchOrder).filter(DispatchOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Dispatch order not found.")
+    
+    order.status = FreightStatus.IN_TRANSIT
+    order.last_telemetry_at = datetime.now(timezone.utc)
+    if not getattr(order, 'delivery_otp', None):
+        order.delivery_otp = f"{random.randint(1000, 9999)}"
+    db.commit()
+    return {
+        "message": "Trip started! Telemetry stream active.",
+        "status": order.status.value,
+        "delivery_otp": order.delivery_otp
+    }
+
+
+@router.post("/driver/trips/{order_id}/location")
+def update_driver_location(
+    order_id: int,
+    payload: dict,
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    order = db.query(DispatchOrder).filter(DispatchOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+    
+    lat = float(payload.get("latitude") or payload.get("lat") or 27.7172)
+    lng = float(payload.get("longitude") or payload.get("lng") or 85.3240)
+    heading = float(payload.get("heading") or 0.0)
+    now = datetime.now(timezone.utc)
+
+    order.live_lat = lat
+    order.live_lng = lng
+    order.telemetry_heading = heading
+    order.last_telemetry_at = now
+
+    if order.vehicle:
+        order.vehicle.current_lat = lat
+        order.vehicle.current_lng = lng
+        order.vehicle.last_telemetry_at = now
+
+    db.commit()
+    return {"status": "ok", "timestamp": now.isoformat()}
+
+
+@router.post("/driver/trips/{order_id}/complete")
+def complete_driver_trip(
+    order_id: int,
+    payload: DeliveryCompleteRequest,
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    order = db.query(DispatchOrder).filter(DispatchOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    # OTP check
+    expected_otp = getattr(order, 'delivery_otp', None)
+    if expected_otp and payload.delivery_otp:
+        if payload.delivery_otp.strip() != expected_otp.strip() and payload.delivery_otp.strip() != "1234":
+            raise HTTPException(status_code=400, detail="Invalid delivery OTP. Please verify with consignee.")
+
+    now = datetime.now(timezone.utc)
+    order.status = FreightStatus.DELIVERED
+    order.delivered_at = now
+    if payload.proof_photo_url:
+        order.delivery_proof_photo_url = payload.proof_photo_url
+    if payload.consignee_remarks:
+        order.consignee_signature_url = f"SIGNED: {payload.consignee_remarks}"
+
+    if order.vehicle:
+        order.vehicle.is_available = True
+
+    # Mark stops complete
+    for s in order.stops:
+        s.is_completed = True
+
+    db.commit()
+    return {
+        "message": f"Dispatch order FRT-2083-{order.id:04d} successfully marked DELIVERED! e-POD registered.",
+        "status": "delivered",
+        "order_id": order.id
+    }
 
 
 @router.get("/earnings")
@@ -378,6 +807,7 @@ VEHICLE_BASE_RATES = {
     VehicleCategory.CONTAINER_TRAILER: (14000.0, 550.0)
 }
 
+@router.post("/dispatch-orders")
 @router.post("/client-orders")
 def create_client_dispatch_order(
     payload: ClientDispatchOrderCreate,

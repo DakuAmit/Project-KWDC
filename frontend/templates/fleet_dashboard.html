@@ -137,7 +137,17 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Operator Classification Mode Switcher -->
+          <button onclick="openOperatorTypeModal()" id="operatorTypeBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition shadow-sm" title="Change Business Classification (Independent Owner vs 3PL)">
+            <i data-lucide="shield" class="w-3.5 h-3.5 text-indigo-600"></i> <span id="operatorTypeLabel">Commercial 3PL Fleet</span>
+          </button>
+
+          <!-- Launch Dedicated Driver Run App -->
+          <a href="/driver" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition shadow-sm" title="Launch Mobile Cab Terminal for Field Drivers">
+            <i data-lucide="smartphone" class="w-3.5 h-3.5 text-emerald-600"></i> <span>Driver Cab App ↗</span>
+          </a>
+
           <!-- Bilingual Switcher Pill -->
           <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
             <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
@@ -154,6 +164,29 @@
 
       <!-- Main Panels -->
       <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+        <!-- Independent Owner-Driver Notice Banner (Shows when in Owner-Driver Mode) -->
+        <div id="ownerDriverBanner" class="hidden bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-amber text-navy font-bold grid place-items-center shrink-0">
+              <i data-lucide="user-check" class="w-5 h-5"></i>
+            </span>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-navy uppercase tracking-wider">Independent Owner-Driver Mode Active</span>
+                <span class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full">Single Vehicle Operator</span>
+              </div>
+              <p class="text-xs text-slate-600 mt-0.5">
+                You drive your registered vehicle. Your mobile credentials and 4-digit PIN grant direct access to the Driver Run Terminal.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <a href="/driver" target="_blank" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center gap-1.5 transition">
+              <i data-lucide="smartphone" class="w-4 h-4 text-amber-400"></i> Open Driver Cab App ↗
+            </a>
+          </div>
+        </div>
 
         <!-- Cabin HUD Summary Bar -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -492,11 +525,16 @@
           <input type="tel" id="drvPhone" required placeholder="98XXXXXXXX" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
         </div>
         <div>
-          <label class="block font-bold text-navy mb-1">Assign Active Vehicle</label>
-          <select id="drvVehicle" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
-            <option value="">Unassigned (Standby)</option>
-          </select>
+          <label class="block font-bold text-navy mb-1">Driver 4-Digit Login PIN *</label>
+          <input type="text" id="drvPin" required pattern="[0-9]{4,6}" maxlength="6" value="1234" placeholder="1234" class="w-full px-3.5 py-2 rounded-xl border border-indigo-300 bg-indigo-50/40 text-xs font-mono font-bold">
         </div>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Assign Active Vehicle</label>
+        <select id="drvVehicle" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+          <option value="">Unassigned (Standby)</option>
+        </select>
       </div>
 
       <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
@@ -535,6 +573,152 @@
         <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
           <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="btn_save_driver">Assign KYC-Verified Driver</span>
         </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Emergency Breakdown & Rescue Reassignment -->
+  <dialog id="breakdownModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-red-200 backdrop:bg-slate-950/70">
+    <div class="p-5 border-b border-red-200 flex items-center justify-between bg-red-600 text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-white text-red-600 grid place-items-center font-bold">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Emergency Vehicle Breakdown Rescue</h3>
+          <p class="text-xs text-red-100">Reassign mid-trip cargo to rescue vehicle &amp; standby driver</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('breakdownModal').close()" class="p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleBreakdownReassignSubmit(event)" class="p-6 space-y-4 text-xs">
+      <input type="hidden" id="reassignOrderId" />
+      <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-red-900 space-y-1">
+        <p class="font-bold text-xs" id="reassignOrderTitle">Order: FRT-2083-0001</p>
+        <p class="text-[11px] text-red-700" id="reassignOrderRoute">Kalanki Depot ➔ Chobhar Hub</p>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Reason for Breakdown / Incident *</label>
+        <select id="reassignReasonSelect" onchange="handleReassignReasonChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white mb-2 font-medium">
+          <option value="Mechanical Failure: Engine Overheating / Axle Breakdown">Mechanical Failure: Engine Overheating / Axle Breakdown</option>
+          <option value="Tyre Puncture &amp; Road Obstruction on Ring Road">Tyre Puncture &amp; Road Obstruction on Ring Road</option>
+          <option value="Minor Traffic Collision / Vehicle Immobilized">Minor Traffic Collision / Vehicle Immobilized</option>
+          <option value="Driver Medical Emergency / Unfit to Continue">Driver Medical Emergency / Unfit to Continue</option>
+          <option value="OTHER">Other Reason (Specify below)...</option>
+        </select>
+        <input type="text" id="reassignReasonText" placeholder="Specify incident details (min 5 characters)..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Rescue Vehicle *</label>
+          <select id="reassignVehicleSelect" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="">Select Rescue Cab</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Rescue Driver *</label>
+          <select id="reassignDriverSelect" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="">Select Rescue Driver</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 space-y-1">
+        <p class="font-bold">Notice to Fleet Operator:</p>
+        <p>The broken-down vehicle will be marked <strong>UNAVAILABLE (In Maintenance)</strong> until inspected. The newly assigned rescue driver will immediately receive the active trip in their Driver Run terminal.</p>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+        <button type="button" onclick="document.getElementById('breakdownModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow flex items-center gap-1.5">
+          <i data-lucide="truck" class="w-3.5 h-3.5"></i> Dispatch Rescue Crew
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Fleet Operator Type Switcher -->
+  <dialog id="operatorTypeModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
+          <i data-lucide="shield" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Fleet Business Classification</h3>
+          <p class="text-xs text-slate-400">Choose between Independent Owner vs Commercial 3PL</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('operatorTypeModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4 text-xs">
+      <p class="text-slate-600 leading-relaxed">
+        Select the operating mode matching your logistics business structure in Nepal:
+      </p>
+
+      <div class="space-y-3">
+        <label class="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-amber-400 cursor-pointer bg-white transition has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50/30">
+          <input type="radio" name="optTypeRadio" value="INDEPENDENT_OWNER" id="radioIndependent" class="mt-1 text-amber-500 focus:ring-amber-400">
+          <div>
+            <span class="font-bold text-navy text-sm block">1. Independent Vehicle Owner (Owner-Driver)</span>
+            <p class="text-slate-500 text-[11px] mt-0.5">
+              You own a single pickup truck, Bolero, or Tata Ace and drive it yourself. Simplifies workflow by auto-linking yourself as the primary driver with 4-digit PIN for the cab app.
+            </p>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-400 cursor-pointer bg-white transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/30">
+          <input type="radio" name="optTypeRadio" value="COMMERCIAL_3PL" id="radio3PL" class="mt-1 text-indigo-600 focus:ring-indigo-500">
+          <div>
+            <span class="font-bold text-navy text-sm block">2. Commercial Fleet Operator &amp; 3PL Transport</span>
+            <p class="text-slate-500 text-[11px] mt-0.5">
+              You operate multiple trucks and employ salaried/commission drivers. Full driver roster, emergency breakdown reassignment, PIN security, and multi-vehicle live radar.
+            </p>
+          </div>
+        </label>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+        <button type="button" onclick="document.getElementById('operatorTypeModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs">Cancel</button>
+        <button type="button" onclick="saveOperatorType()" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center gap-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Update Business Profile
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: Reset Driver PIN -->
+  <dialog id="resetPinModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-sm border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-indigo-500 text-white grid place-items-center font-bold">
+          <i data-lucide="key" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-sm text-white">Reset Driver Access PIN</h3>
+          <p class="text-[11px] text-slate-400" id="resetPinDriverName">Driver: -</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('resetPinModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleResetPinSubmit(event)" class="p-6 space-y-4 text-xs">
+      <input type="hidden" id="resetPinDriverId" />
+      <div>
+        <label class="block font-bold text-navy mb-1">New 4-6 Digit Security PIN *</label>
+        <input type="text" id="newPinInput" required pattern="[0-9]{4,6}" maxlength="6" placeholder="e.g. 5678" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-center font-mono text-lg tracking-widest font-bold">
+        <p class="text-[10px] text-slate-400 mt-1">Provide this PIN to the driver along with their mobile phone number to log into <strong>/driver</strong>.</p>
+      </div>
+      <div class="pt-2 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('resetPinModal').close()" class="px-3.5 py-1.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs">Cancel</button>
+        <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow">Save PIN</button>
       </div>
     </form>
   </dialog>
@@ -765,6 +949,16 @@
       if (tabId === 'earnings') loadFleetEarnings();
     }
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     function formatToastMessage(msg) {
       if (!msg) return 'Operation failed.';
       if (typeof msg === 'string') {
@@ -924,22 +1118,29 @@
             <div>
               <div class="flex items-start justify-between gap-3 mb-2">
                 <div>
-                  <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">${j.order_number}</span>
-                  <h4 class="font-bold text-navy text-sm mt-1.5">${j.cargo_description}</h4>
+                  <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">${escapeHtml(j.order_number)}</span>
+                  <h4 class="font-bold text-navy text-sm mt-1.5">${escapeHtml(j.cargo_description)}</h4>
                 </div>
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${j.status === 'delivered' ? 'bg-emerald-100 text-emerald-800' : (j.status === 'in_transit' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800')} uppercase font-mono">
                   ${j.status.replace('_', ' ')}
                 </span>
               </div>
 
+              ${j.reassignment_reason ? `
+                <div class="mb-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-[11px] flex items-center gap-2">
+                  <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600 shrink-0"></i>
+                  <span><strong>🚨 Emergency Rescue Active:</strong> Reassigned due to: "${escapeHtml(j.reassignment_reason)}"</span>
+                </div>
+              ` : ''}
+
               <div class="grid sm:grid-cols-2 gap-3 py-3 border-y border-slate-100 font-mono text-xs text-slate-600">
                 <div>
                   <span class="text-slate-400 block text-[10px]">ORIGIN (PICKUP WAREHOUSE):</span>
-                  <p class="font-sans font-semibold text-navy text-xs">${j.pickup_address}</p>
+                  <p class="font-sans font-semibold text-navy text-xs">${escapeHtml(j.pickup_address)}</p>
                 </div>
                 <div>
                   <span class="text-slate-400 block text-[10px]">DESTINATION (DELIVERY HUB):</span>
-                  <p class="font-sans font-semibold text-navy text-xs">${j.delivery_address}</p>
+                  <p class="font-sans font-semibold text-navy text-xs">${escapeHtml(j.delivery_address)}</p>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-slate-400">Total Distance:</span>
@@ -950,20 +1151,30 @@
                   <span>${Number(j.net_cargo_kg).toLocaleString('en-IN')} KG</span>
                 </div>
               </div>
+
+              <!-- Driver & Vehicle Details -->
+              <div class="mt-2.5 p-2 rounded-lg bg-slate-50 border border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-600">
+                <span>Cab: <strong class="text-navy">${escapeHtml(j.vehicle_plate || 'Assigned')}</strong></span>
+                <span>Driver: <strong class="text-navy">${escapeHtml(j.driver_name || 'Assigned Driver')}</strong></span>
+                ${j.delivery_otp ? `<span class="bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-bold">Consignee OTP: ${escapeHtml(j.delivery_otp)}</span>` : ''}
+              </div>
             </div>
 
-            <div class="mt-4 pt-3 flex items-center justify-between gap-3">
+            <div class="mt-4 pt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
               <div>
                 <span class="text-[10px] text-slate-400 font-mono">Net Fleet Settlement:</span>
                 <p class="text-base font-black text-emerald-700 font-mono">Rs. ${Number(j.net_fleet_earnings_npr).toLocaleString('en-IN')}</p>
               </div>
 
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 ${j.status === 'requested' ? `
                   <button onclick="acceptFreightJob(${j.id})" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
                     <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Accept Job
                   </button>
-                ` : (j.status === 'in_transit' ? `
+                ` : (j.status === 'in_transit' || j.status === 'assigned' ? `
+                  <button onclick="openBreakdownModal(${j.id}, '${escapeHtml(j.order_number)}', '${escapeHtml(j.pickup_address)}', '${escapeHtml(j.delivery_address)}')" class="px-3 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs shadow-sm transition flex items-center gap-1.5" title="Vehicle Breakdown Emergency Reassignment">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-red-600"></i> Breakdown / Reassign
+                  </button>
                   <button onclick="updateJobStatus(${j.id}, 'delivered')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
                     <i data-lucide="package-check" class="w-3.5 h-3.5"></i> Mark Delivered
                   </button>
@@ -1014,12 +1225,15 @@
       }
     }
 
+    let cachedDrivers = [];
+
     async function loadMyFleet() {
       try {
         const res = await fetch('/api/fleet/my-fleet', { headers: getAuthHeaders() });
         if (!res.ok) return;
         const data = await res.json();
         cachedVehicles = data.vehicles || [];
+        cachedDrivers = data.drivers || [];
 
         const vList = document.getElementById('fleetVehiclesGrid');
         const dList = document.getElementById('fleetDriversGrid');
@@ -1034,21 +1248,25 @@
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
               <div>
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-navy font-mono">${v.license_plate}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">BLUEBOOK VERIFIED</span>
+                  <span class="text-xs font-bold text-navy font-mono">${escapeHtml(v.license_plate)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${v.is_available ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
+                    ${v.is_available ? 'BLUEBOOK VERIFIED' : 'MAINTENANCE / BREAKDOWN'}
+                  </span>
                 </div>
-                <p class="text-xs text-slate-600 mt-1">${v.model_name} • ${v.category.replace('_', ' ')}</p>
+                <p class="text-xs text-slate-600 mt-1">${escapeHtml(v.model_name)} • ${escapeHtml(v.category.replace('_', ' '))}</p>
                 <div class="mt-2 font-mono text-[11px] text-slate-500">
-                  <p>Bluebook: <strong>${v.bluebook_number}</strong></p>
+                  <p>Bluebook: <strong>${escapeHtml(v.bluebook_number)}</strong></p>
                   <p>Payload: <strong>${v.payload_capacity_kg} KG</strong></p>
                 </div>
               </div>
               <div class="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
-                <span class="text-emerald-700 font-bold">● GPS Live</span>
+                <span class="${v.is_available ? 'text-emerald-700' : 'text-amber-700'} font-bold">● ${v.is_available ? 'GPS Active' : 'Standby'}</span>
                 <button onclick="simulateGpsPing()" class="text-slate-500 hover:text-navy font-bold">Ping Telemetry</button>
               </div>
             </div>
           `).join('');
+        } else {
+          vList.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400"><p class="text-xs">No vehicles registered yet. Add commercial vehicles above.</p></div>`;
         }
 
         if (data.drivers.length > 0) {
@@ -1088,13 +1306,29 @@
                     </div>
                   ` : ''}
                 </div>
+
+                <!-- Driver App PIN & Quick Access -->
+                <div class="mt-2.5 p-2 rounded-lg bg-indigo-50/80 border border-indigo-100 flex items-center justify-between text-[11px]">
+                  <span class="text-indigo-900 font-bold flex items-center gap-1.5">
+                    <i data-lucide="key" class="w-3.5 h-3.5 text-indigo-600"></i> PIN: <span class="font-mono text-indigo-800 bg-white px-2 py-0.5 rounded border border-indigo-200 tracking-wider">${escapeHtml(d.login_pin || '1234')}</span>
+                  </span>
+                  <button onclick="promptResetPin(${d.id}, '${escapeHtml(d.full_name)}')" class="text-[10px] text-indigo-600 hover:text-indigo-900 font-bold underline">Reset PIN</button>
+                </div>
               </div>
-              <div class="mt-2 text-[10px] text-emerald-700 flex items-center gap-1 font-semibold">
-                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Traffic Police Cleared
+
+              <div class="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+                <span class="text-emerald-700 flex items-center gap-1 font-semibold">
+                  <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Cleared
+                </span>
+                <a href="/driver" target="_blank" class="text-indigo-600 hover:text-indigo-900 font-bold flex items-center gap-1">
+                  <span>Cab App</span> <i data-lucide="external-link" class="w-3 h-3"></i>
+                </a>
               </div>
             </div>
           `).join('');
           lucide.createIcons();
+        } else {
+          dList.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400"><p class="text-xs">No drivers registered yet. Add commercial drivers to assign trips.</p></div>`;
         }
       } catch (err) {
         console.error(err);
@@ -1207,6 +1441,7 @@
       const payload = {
         full_name: document.getElementById('drvName').value.trim(),
         phone_number: document.getElementById('drvPhone').value.trim(),
+        login_pin: document.getElementById('drvPin')?.value.trim() || '1234',
         license_number: document.getElementById('drvLicense').value.trim(),
         license_category: effectiveCat,
         citizenship_no: document.getElementById('drvCitizenship').value.trim(),
@@ -1227,7 +1462,7 @@
         });
         const data = await res.json();
         if (res.ok) {
-          showToast(`Driver ${data.full_name || ''} registered with verified license!`);
+          showToast(`Driver ${data.full_name || ''} registered with PIN ${payload.login_pin}!`);
           document.getElementById('driverModal').close();
           loadMyFleet();
         } else {
@@ -1235,6 +1470,202 @@
         }
       } catch (err) {
         showToast("Network error registering driver: " + err.message, true);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Operator Classification: Independent Owner vs Commercial 3PL
+    // -------------------------------------------------------------
+    let currentOperatorType = 'COMMERCIAL_3PL';
+
+    async function loadOperatorProfile() {
+      try {
+        const res = await fetch('/api/fleet/operator-profile', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        currentOperatorType = data.operator_type || 'COMMERCIAL_3PL';
+        updateOperatorTypeUI();
+      } catch (err) {
+        console.error("loadOperatorProfile error:", err);
+      }
+    }
+
+    function updateOperatorTypeUI() {
+      const lbl = document.getElementById('operatorTypeLabel');
+      const banner = document.getElementById('ownerDriverBanner');
+      const isOwner = currentOperatorType === 'INDEPENDENT_OWNER';
+      if (lbl) {
+        lbl.textContent = isOwner ? 'Independent Owner' : 'Commercial 3PL Fleet';
+      }
+      if (banner) {
+        banner.classList.toggle('hidden', !isOwner);
+      }
+    }
+
+    function openOperatorTypeModal() {
+      const modal = document.getElementById('operatorTypeModal');
+      if (!modal) return;
+      const radioInd = document.getElementById('radioIndependent');
+      const radio3pl = document.getElementById('radio3PL');
+      if (currentOperatorType === 'INDEPENDENT_OWNER') {
+        if (radioInd) radioInd.checked = true;
+      } else {
+        if (radio3pl) radio3pl.checked = true;
+      }
+      modal.showModal();
+    }
+
+    async function saveOperatorType() {
+      const selected = document.querySelector('input[name="optTypeRadio"]:checked')?.value || 'COMMERCIAL_3PL';
+      try {
+        const res = await fetch('/api/fleet/operator-type', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ operator_type: selected })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          currentOperatorType = selected;
+          updateOperatorTypeUI();
+          showToast(data.message || "Operating classification updated!");
+          document.getElementById('operatorTypeModal').close();
+          loadMyFleet();
+        } else {
+          showToast(formatToastMessage(data.detail) || "Failed to update operator type.", true);
+        }
+      } catch (err) {
+        showToast("Network error: " + err.message, true);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Emergency Breakdown & Rescue Reassignment
+    // -------------------------------------------------------------
+    function openBreakdownModal(orderId, orderNum, pickup, delivery) {
+      const modal = document.getElementById('breakdownModal');
+      if (!modal) return;
+      document.getElementById('reassignOrderId').value = orderId;
+      document.getElementById('reassignOrderTitle').textContent = `Order: ${orderNum}`;
+      document.getElementById('reassignOrderRoute').textContent = `${pickup} ➔ ${delivery}`;
+
+      // Populate rescue vehicles
+      const vSel = document.getElementById('reassignVehicleSelect');
+      if (vSel) {
+        if (cachedVehicles.length === 0) {
+          vSel.innerHTML = '<option value="">No standby vehicles available</option>';
+        } else {
+          vSel.innerHTML = '<option value="">-- Select Rescue Vehicle --</option>' + cachedVehicles.map(v => `
+            <option value="${v.id}">${escapeHtml(v.license_plate)} (${escapeHtml(v.model_name)} - ${v.payload_capacity_kg}KG)</option>
+          `).join('');
+        }
+      }
+
+      // Populate rescue drivers
+      const dSel = document.getElementById('reassignDriverSelect');
+      if (dSel) {
+        if (cachedDrivers.length === 0) {
+          dSel.innerHTML = '<option value="">No standby drivers available</option>';
+        } else {
+          dSel.innerHTML = '<option value="">-- Select Rescue Driver --</option>' + cachedDrivers.map(d => `
+            <option value="${d.id}">${escapeHtml(d.full_name)} (${escapeHtml(d.phone_number)})</option>
+          `).join('');
+        }
+      }
+
+      document.getElementById('reassignReasonText').value = '';
+      modal.showModal();
+      lucide.createIcons();
+    }
+
+    function handleReassignReasonChange() {
+      const sel = document.getElementById('reassignReasonSelect').value;
+      const input = document.getElementById('reassignReasonText');
+      if (sel !== 'OTHER') {
+        input.value = sel;
+      } else {
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    async function handleBreakdownReassignSubmit(e) {
+      e.preventDefault();
+      const orderId = document.getElementById('reassignOrderId').value;
+      const vehId = document.getElementById('reassignVehicleSelect').value;
+      const drvId = document.getElementById('reassignDriverSelect').value;
+      const reason = document.getElementById('reassignReasonText').value.trim() || document.getElementById('reassignReasonSelect').value;
+
+      if (!vehId || !drvId) {
+        showToast("Please select both a rescue vehicle and driver.", true);
+        return;
+      }
+      if (!reason || reason.length < 5) {
+        showToast("Please provide breakdown incident details (min 5 characters).", true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/fleet/orders/${orderId}/reassign`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            new_vehicle_id: parseInt(vehId),
+            new_driver_id: parseInt(drvId),
+            breakdown_reason: reason
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || "Rescue crew dispatched! Breakdown registered.");
+          document.getElementById('breakdownModal').close();
+          loadDispatchOrders();
+          loadMyFleet();
+        } else {
+          showToast(formatToastMessage(data.detail) || "Reassignment failed.", true);
+        }
+      } catch (err) {
+        showToast("Network error: " + err.message, true);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Driver Access PIN Reset
+    // -------------------------------------------------------------
+    function promptResetPin(driverId, driverName) {
+      const modal = document.getElementById('resetPinModal');
+      if (!modal) return;
+      document.getElementById('resetPinDriverId').value = driverId;
+      document.getElementById('resetPinDriverName').textContent = `Driver: ${driverName}`;
+      document.getElementById('newPinInput').value = '';
+      modal.showModal();
+    }
+
+    async function handleResetPinSubmit(e) {
+      e.preventDefault();
+      const driverId = document.getElementById('resetPinDriverId').value;
+      const newPin = document.getElementById('newPinInput').value.trim();
+
+      if (!newPin || newPin.length < 4 || newPin.length > 6) {
+        showToast("PIN must be 4 to 6 numeric digits.", true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/fleet/drivers/${driverId}/reset-pin`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ new_pin: newPin })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || `PIN successfully updated to ${newPin}!`);
+          document.getElementById('resetPinModal').close();
+          loadMyFleet();
+        } else {
+          showToast(formatToastMessage(data.detail) || "Failed to reset PIN.", true);
+        }
+      } catch (err) {
+        showToast("Network error: " + err.message, true);
       }
     }
 
@@ -1258,6 +1689,7 @@
       applyTranslations(savedLang);
 
       initFleetMap();
+      loadOperatorProfile();
       loadDispatchOrders();
       loadMyFleet();
       loadFleetEarnings();

@@ -117,6 +117,7 @@ class User(Base):
     operating_location = Column(String(100), default="Kathmandu Valley")
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), default=UserRole.COMMERCIAL_CLIENT, nullable=False)
+    fleet_operator_type = Column(String(50), default="COMMERCIAL_3PL") # "INDEPENDENT_OWNER" or "COMMERCIAL_3PL"
     
     # Verification & Security
     is_active = Column(Boolean, default=True)
@@ -366,8 +367,8 @@ class Vehicle(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     fleet_partner = relationship("User", back_populates="fleet_vehicles")
-    drivers = relationship("Driver", back_populates="assigned_vehicle")
-    dispatches = relationship("DispatchOrder", back_populates="vehicle")
+    drivers = relationship("Driver", foreign_keys="[Driver.assigned_vehicle_id]", back_populates="assigned_vehicle")
+    dispatches = relationship("DispatchOrder", foreign_keys="[DispatchOrder.vehicle_id]", back_populates="vehicle")
 
 
 class Driver(Base):
@@ -393,13 +394,14 @@ class Driver(Base):
     emergency_contact_name = Column(String(255), nullable=True)
     emergency_contact_phone = Column(String(50), nullable=True)
     has_clean_traffic_record = Column(Boolean, default=True)
+    login_pin = Column(String(255), default="1234") # 4-digit access PIN for Driver Run Interface
     kyc_status = Column(Enum(KycStatus), default=KycStatus.PENDING_SUBMISSION, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     fleet_partner = relationship("User", back_populates="fleet_drivers")
-    assigned_vehicle = relationship("Vehicle", back_populates="drivers")
-    dispatches = relationship("DispatchOrder", back_populates="driver")
+    assigned_vehicle = relationship("Vehicle", foreign_keys=[assigned_vehicle_id], back_populates="drivers")
+    dispatches = relationship("DispatchOrder", foreign_keys="[DispatchOrder.driver_id]", back_populates="driver")
 
 
 class DispatchOrder(Base):
@@ -435,11 +437,20 @@ class DispatchOrder(Base):
 
     consignee_signature_url = Column(String(500), nullable=True)
     delivery_proof_photo_url = Column(String(500), nullable=True)
+    delivery_otp = Column(String(6), nullable=True)
+    delivered_at = Column(DateTime, nullable=True)
+
+    # Emergency Breakdown Mid-Trip Reassignment Tracking
+    reassigned_from_vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
+    reassigned_from_driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=True)
+    reassignment_reason = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     client = relationship("User", foreign_keys=[client_id], back_populates="dispatch_orders_as_client")
-    vehicle = relationship("Vehicle", back_populates="dispatches")
-    driver = relationship("Driver", back_populates="dispatches")
+    vehicle = relationship("Vehicle", foreign_keys=[vehicle_id], back_populates="dispatches")
+    driver = relationship("Driver", foreign_keys=[driver_id], back_populates="dispatches")
+    reassigned_from_vehicle = relationship("Vehicle", foreign_keys=[reassigned_from_vehicle_id])
+    reassigned_from_driver = relationship("Driver", foreign_keys=[reassigned_from_driver_id])
     stops = relationship("DeliveryStop", back_populates="dispatch_order", cascade="all, delete-orphan")
     invoice = relationship("TaxInvoice", back_populates="freight_order", uselist=False)
 

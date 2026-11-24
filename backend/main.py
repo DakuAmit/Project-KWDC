@@ -120,6 +120,10 @@ def incharge_page(request: Request):
 def fleet_page(request: Request):
     return templates.TemplateResponse(request=request, name="fleet_dashboard.html", context={"app_name": settings.APP_NAME})
 
+@app.get("/driver", response_class=HTMLResponse)
+def driver_page(request: Request):
+    return templates.TemplateResponse(request=request, name="driver_run.html", context={"app_name": settings.APP_NAME})
+
 @app.get("/invoice", response_class=HTMLResponse)
 def invoice_page(request: Request):
     return templates.TemplateResponse(request=request, name="v0/invoice.html", context={"app_name": settings.APP_NAME})

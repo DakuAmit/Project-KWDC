@@ -199,6 +199,27 @@ class DriverCreate(BaseModel):
     citizenship_photo_url: Optional[str] = None
     has_clean_traffic_record: Optional[bool] = True
     assigned_vehicle_id: Optional[int] = None
+    login_pin: Optional[str] = "1234"
+
+class DriverLoginRequest(BaseModel):
+    phone_number: str
+    pin: str
+
+class DriverResetPinRequest(BaseModel):
+    new_pin: str = Field(..., min_length=4, max_length=6)
+
+class EmergencyReassignRequest(BaseModel):
+    new_vehicle_id: int
+    new_driver_id: int
+    breakdown_reason: str = Field(..., min_length=5)
+
+class OperatorTypeUpdateRequest(BaseModel):
+    operator_type: str = Field(..., description="'INDEPENDENT_OWNER' or 'COMMERCIAL_3PL'")
+
+class DeliveryCompleteRequest(BaseModel):
+    delivery_otp: Optional[str] = None
+    proof_photo_url: Optional[str] = None
+    consignee_remarks: Optional[str] = None
 
 class InsuranceRequestCreate(BaseModel):
     warehouse_id: int

@@ -75,6 +75,34 @@ def ensure_db_schema_extensions():
                     conn.execute(text("ALTER TABLE drivers ADD COLUMN has_clean_traffic_record BOOLEAN DEFAULT 1;"))
                 except Exception:
                     pass
+                try:
+                    conn.execute(text("ALTER TABLE drivers ADD COLUMN login_pin VARCHAR(255) DEFAULT '1234';"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN fleet_operator_type VARCHAR(50) DEFAULT 'COMMERCIAL_3PL';"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN reassigned_from_vehicle_id INTEGER;"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN reassigned_from_driver_id INTEGER;"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN reassignment_reason VARCHAR(500);"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN delivery_otp VARCHAR(6);"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN delivered_at TIMESTAMP;"))
+                except Exception:
+                    pass
             else:
                 conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_category VARCHAR(50) DEFAULT 'Category B (Delivery Van / Pickup)';"))
                 conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_photo_front_url VARCHAR(500);"))
@@ -83,6 +111,13 @@ def ensure_db_schema_extensions():
                 conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS emergency_contact_name VARCHAR(255);"))
                 conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS emergency_contact_phone VARCHAR(50);"))
                 conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS has_clean_traffic_record BOOLEAN DEFAULT TRUE;"))
+                conn.execute(text("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS login_pin VARCHAR(255) DEFAULT '1234';"))
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fleet_operator_type VARCHAR(50) DEFAULT 'COMMERCIAL_3PL';"))
+                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS reassigned_from_vehicle_id INTEGER;"))
+                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS reassigned_from_driver_id INTEGER;"))
+                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS reassignment_reason VARCHAR(500);"))
+                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS delivery_otp VARCHAR(6);"))
+                conn.execute(text("ALTER TABLE dispatch_orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;"))
     except Exception as e:
         print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
 

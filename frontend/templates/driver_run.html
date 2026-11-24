@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+  <title>Driver Cab Terminal | KTM-WDC Logistics Nepal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#0f172a',
+            amber: '#f59e0b',
+            nepal: '#dc2626'
+          },
+          fontFamily: {
+            sans: ['Geist', 'system-ui', 'sans-serif'],
+            mono: ['Geist Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Geist', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .pulse-ring {
+      animation: pulseAnimation 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+    @keyframes pulseAnimation {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(1.08); }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-navy">
+
+  <!-- Toast Notification HUD -->
+  <div id="toastContainer" class="fixed top-4 inset-x-4 z-50 flex flex-col gap-2 max-w-sm mx-auto pointer-events-none"></div>
+
+  <!-- Screen 1: Driver Mobile & PIN Sign-In (High-Contrast Cab Login) -->
+  <div id="driverLoginScreen" class="flex-1 flex flex-col justify-center px-5 py-8 max-w-md w-full mx-auto">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 rounded-2xl bg-amber text-navy font-black grid place-items-center mx-auto mb-3 shadow-lg shadow-amber-500/20">
+        <i data-lucide="truck" class="w-9 h-9"></i>
+      </div>
+      <div class="flex items-center justify-center gap-2">
+        <h1 class="text-2xl font-black text-white tracking-tight">KTM-WDC</h1>
+        <span class="bg-nepal text-white text-[10px] font-black px-2 py-0.5 rounded tracking-wider">NEPAL</span>
+      </div>
+      <p class="text-xs text-amber-400 font-bold uppercase tracking-widest mt-1" data-i18n="login_sub">Field Driver Cab Terminal</p>
+      <p class="text-xs text-slate-400 mt-1" data-i18n="login_hint">Enter your mobile phone number and 4-digit PIN provided by your fleet manager.</p>
+    </div>
+
+    <form onsubmit="handleDriverLogin(event)" class="bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-300 mb-1" data-i18n="label_mobile">Driver Mobile Number *</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-mono text-sm">+977</span>
+          <input type="tel" id="loginPhone" required pattern="[0-9]{10}" maxlength="10" placeholder="98XXXXXXXX" class="w-full pl-16 pr-4 py-3 rounded-2xl border border-slate-600 bg-slate-900/90 text-white font-mono text-base font-semibold focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-300 mb-1" data-i18n="label_pin">4-Digit Driver Security PIN *</label>
+        <input type="password" id="loginPin" required pattern="[0-9]{4,6}" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full px-4 py-3 rounded-2xl border border-slate-600 bg-slate-900/90 text-white font-mono text-center text-2xl tracking-[0.4em] font-bold focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+      </div>
+
+      <div class="pt-2">
+        <button type="submit" id="btnSignIn" class="w-full py-3.5 rounded-2xl bg-amber hover:bg-amber-400 text-navy font-black text-sm tracking-wide shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 transition active:scale-[0.98]">
+          <i data-lucide="log-in" class="w-5 h-5"></i> <span data-i18n="btn_login">Sign In to Cab Terminal</span>
+        </button>
+      </div>
+
+      <div class="pt-3 border-t border-slate-700/70 text-center">
+        <p class="text-[11px] text-slate-400">
+          <span data-i18n="forgot_pin_text">Forgot your PIN? Contact your fleet dispatcher or transport manager to reset it.</span>
+        </p>
+      </div>
+    </form>
+
+    <div class="mt-6 flex items-center justify-center gap-3">
+      <button onclick="toggleDriverLang()" id="loginLangBtn" class="px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-800 text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5 shadow-sm">
+        <span id="loginLangFlag">🇳🇵</span> <span id="loginLangLabel">नेपाली</span>
+      </button>
+      <a href="/login" class="text-xs text-slate-500 hover:text-slate-300 transition">Fleet Manager Portal ➔</a>
+    </div>
+  </div>
+
+  <!-- Screen 2: Active Driver Cab Cockpit (Post-Login) -->
+  <div id="driverCockpitScreen" class="hidden flex-1 flex flex-col max-w-lg w-full mx-auto">
+    <!-- Top Driver HUD Bar -->
+    <header class="bg-slate-800/95 border-b border-slate-700/80 px-4 py-3 sticky top-0 z-30 shadow-md flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-amber text-navy font-black grid place-items-center text-sm shadow">
+          <i data-lucide="truck" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-white truncate" id="hudDriverName">Driver Name</h2>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> GPS ONLINE
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-mono" id="hudVehiclePlate">Vehicle: Ba 2 Kha 4921</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="toggleDriverLang()" class="px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-xs font-bold text-slate-300 hover:text-white transition">
+          <span id="cockpitLangLabel">नेपाली</span>
+        </button>
+        <button onclick="handleDriverLogout()" title="Sign Out" class="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-slate-700/60 transition">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Cockpit Main Scroll Area -->
+    <main class="flex-1 p-4 space-y-4 overflow-y-auto">
+
+      <!-- Standby Notice (When no trip is assigned) -->
+      <div id="standbyCard" class="hidden bg-slate-800/80 border border-slate-700 rounded-3xl p-6 text-center shadow-lg space-y-4">
+        <div class="w-14 h-14 rounded-2xl bg-slate-700 text-slate-400 grid place-items-center mx-auto">
+          <i data-lucide="coffee" class="w-7 h-7 text-amber-400"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-base text-white" data-i18n="standby_title">On Standby Duty</h3>
+          <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto" data-i18n="standby_sub">
+            No active freight trip assigned right now. Your fleet dispatcher will allocate your next corridor dispatch shortly.
+          </p>
+        </div>
+        <div>
+          <button onclick="loadActiveTrip()" class="px-5 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs shadow flex items-center gap-2 mx-auto transition">
+            <i data-lucide="refresh-cw" class="w-4 h-4 text-amber-400"></i> <span data-i18n="btn_check_dispatch">Check for New Dispatch</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Assigned Freight Trip Card -->
+      <div id="activeTripCard" class="hidden space-y-4">
+
+        <!-- Trip Status Pill & Order Header -->
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full uppercase" id="tripOrderNumber">
+              FRT-2083-0001
+            </span>
+            <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider" id="tripStatusBadge">
+              IN TRANSIT
+            </span>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-black text-white" id="tripCargo">5,000 KG Basmati Rice Cargo</h3>
+            <p class="text-xs text-slate-400 mt-0.5" id="tripCorridorDistance">Corridor Distance: 18.5 KM</p>
+          </div>
+
+          <!-- Emergency Reassignment Notice if applicable -->
+          <div id="tripRescueAlert" class="hidden p-3 rounded-2xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs flex items-center gap-2.5">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400 shrink-0"></i>
+            <span id="tripRescueText">Emergency Rescue Dispatch assigned due to vehicle breakdown.</span>
+          </div>
+
+          <!-- Corridors: Origin (Pickup) & Destination (Delivery) -->
+          <div class="space-y-3 pt-3 border-t border-slate-700 font-sans">
+            <!-- Pickup Warehouse -->
+            <div class="flex items-start gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/60">
+              <span class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 grid place-items-center shrink-0 mt-0.5">
+                <i data-lucide="warehouse" class="w-4 h-4"></i>
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider" data-i18n="tag_pickup">1. PICKUP WAREHOUSE</span>
+                  <a id="btnCallPickup" href="#" class="inline-flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+                    <i data-lucide="phone" class="w-3 h-3"></i> Call
+                  </a>
+                </div>
+                <h4 class="font-bold text-white text-xs mt-0.5 truncate" id="tripPickupName">Chobhar Dry Port Storage</h4>
+                <p class="text-[11px] text-slate-400 mt-0.5" id="tripPickupAddress">Kirtipur Road, Chobhar Gate 2</p>
+              </div>
+            </div>
+
+            <!-- Destination Drop -->
+            <div class="flex items-start gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/60">
+              <span class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 grid place-items-center shrink-0 mt-0.5">
+                <i data-lucide="map-pin" class="w-4 h-4"></i>
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider" data-i18n="tag_delivery">2. DELIVERY DESTINATION</span>
+                  <a id="btnCallConsignee" href="#" class="inline-flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/30">
+                    <i data-lucide="phone" class="w-3 h-3"></i> Call Consignee
+                  </a>
+                </div>
+                <h4 class="font-bold text-white text-xs mt-0.5 truncate" id="tripConsigneeName">Nepal Agro Trading Ltd</h4>
+                <p class="text-[11px] text-slate-400 mt-0.5" id="tripDeliveryAddress">Balaju Industrial Area, Sector 4B</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Navigation & Gate Pass Buttons -->
+          <div class="grid grid-cols-2 gap-2 pt-2">
+            <button onclick="openGatePassModal()" class="py-2.5 px-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="qr-code" class="w-4 h-4 text-amber-400"></i> <span data-i18n="btn_qr_pass">QR Gate Pass</span>
+            </button>
+            <a id="btnGoogleMapsNav" href="#" target="_blank" class="py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="navigation" class="w-4 h-4"></i> <span data-i18n="btn_gmaps">Navigate (Maps)</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Dynamic Action Controls: Start Trip vs Complete Delivery -->
+        <div class="space-y-3">
+          <!-- Start Trip Button (Visible when status is requested / assigned) -->
+          <button id="btnStartTrip" onclick="handleStartTrip()" class="w-full py-4 rounded-3xl bg-emerald-500 hover:bg-emerald-400 text-navy font-black text-base shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 transition active:scale-[0.98]">
+            <i data-lucide="play" class="w-6 h-6 fill-current"></i> <span data-i18n="btn_start_trip">START TRANSIT & GPS STREAM</span>
+          </button>
+
+          <!-- Complete Delivery Button (Visible when status is in_transit) -->
+          <div id="inTransitActions" class="hidden space-y-3">
+            <div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl flex items-center justify-between text-xs text-emerald-300">
+              <span class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span data-i18n="telemetry_active_msg">Live GPS Corridors Broadcasting (100ms)</span>
+              </span>
+              <button onclick="pingLiveLocation()" class="text-amber-400 underline font-bold" data-i18n="btn_sync_gps">Ping Location</button>
+            </div>
+
+            <button onclick="openCompleteDeliveryModal()" class="w-full py-4 rounded-3xl bg-amber hover:bg-amber-400 text-navy font-black text-base shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 transition active:scale-[0.98]">
+              <i data-lucide="check-circle-2" class="w-6 h-6"></i> <span data-i18n="btn_complete_trip">DELIVER CARGO & VERIFY OTP</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Bottom Footer Bar -->
+    <footer class="p-3 text-center text-[10px] text-slate-500 border-t border-slate-800">
+      KTM-WDC Logistics • Driver Safe Operations • Bikram Sambat 2083
+    </footer>
+  </div>
+
+  <!-- Modal 1: Warehouse QR Gate Pass (Full Screen View for Gate Guards) -->
+  <dialog id="gatePassModal" class="rounded-3xl shadow-2xl p-0 w-full max-w-sm border border-slate-700 bg-slate-900 text-white backdrop:bg-black/80">
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-800/90 rounded-t-3xl">
+      <div class="flex items-center gap-2">
+        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+        <h3 class="font-bold text-sm text-white" data-i18n="gate_pass_title">Warehouse Security Gate Pass</h3>
+      </div>
+      <button onclick="document.getElementById('gatePassModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-6 text-center space-y-4">
+      <p class="text-xs text-slate-400" data-i18n="gate_pass_sub">Present this QR Gate Pass to the Warehouse Incharge or Security Guard for inward/outward clearance.</p>
+
+      <!-- QR Code Display Canvas -->
+      <div class="bg-white p-4 rounded-2xl inline-block shadow-inner">
+        <img id="gatePassQrImg" src="" alt="Gate Pass QR" class="w-48 h-48 mx-auto object-contain">
+      </div>
+
+      <div class="space-y-1 font-mono text-xs">
+        <p class="text-amber-400 font-bold" id="gatePassTokenText">GP-FRT-ORD001</p>
+        <p class="text-slate-400" id="gatePassVehicleText">Cab: Ba 2 Kha 4921</p>
+      </div>
+
+      <button type="button" onclick="document.getElementById('gatePassModal').close()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs" data-i18n="btn_close">
+        Close Gate Pass
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Modal 2: Delivery Completion & e-POD with Consignee OTP -->
+  <dialog id="completeDeliveryModal" class="rounded-3xl shadow-2xl p-0 w-full max-w-sm border border-slate-700 bg-slate-900 text-white backdrop:bg-black/80">
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-emerald-900/40 text-emerald-300 rounded-t-3xl">
+      <div class="flex items-center gap-2">
+        <i data-lucide="package-check" class="w-5 h-5 text-emerald-400"></i>
+        <h3 class="font-bold text-sm text-white" data-i18n="modal_epod_title">Complete Delivery (e-POD)</h3>
+      </div>
+      <button onclick="document.getElementById('completeDeliveryModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleDeliveryComplete(event)" class="p-6 space-y-4 text-xs">
+      <div class="p-3 rounded-2xl bg-slate-800 border border-slate-700 space-y-1">
+        <span class="text-[10px] uppercase font-bold text-amber-400" data-i18n="label_otp_step">Step 1: Consignee 4-Digit Handover OTP *</span>
+        <p class="text-[11px] text-slate-400" data-i18n="otp_instruction">Ask the receiving consignee for their secret delivery OTP code sent to their phone.</p>
+        <input type="text" id="deliveryOtpInput" required pattern="[0-9]{4,6}" maxlength="6" inputmode="numeric" placeholder="e.g. 5821" class="w-full mt-2 px-3 py-2.5 rounded-xl border border-amber-400/80 bg-slate-900 text-center font-mono text-xl tracking-[0.3em] font-black text-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400">
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-300 mb-1" data-i18n="label_remarks">Receiver Name / Consignee Remarks</label>
+        <input type="text" id="consigneeRemarksInput" placeholder="e.g. Received by Store Incharge Hari Sharma (No damage)" class="w-full px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 text-white text-xs">
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-300 mb-1" data-i18n="label_proof_photo">Unloading Proof Photo (Doc Ref / URL)</label>
+        <input type="text" id="proofPhotoInput" placeholder="Optional photo URL or invoice reference" class="w-full px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 text-white text-xs font-mono">
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('completeDeliveryModal').close()" class="px-4 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-xs font-bold" data-i18n="btn_cancel">
+          Cancel
+        </button>
+        <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-navy font-black text-xs shadow flex items-center gap-1.5 transition">
+          <i data-lucide="check" class="w-4 h-4"></i> <span data-i18n="btn_confirm_delivery">Confirm Delivery</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Driver Application JavaScript Engine -->
+  <script>
+    // -------------------------------------------------------------
+    // Bilingual Dictionary for Driver Cab Terminal
+    // -------------------------------------------------------------
+    const I18N_DRIVER = {
+      en: {
+        login_sub: "Field Driver Cab Terminal",
+        login_hint: "Enter your mobile phone number and 4-digit PIN provided by your fleet manager.",
+        label_mobile: "Driver Mobile Number *",
+        label_pin: "4-Digit Driver Security PIN *",
+        btn_login: "Sign In to Cab Terminal",
+        forgot_pin_text: "Forgot your PIN? Contact your fleet dispatcher or transport manager to reset it.",
+        standby_title: "On Standby Duty",
+        standby_sub: "No active freight trip assigned right now. Your fleet dispatcher will allocate your next corridor dispatch shortly.",
+        btn_check_dispatch: "Check for New Dispatch",
+        tag_pickup: "1. PICKUP WAREHOUSE",
+        tag_delivery: "2. DELIVERY DESTINATION",
+        btn_qr_pass: "QR Gate Pass",
+        btn_gmaps: "Navigate (Maps)",
+        btn_start_trip: "START TRANSIT & GPS STREAM",
+        telemetry_active_msg: "Live GPS Corridors Broadcasting (100ms)",
+        btn_sync_gps: "Ping Location",
+        btn_complete_trip: "DELIVER CARGO & VERIFY OTP",
+        gate_pass_title: "Warehouse Security Gate Pass",
+        gate_pass_sub: "Present this QR Gate Pass to the Warehouse Incharge or Security Guard for inward/outward clearance.",
+        btn_close: "Close Gate Pass",
+        modal_epod_title: "Complete Delivery (e-POD)",
+        label_otp_step: "Step 1: Consignee 4-Digit Handover OTP *",
+        otp_instruction: "Ask the receiving consignee for their secret delivery OTP code sent to their phone.",
+        label_remarks: "Receiver Name / Consignee Remarks",
+        label_proof_photo: "Unloading Proof Photo (Doc Ref / URL)",
+        btn_cancel: "Cancel",
+        btn_confirm_delivery: "Confirm Delivery"
+      },
+      ne: {
+        login_sub: "चालक क्याब टर्मिनल",
+        login_hint: "तपाईंको फ्लीट व्यवस्थापकले उपलब्ध गराएको मोबाइल नम्बर र ४-अंकको गोप्य पिन प्रविष्ट गर्नुहोस्।",
+        label_mobile: "चालकको मोबाइल नम्बर *",
+        label_pin: "४-अंकको सुरक्षा पिन *",
+        btn_login: "क्याब टर्मिनलमा प्रवेश गर्नुहोस्",
+        forgot_pin_text: "पिन बिर्सनुभयो? नयाँ पिनको लागि आफ्नो फ्लीट म्यानेजरलाई सम्पर्क गर्नुहोस्।",
+        standby_title: "ड्युटीमा स्ट्यान्डबाई",
+        standby_sub: "हाल कुनै ढुवानी कार्य बाँडफाँड गरिएको छैन। फ्लीट म्यानेजरले नयाँ अर्डर तोक्ने बित्तिकै यहाँ देखिनेछ।",
+        btn_check_dispatch: "नयाँ कार्य चेक गर्नुहोस्",
+        tag_pickup: "१. सामान लोड गर्ने गोदाम",
+        tag_delivery: "२. सामान बुझाउने गन्तव्य",
+        btn_qr_pass: "गेट पास क्यूआर",
+        btn_gmaps: "गुगल नक्सा खोल्नुहोस्",
+        btn_start_trip: "ढुवानी सुरु गर्नुहोस् (जीपीएस अन)",
+        telemetry_active_msg: "प्रत्यक्ष जीपीएस ट्र्याकिङ सक्रिय छ",
+        btn_sync_gps: "लोकेसन पठाउनुहोस्",
+        btn_complete_trip: "सामान डेलिभर भयो (OTP प्रमाणीकरण)",
+        gate_pass_title: "गोदाम सुरक्षा गेट पास",
+        gate_pass_sub: "गोदामको गेटमा सुरक्षा गार्ड वा इन्चार्जलाई यो क्यूआर कोड स्क्यान गराउनुहोस्।",
+        btn_close: "गेट पास बन्द गर्नुहोस्",
+        modal_epod_title: "ढुवानी सम्पन्न (e-POD)",
+        label_otp_step: "पहिलो चरण: सामान बुझ्ने व्यक्तिको ४-अंकको OTP *",
+        otp_instruction: "सामान बुझ्ने व्यक्तिको मोबाइलमा आएको ४-अंकको गोप्य OTP सोधेर यहाँ प्रविष्ट गर्नुहोस्।",
+        label_remarks: "सामान बुझ्ने व्यक्तिको नाम / विवरण",
+        label_proof_photo: "सामान अनलोड गरेको फोटो (लिङ्क)",
+        btn_cancel: "रद्द गर्नुहोस्",
+        btn_confirm_delivery: "डेलिभरी प्रमाणित गर्नुहोस्"
+      }
+    };
+
+    function toggleDriverLang() {
+      const cur = localStorage.getItem('kwdc_driver_lang') === 'ne' ? 'en' : 'ne';
+      localStorage.setItem('kwdc_driver_lang', cur);
+      applyDriverTranslations(cur);
+    }
+
+    function applyDriverTranslations(lang) {
+      const dict = I18N_DRIVER[lang] || I18N_DRIVER.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = dict[key];
+          } else {
+            el.textContent = dict[key];
+          }
+        }
+      });
+
+      const loginFlag = document.getElementById('loginLangFlag');
+      const loginLabel = document.getElementById('loginLangLabel');
+      const cockpitLabel = document.getElementById('cockpitLangLabel');
+      if (lang === 'ne') {
+        if (loginFlag) loginFlag.textContent = '🇬🇧';
+        if (loginLabel) loginLabel.textContent = 'English';
+        if (cockpitLabel) cockpitLabel.textContent = 'English';
+      } else {
+        if (loginFlag) loginFlag.textContent = '🇳🇵';
+        if (loginLabel) loginLabel.textContent = 'नेपाली';
+        if (cockpitLabel) cockpitLabel.textContent = 'नेपाली';
+      }
+    }
+
+    function showToast(msg, isError = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `p-3.5 rounded-2xl text-white text-xs font-bold shadow-2xl pointer-events-auto transition-all transform duration-300 flex items-center gap-2 ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
+      toast.innerHTML = `<i data-lucide="${isError ? 'alert-circle' : 'check-circle-2'}" class="w-4 h-4 shrink-0"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function getDriverToken() {
+      return localStorage.getItem('kwdc_driver_token');
+    }
+
+    function getDriverHeaders() {
+      const token = getDriverToken();
+      return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+    }
+
+    let activeTripData = null;
+    let gpsStreamInterval = null;
+
+    // -------------------------------------------------------------
+    // Driver Login Flow
+    // -------------------------------------------------------------
+    async function handleDriverLogin(e) {
+      e.preventDefault();
+      const phone = document.getElementById('loginPhone').value.trim();
+      const pin = document.getElementById('loginPin').value.trim();
+
+      const btn = document.getElementById('btnSignIn');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin"></div> Connecting...`;
+
+      try {
+        const res = await fetch('/api/fleet/driver/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone_number: phone, pin: pin })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('kwdc_driver_token', data.access_token);
+          localStorage.setItem('kwdc_driver', JSON.stringify(data.driver));
+          showToast(`Welcome back, ${data.driver.full_name}!`);
+          setupCockpitView(data.driver);
+        } else {
+          showToast(data.detail || "Authentication failed. Check phone and PIN.", true);
+        }
+      } catch (err) {
+        showToast("Network error connecting to server: " + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="log-in" class="w-5 h-5"></i> <span>Sign In to Cab Terminal</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    function handleDriverLogout() {
+      localStorage.removeItem('kwdc_driver_token');
+      localStorage.removeItem('kwdc_driver');
+      if (gpsStreamInterval) clearInterval(gpsStreamInterval);
+      document.getElementById('driverCockpitScreen').classList.add('hidden');
+      document.getElementById('driverLoginScreen').classList.remove('hidden');
+      showToast("Signed out of Cab Terminal.");
+    }
+
+    function setupCockpitView(driver) {
+      document.getElementById('driverLoginScreen').classList.add('hidden');
+      document.getElementById('driverCockpitScreen').classList.remove('hidden');
+
+      document.getElementById('hudDriverName').textContent = driver.full_name || 'Driver';
+      document.getElementById('hudVehiclePlate').textContent = `Cab: ${driver.assigned_vehicle_plate || 'Unassigned'} • Lic: ${driver.license_number || '-'}`;
+
+      loadActiveTrip();
+      lucide.createIcons();
+    }
+
+    // -------------------------------------------------------------
+    // Load Active Trip
+    // -------------------------------------------------------------
+    async function loadActiveTrip() {
+      try {
+        const res = await fetch('/api/fleet/driver/active-trip', {
+          headers: getDriverHeaders()
+        });
+        if (res.status === 401) {
+          handleDriverLogout();
+          return;
+        }
+        const data = await res.json();
+        const trip = data.active_trip;
+
+        const standbyEl = document.getElementById('standbyCard');
+        const activeEl = document.getElementById('activeTripCard');
+
+        if (!trip) {
+          activeTripData = null;
+          standbyEl.classList.remove('hidden');
+          activeEl.classList.add('hidden');
+          if (gpsStreamInterval) clearInterval(gpsStreamInterval);
+          return;
+        }
+
+        activeTripData = trip;
+        standbyEl.classList.add('hidden');
+        activeEl.classList.remove('hidden');
+
+        // Populate Trip Info
+        document.getElementById('tripOrderNumber').textContent = trip.order_number;
+        document.getElementById('tripCargo').textContent = trip.cargo_description;
+        document.getElementById('tripCorridorDistance').textContent = `Corridor Distance: ${trip.total_distance_km || 15} KM`;
+
+        // Status Badge
+        const badge = document.getElementById('tripStatusBadge');
+        if (trip.status === 'in_transit') {
+          badge.textContent = 'IN TRANSIT';
+          badge.className = 'px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-sky-500/20 text-sky-400 border border-sky-500/30';
+          document.getElementById('btnStartTrip').classList.add('hidden');
+          document.getElementById('inTransitActions').classList.remove('hidden');
+          startGpsTracking();
+        } else {
+          badge.textContent = 'ASSIGNED';
+          badge.className = 'px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30';
+          document.getElementById('btnStartTrip').classList.remove('hidden');
+          document.getElementById('inTransitActions').classList.add('hidden');
+          if (gpsStreamInterval) clearInterval(gpsStreamInterval);
+        }
+
+        // Rescue Reassignment Alert
+        const rescueEl = document.getElementById('tripRescueAlert');
+        const rescueText = document.getElementById('tripRescueText');
+        if (trip.reassignment_notice) {
+          rescueEl.classList.remove('hidden');
+          rescueText.textContent = trip.reassignment_notice;
+        } else {
+          rescueEl.classList.add('hidden');
+        }
+
+        // Addresses & Contacts
+        document.getElementById('tripPickupName').textContent = trip.origin_warehouse || 'Pickup Hub';
+        document.getElementById('tripPickupAddress').textContent = trip.pickup_address;
+        document.getElementById('tripConsigneeName').textContent = trip.consignee_name || 'Consignee Receiver';
+        document.getElementById('tripDeliveryAddress').textContent = trip.delivery_address;
+
+        // 1-Tap Call links
+        document.getElementById('btnCallPickup').href = `tel:${trip.pickup_phone || '9801000001'}`;
+        document.getElementById('btnCallConsignee').href = `tel:${trip.consignee_phone || '9801000002'}`;
+
+        // Google Maps Turn-by-Turn Navigation Link
+        const destQuery = encodeURIComponent(trip.delivery_address + ", Kathmandu");
+        document.getElementById('btnGoogleMapsNav').href = `https://www.google.com/maps/dir/?api=1&destination=${destQuery}`;
+
+        // Gate Pass QR
+        const qrToken = trip.gate_pass_qr || `GP-FRT-ORD${trip.id}`;
+        document.getElementById('gatePassQrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrToken)}`;
+        document.getElementById('gatePassTokenText').textContent = qrToken;
+        document.getElementById('gatePassVehicleText').textContent = `Cab: ${trip.vehicle?.plate || 'Active'} • Driver: ${data.driver?.full_name || 'Driver'}`;
+
+        lucide.createIcons();
+      } catch (err) {
+        console.error("loadActiveTrip error:", err);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Trip Actions: Start Trip & Complete Delivery
+    // -------------------------------------------------------------
+    async function handleStartTrip() {
+      if (!activeTripData) return;
+      try {
+        const res = await fetch(`/api/fleet/driver/trips/${activeTripData.id}/start`, {
+          method: 'POST',
+          headers: getDriverHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast("Transit started! GPS telemetry stream activated.");
+          loadActiveTrip();
+        } else {
+          showToast(data.detail || "Failed to start trip.", true);
+        }
+      } catch (err) {
+        showToast("Network error: " + err.message, true);
+      }
+    }
+
+    function openGatePassModal() {
+      document.getElementById('gatePassModal').showModal();
+    }
+
+    function openCompleteDeliveryModal() {
+      document.getElementById('deliveryOtpInput').value = '';
+      document.getElementById('consigneeRemarksInput').value = '';
+      document.getElementById('completeDeliveryModal').showModal();
+    }
+
+    async function handleDeliveryComplete(e) {
+      e.preventDefault();
+      if (!activeTripData) return;
+
+      const otp = document.getElementById('deliveryOtpInput').value.trim();
+      const remarks = document.getElementById('consigneeRemarksInput').value.trim();
+      const proofUrl = document.getElementById('proofPhotoInput').value.trim();
+
+      if (!otp || otp.length < 4) {
+        showToast("Please provide the 4-digit OTP from consignee.", true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/fleet/driver/trips/${activeTripData.id}/complete`, {
+          method: 'POST',
+          headers: getDriverHeaders(),
+          body: JSON.stringify({
+            delivery_otp: otp,
+            consignee_remarks: remarks || "Received in good condition",
+            proof_photo_url: proofUrl || undefined
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('completeDeliveryModal').close();
+          showToast(data.message || "Delivery complete! e-POD confirmed.");
+          loadActiveTrip();
+        } else {
+          showToast(data.detail || "Delivery completion failed.", true);
+        }
+      } catch (err) {
+        showToast("Network error: " + err.message, true);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Live Telemetry GPS Streaming
+    // -------------------------------------------------------------
+    function startGpsTracking() {
+      if (gpsStreamInterval) clearInterval(gpsStreamInterval);
+      pingLiveLocation(); // immediate ping
+      gpsStreamInterval = setInterval(pingLiveLocation, 10000); // every 10 seconds
+    }
+
+    function pingLiveLocation() {
+      if (!activeTripData) return;
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => sendLocationUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.heading || 0),
+          () => {
+            // Simulated movement along Kathmandu Valley Ring Road
+            const simLat = 27.700769 + (Math.random() - 0.5) * 0.008;
+            const simLng = 85.300140 + (Math.random() - 0.5) * 0.008;
+            sendLocationUpdate(simLat, simLng, 45.0);
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } else {
+        const simLat = 27.700769 + (Math.random() - 0.5) * 0.008;
+        const simLng = 85.300140 + (Math.random() - 0.5) * 0.008;
+        sendLocationUpdate(simLat, simLng, 45.0);
+      }
+    }
+
+    async function sendLocationUpdate(lat, lng, heading) {
+      if (!activeTripData) return;
+      try {
+        await fetch(`/api/fleet/driver/trips/${activeTripData.id}/location`, {
+          method: 'POST',
+          headers: getDriverHeaders(),
+          body: JSON.stringify({ latitude: lat, longitude: lng, heading: heading })
+        });
+      } catch (_) {
+        // quiet telemetry heartbeat
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Init on Page Load
+    // -------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedLang = localStorage.getItem('kwdc_driver_lang') || 'en';
+      applyDriverTranslations(savedLang);
+
+      const savedToken = getDriverToken();
+      const savedDriver = JSON.parse(localStorage.getItem('kwdc_driver') || 'null');
+
+      if (savedToken && savedDriver) {
+        setupCockpitView(savedDriver);
+      } else {
+        document.getElementById('driverLoginScreen').classList.remove('hidden');
+        document.getElementById('driverCockpitScreen').classList.add('hidden');
+      }
+
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
