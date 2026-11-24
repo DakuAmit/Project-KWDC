@@ -42,6 +42,7 @@ class TokenResponse(BaseModel):
     user_id: int
     is_verified: bool
     kyc_status: str
+    email: Optional[str] = None
 
 class SubmitKycRequest(BaseModel):
     # Backward compatibility
@@ -110,6 +111,27 @@ class WarehouseCreate(BaseModel):
     has_fire_safety: bool = False
     temp_min_c: Optional[float] = None
     temp_max_c: Optional[float] = None
+
+class ClientDispatchOrderCreate(BaseModel):
+    movement_type: str = "DIRECT_HAUL" # WAREHOUSE_DISPATCH or DIRECT_HAUL
+    warehouse_id: Optional[int] = None
+    cargo_description: str
+    cargo_description_other: Optional[str] = None
+    required_vehicle_category: str = "mini_truck"
+    vehicle_category_other: Optional[str] = None
+    pickup_address: str
+    pickup_contact_name: str
+    pickup_contact_phone: str
+    pickup_lat: Optional[float] = 27.7172
+    pickup_lng: Optional[float] = 85.3240
+    destination_address: str
+    consignee_name: str
+    consignee_phone: str
+    dest_lat: Optional[float] = 27.7000
+    dest_lng: Optional[float] = 85.3000
+    estimated_distance_km: Optional[float] = 8.5
+    is_fragile: bool = False
+    is_perishable: bool = False
 
 class MaintenanceHoldRequest(BaseModel):
     warehouse_id: Optional[int] = None

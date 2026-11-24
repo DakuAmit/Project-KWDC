@@ -8,6 +8,7 @@ Enforces:
 5. Maintenance hold with mandatory reason note
 6. Privacy Shield (Owner & Client identities masked)
 """
+import math
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -245,17 +246,59 @@ def get_my_listings(
         })
     return results
 
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates great-circle distance between two GPS coordinates in kilometers."""
+    R = 6371.0 # Earth's radius in km
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2.0)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0)**2
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return round(R * c, 2)
+
+NEPAL_AREA_COORDINATES = {
+    "balaju": (27.7333, 85.3000),
+    "kalanki": (27.6937, 85.2816),
+    "koteshwor": (27.6766, 85.3475),
+    "chobhar": (27.6603, 85.2872),
+    "satungal": (27.6894, 85.2442),
+    "teku": (27.7010, 85.3050),
+    "thapathali": (27.6917, 85.3204),
+    "gongabu": (27.7371, 85.3142),
+    "bhaktapur": (27.6710, 85.4298),
+    "thimi": (27.6823, 85.3854),
+    "lalitpur": (27.6683, 85.3206),
+    "patan": (27.6683, 85.3206),
+    "saneba": (27.6840, 85.3080),
+    "birgunj": (27.0137, 84.8770),
+    "bhairahawa": (27.5050, 83.4500),
+    "butwal": (27.7006, 83.4484),
+    "pokhara": (28.2096, 83.9856),
+    "biratnagar": (26.4525, 87.2718),
+    "hetauda": (27.4287, 85.0322),
+    "chitwan": (27.5291, 84.3542),
+    "narayangarh": (27.6939, 84.4281),
+    "dhading": (27.8631, 84.9015),
+    "banepa": (27.6298, 85.5214),
+    "dhulikhel": (27.6253, 85.5561),
+}
+
 @router.get("/catalog")
 def get_public_catalog(
     space_type: Optional[str] = None,
     min_sqft: Optional[float] = None,
     cold_storage_only: Optional[bool] = None,
+    area: Optional[str] = None,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_km: Optional[float] = None,
     db: Session = Depends(get_db)
 ):
     """
     Public Catalog enforcing:
     1. Only approved and active spaces shown.
-    2. Privacy Shield: Owner identities masked.
+    2. Spatial Distance Filter: Search by area or GPS with radius (km).
+    3. Privacy Shield: Owner identities masked.
     """
     query = db.query(Warehouse).filter(
         Warehouse.is_approved == True,
@@ -264,16 +307,44 @@ def get_public_catalog(
     )
 
     if space_type:
-        query = query.filter(Warehouse.space_type == space_type)
+        stype = normalize_space_type(space_type)
+        query = query.filter(Warehouse.space_type == stype)
     if min_sqft:
         query = query.filter(Warehouse.available_sqft >= min_sqft)
     if cold_storage_only:
         query = query.filter(Warehouse.has_cold_storage == True)
 
+    # Determine reference coordinates for radius search
+    ref_lat = lat
+    ref_lng = lng
+    clean_area = (area or "").strip().lower()
+
+    if (ref_lat is None or ref_lng is None) and clean_area:
+        for hub_name, coords in NEPAL_AREA_COORDINATES.items():
+            if hub_name in clean_area or clean_area in hub_name:
+                ref_lat, ref_lng = coords
+                break
+
     warehouses = query.all()
     results = []
+
     for w in warehouses:
         units = from_sqft_to_all(w.total_sqft, w.clear_ceiling_height_ft)
+        w_lat = float(w.latitude or 27.7172)
+        w_lng = float(w.longitude or 85.3240)
+        
+        distance_km = None
+        if ref_lat is not None and ref_lng is not None:
+            distance_km = haversine_km(ref_lat, ref_lng, w_lat, w_lng)
+            # If radius constraint is supplied, filter out spaces outside radius
+            if radius_km is not None and radius_km > 0 and distance_km > radius_km:
+                continue
+        elif clean_area:
+            # Fallback text match if coordinates not resolved
+            loc_str = f"{w.title} {w.municipality or ''} {w.district or ''} {w.neighborhood_landmark or ''}".lower()
+            if clean_area not in loc_str:
+                continue
+
         results.append({
             "id": w.id,
             "title": w.title,
@@ -286,6 +357,7 @@ def get_public_catalog(
             "neighborhood_landmark": w.neighborhood_landmark,
             "latitude": w.latitude,
             "longitude": w.longitude,
+            "distance_km": distance_km,
             "road_access_ft": w.road_access_ft,
             "has_three_phase_power": w.has_three_phase_power,
             "has_forklift_ramp": w.has_forklift_ramp,
@@ -294,6 +366,11 @@ def get_public_catalog(
             "units": units,
             "privacy_shield_note": "Direct owner contact is protected. KTM-WDC acts as your verified corporate counterparty."
         })
+
+    # Sort by distance if available, otherwise default by id
+    if ref_lat is not None and ref_lng is not None:
+        results.sort(key=lambda x: x["distance_km"] if x["distance_km"] is not None else 999999.0)
+
     return results
 
 @router.get("/{warehouse_id}/capacity-breakdown")

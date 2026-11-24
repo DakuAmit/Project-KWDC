@@ -652,6 +652,9 @@ def get_all_users(
     users = db.query(User).order_by(User.created_at.desc()).all()
     results = []
     for u in users:
+        # SuperAdmin is the platform auditor/guarantor, inherently verified and exempt from operational KYC
+        is_superadmin = (u.role == UserRole.SUPERADMIN)
+        kyc_val = "EXEMPT" if is_superadmin else u.kyc_status.value
         results.append({
             "id": u.id,
             "full_name": u.full_name,
@@ -660,8 +663,8 @@ def get_all_users(
             "role": u.role.value,
             "operating_location": u.operating_location,
             "is_active": u.is_active,
-            "is_verified": u.is_verified,
-            "kyc_status": u.kyc_status.value,
+            "is_verified": True if is_superadmin else u.is_verified,
+            "kyc_status": kyc_val,
             "created_at": u.created_at.strftime("%Y-%m-%d %H:%M")
         })
     return results

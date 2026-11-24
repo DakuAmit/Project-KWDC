@@ -354,7 +354,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_bank_name">Commercial Bank Name *</label>
-                    <select id="ownerBankName" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+                    <select id="ownerBankName" required onchange="handleBankChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white font-medium">
                       <option value="">Select Bank in Nepal...</option>
                       <option value="Nabil Bank Limited">Nabil Bank Limited</option>
                       <option value="NIC Asia Bank Limited">NIC Asia Bank Limited</option>
@@ -375,7 +375,12 @@
                       <option value="Prabhu Bank Limited">Prabhu Bank Limited</option>
                       <option value="Prime Commercial Bank Limited">Prime Commercial Bank Limited</option>
                       <option value="Agricultural Development Bank">Agricultural Development Bank</option>
+                      <option value="OTHER">Other Bank / Co-operative (अन्य बैंक / सहकारी)...</option>
                     </select>
+                    <div id="ownerBankNameOtherCol" class="hidden mt-2">
+                      <label class="block text-[11px] font-bold text-navy mb-1">Specify Institution Name *</label>
+                      <input type="text" id="ownerBankNameOther" placeholder="e.g. Jyoti Bikash Bank, Standard Chartered" class="w-full px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/40 text-xs">
+                    </div>
                   </div>
                   <div>
                     <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_account_name">Bank Account Holder Name *</label>
@@ -445,7 +450,12 @@
             <option value="bonded_warehouse">Bonded Warehouse (भन्सार बन्डेड)</option>
             <option value="heavy_industrial">Heavy Industrial (भारी औद्योगिक)</option>
             <option value="open_yard">Open Yard Storage (खुल्ला यार्ड)</option>
+            <option value="OTHER">Other Classification (अन्य प्रकार - खुलाउनुहोस्)...</option>
           </select>
+          <div id="propSpaceTypeOtherCol" class="hidden mt-2">
+            <label class="block text-[11px] font-bold text-navy mb-1">Specify Space Type / विवरण *</label>
+            <input type="text" id="propSpaceTypeOther" placeholder="e.g. Pharmaceutical Grade Cold Room, Grain Silo, Chemical Yard" class="w-full px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/40 text-xs">
+          </div>
         </div>
         <div>
           <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_expected_rate">Expected Monthly Rate (Rs./sq ft) *</label>
@@ -497,14 +507,26 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_district">District *</label>
-          <select id="propDistrict" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white">
+          <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_district">District / Region *</label>
+          <select id="propDistrict" required onchange="handleDistrictChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white">
             <option value="Kathmandu">Kathmandu (काठमाडौं)</option>
             <option value="Lalitpur">Lalitpur (ललितपुर)</option>
             <option value="Bhaktapur">Bhaktapur (भक्तपुर)</option>
             <option value="Kavrepalanchok">Kavrepalanchok (काभ्रेपलाञ्चोक)</option>
             <option value="Dhading">Dhading (धादिङ)</option>
+            <option value="Nuwakot">Nuwakot (नुवाकोट)</option>
+            <option value="Makwanpur">Makwanpur / Hetauda (मकवानपुर)</option>
+            <option value="Chitwan">Chitwan / Narayangarh (चितवन)</option>
+            <option value="Parsa">Parsa / Birgunj (पर्सा/वीरगन्ज)</option>
+            <option value="Morang">Morang / Biratnagar (मोरङ/विराटनगर)</option>
+            <option value="Rupandehi">Rupandehi / Butwal / Bhairahawa (रुपन्देही)</option>
+            <option value="Kaski">Kaski / Pokhara (कास्की/पोखरा)</option>
+            <option value="OTHER">Other District (अन्य जिल्ला - खुलाउनुहोस्)...</option>
           </select>
+          <div id="propDistrictOtherCol" class="hidden mt-2">
+            <label class="block text-[11px] font-bold text-navy mb-1">Specify District / Location *</label>
+            <input type="text" id="propDistrictOther" placeholder="e.g. Sunsari (Itahari), Banke (Nepalgunj)" class="w-full px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/40 text-xs">
+          </div>
         </div>
         <div>
           <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_road_access">Vehicle Road Access (ft width) *</label>
@@ -913,11 +935,14 @@
       btn.disabled = true;
       btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Submitting...`;
 
+      const rawBank = document.getElementById('ownerBankName').value;
+      const bankName = (rawBank === 'OTHER') ? (document.getElementById('ownerBankNameOther').value.trim() || 'Other Bank') : rawBank;
+
       const payload = {
         citizenship_number: document.getElementById('ownerCtzNo').value.trim(),
         citizenship_front_url: document.getElementById('ownerCtzFront').value.trim(),
         citizenship_back_url: document.getElementById('ownerCtzBack').value.trim(),
-        bank_name: document.getElementById('ownerBankName').value,
+        bank_name: bankName,
         bank_account_name: document.getElementById('ownerAccountName').value.trim(),
         bank_account_number: document.getElementById('ownerAccountNo').value.trim(),
         bank_branch: document.getElementById('ownerBranch').value.trim(),
@@ -1028,6 +1053,11 @@
       const yardCol = document.getElementById('openYardNoteCol');
       const htInput = document.getElementById('propCeilingHeight');
       const volSpan = document.getElementById('previewVolumeSpan');
+      const otherCol = document.getElementById('propSpaceTypeOtherCol');
+
+      if (otherCol) {
+        otherCol.classList.toggle('hidden', type !== 'OTHER');
+      }
 
       if (ceilingCol && yardCol) {
         ceilingCol.classList.toggle('hidden', isYard);
@@ -1042,6 +1072,18 @@
         htInput.value = 14;
       }
       convertUnits();
+    }
+
+    function handleDistrictChange() {
+      const dist = document.getElementById('propDistrict').value;
+      const otherCol = document.getElementById('propDistrictOtherCol');
+      if (otherCol) otherCol.classList.toggle('hidden', dist !== 'OTHER');
+    }
+
+    function handleBankChange() {
+      const bank = document.getElementById('ownerBankName').value;
+      const otherCol = document.getElementById('ownerBankNameOtherCol');
+      if (otherCol) otherCol.classList.toggle('hidden', bank !== 'OTHER');
     }
 
     function handleUnitChange() {
@@ -1240,20 +1282,25 @@
 
       const val = parseFloat(document.getElementById('propAreaValue').value) || 0;
       const unit = document.getElementById('propAreaUnit').value;
-      const isYard = (document.getElementById('propSpaceType').value === 'open_yard');
+      const rawType = document.getElementById('propSpaceType').value;
+      const spaceType = (rawType === 'OTHER') ? (document.getElementById('propSpaceTypeOther').value.trim() || 'Covered Godown') : rawType;
+      const isYard = (rawType === 'open_yard');
       const factors = { sqft: 1.0, sqm: 10.7639, aana: 342.25, ropani: 5476.0, kattha: 3645.0, bigha: 72900.0 };
       const total_sqft = Math.round(val * (factors[unit] || 1.0));
       const ceiling_ht = isYard ? 0.0 : (parseFloat(document.getElementById('propCeilingHeight').value) || 12.0);
 
+      const rawDist = document.getElementById('propDistrict').value;
+      const districtVal = (rawDist === 'OTHER') ? (document.getElementById('propDistrictOther').value.trim() || 'Kathmandu') : rawDist;
+
       const payload = {
         title: document.getElementById('propTitle').value.trim(),
-        space_type: document.getElementById('propSpaceType').value,
+        space_type: spaceType,
         input_value: val,
         input_unit: unit,
         total_sqft: total_sqft,
         ceiling_height_ft: ceiling_ht,
         base_rate_per_sqft: parseFloat(document.getElementById('propBaseRate').value) || 45,
-        district: document.getElementById('propDistrict').value,
+        district: districtVal,
         municipality: document.getElementById('propAddress').value.trim(),
         neighborhood_landmark: document.getElementById('propAddress').value.trim(),
         road_access_width_ft: parseFloat(document.getElementById('propRoadAccess').value) || 20,

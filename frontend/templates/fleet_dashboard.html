@@ -380,12 +380,17 @@
     <form onsubmit="handleVehicleSubmit(event)" class="p-6 space-y-4 text-sm">
       <div>
         <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_veh_cat">Vehicle Classification *</label>
-        <select id="vehCategory" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white">
+        <select id="vehCategory" required onchange="handleVehCategoryChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white">
           <option value="mini_truck">Mini Truck (टाटा एस / बोलेरो - Up to 1.5 MT)</option>
           <option value="heavy_truck">Heavy Truck (टाटा १६१३ / आयशर - 5-10 MT)</option>
           <option value="container_trailer">Container Trailer (२०/४० फिट ट्रयाक्टर ट्रेलर्स)</option>
           <option value="two_wheeler">2-Wheeler Courier Cargo</option>
+          <option value="OTHER">Other Classification (अन्य सवारी वर्ग - खुलाउनुहोस्)...</option>
         </select>
+        <div id="vehCategoryOtherCol" class="hidden mt-2">
+          <label class="block text-[11px] font-bold text-navy mb-1">Specify Vehicle Type *</label>
+          <input type="text" id="vehCategoryOther" placeholder="e.g. Electric Delivery Van, Refrigerated Reefer, Flatbed" class="w-full px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs">
+        </div>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
@@ -444,12 +449,16 @@
         </div>
         <div>
           <label class="block font-bold text-navy mb-1">License Category (सवारी वर्ग) *</label>
-          <select id="drvCategory" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+          <select id="drvCategory" required onchange="handleDrvCategoryChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
             <option value="Category B (Van / Pickup / Light 4-Wheeler)">Category B (Van / Pickup / 4-Wheeler)</option>
             <option value="Category H (Heavy Truck / Multi-Axle / Tipper)">Category H (Heavy Truck / Multi-Axle)</option>
             <option value="Category G (Tractor / Agro-Carrier)">Category G (Tractor / Agro-Carrier)</option>
             <option value="Category A (Motorcycle / Courier Bike)">Category A (Motorcycle / Delivery Bike)</option>
+            <option value="OTHER">Other Category (अन्य सवारी वर्ग - खुलाउनुहोस्)...</option>
           </select>
+          <div id="drvCategoryOtherCol" class="hidden mt-1.5">
+            <input type="text" id="drvCategoryOther" placeholder="Specify License Category..." class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs">
+          </div>
         </div>
       </div>
 
@@ -460,7 +469,7 @@
         </div>
         <div>
           <label class="block font-bold text-navy mb-1">Blood Group (रक्त समूह) *</label>
-          <select id="drvBloodGroup" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+          <select id="drvBloodGroup" required onchange="handleDrvBloodGroupChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
             <option value="O+">O+</option>
             <option value="A+">A+</option>
             <option value="B+">B+</option>
@@ -469,7 +478,11 @@
             <option value="A-">A-</option>
             <option value="B-">B-</option>
             <option value="AB-">AB-</option>
+            <option value="OTHER">Other / Unknown (अन्य - खुलाउनुहोस्)...</option>
           </select>
+          <div id="drvBloodGroupOtherCol" class="hidden mt-1.5">
+            <input type="text" id="drvBloodGroupOther" placeholder="Specify Blood Group..." class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs">
+          </div>
         </div>
       </div>
 
@@ -752,17 +765,71 @@
       if (tabId === 'earnings') loadFleetEarnings();
     }
 
+    function formatToastMessage(msg) {
+      if (!msg) return 'Operation failed.';
+      if (typeof msg === 'string') {
+        if (msg.startsWith('{') || msg.startsWith('[')) {
+          try {
+            return formatToastMessage(JSON.parse(msg));
+          } catch (_) {
+            return msg;
+          }
+        }
+        return msg;
+      }
+      if (Array.isArray(msg)) {
+        return msg.map(item => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object') {
+            const loc = Array.isArray(item.loc) ? item.loc.filter(x => x !== 'body').join(' ') : '';
+            return (loc ? loc + ': ' : '') + (item.msg || JSON.stringify(item));
+          }
+          return String(item);
+        }).join(' • ');
+      }
+      if (typeof msg === 'object') {
+        if (msg.detail) return formatToastMessage(msg.detail);
+        if (msg.message) return msg.message;
+        if (msg.error) return typeof msg.error === 'string' ? msg.error : formatToastMessage(msg.error);
+        try {
+          return Object.entries(msg).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' • ');
+        } catch (_) {
+          return 'An error occurred. Please check your input.';
+        }
+      }
+      return String(msg);
+    }
+
     function showToast(msg, isError = false) {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
+      const safeText = formatToastMessage(msg);
       toast.className = `p-4 rounded-xl text-white text-xs font-semibold shadow-xl pointer-events-auto transition-all transform duration-300 ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
-      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4"></i><span>${msg}</span></div>`;
+      toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4 shrink-0"></i><span>${escapeHtml(safeText)}</span></div>`;
       container.appendChild(toast);
       lucide.createIcons();
       setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
       }, 4000);
+    }
+
+    function handleVehCategoryChange() {
+      const val = document.getElementById('vehCategory').value;
+      const col = document.getElementById('vehCategoryOtherCol');
+      if (col) col.classList.toggle('hidden', val !== 'OTHER');
+    }
+
+    function handleDrvCategoryChange() {
+      const val = document.getElementById('drvCategory').value;
+      const col = document.getElementById('drvCategoryOtherCol');
+      if (col) col.classList.toggle('hidden', val !== 'OTHER');
+    }
+
+    function handleDrvBloodGroupChange() {
+      const val = document.getElementById('drvBloodGroup').value;
+      const col = document.getElementById('drvBloodGroupOtherCol');
+      if (col) col.classList.toggle('hidden', val !== 'OTHER');
     }
 
     function getAuthHeaders() {
@@ -1098,8 +1165,11 @@
 
     async function handleVehicleSubmit(e) {
       e.preventDefault();
+      const rawCat = document.getElementById('vehCategory').value;
+      const effectiveCat = (rawCat === 'OTHER') ? (document.getElementById('vehCategoryOther')?.value?.trim() || 'mini_truck') : rawCat;
+
       const payload = {
-        category: document.getElementById('vehCategory').value,
+        category: effectiveCat,
         model_name: document.getElementById('vehModel').value,
         license_plate: document.getElementById('vehPlate').value,
         bluebook_number: document.getElementById('vehBluebook').value,
@@ -1118,23 +1188,29 @@
           document.getElementById('vehicleModal').close();
           loadMyFleet();
         } else {
-          showToast(data.detail || "Registration failed.", true);
+          showToast(formatToastMessage(data.detail) || "Registration failed.", true);
         }
       } catch (err) {
-        showToast("Network error registering vehicle.", true);
+        showToast("Network error registering vehicle: " + err.message, true);
       }
     }
 
     async function handleDriverSubmit(e) {
       e.preventDefault();
       const vehId = document.getElementById('drvVehicle').value;
+      const rawCat = document.getElementById('drvCategory').value;
+      const effectiveCat = (rawCat === 'OTHER') ? (document.getElementById('drvCategoryOther')?.value?.trim() || 'Category B') : rawCat;
+
+      const rawBlood = document.getElementById('drvBloodGroup').value;
+      const effectiveBlood = (rawBlood === 'OTHER') ? (document.getElementById('drvBloodGroupOther')?.value?.trim() || 'Unknown') : rawBlood;
+
       const payload = {
         full_name: document.getElementById('drvName').value.trim(),
         phone_number: document.getElementById('drvPhone').value.trim(),
         license_number: document.getElementById('drvLicense').value.trim(),
-        license_category: document.getElementById('drvCategory').value,
+        license_category: effectiveCat,
         citizenship_no: document.getElementById('drvCitizenship').value.trim(),
-        blood_group: document.getElementById('drvBloodGroup').value,
+        blood_group: effectiveBlood,
         emergency_contact_name: document.getElementById('drvEmergencyName').value.trim(),
         emergency_contact_phone: document.getElementById('drvEmergencyPhone').value.trim(),
         license_photo_url: document.getElementById('drvLicensePhoto').value.trim() || undefined,
@@ -1158,7 +1234,7 @@
           showToast(formatToastMessage(data.detail) || "Driver registration failed.", true);
         }
       } catch (err) {
-        showToast("Network error registering driver.", true);
+        showToast("Network error registering driver: " + err.message, true);
       }
     }
 

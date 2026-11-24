@@ -82,6 +82,16 @@
           <span class="flex items-center gap-3"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_insurance">Cargo &amp; Stock Insurance</span></span>
           <span id="badgeInsuranceCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
         </button>
+
+        <button type="button" onclick="switchTab('pickup-dispatch')" id="nav-pickup-dispatch" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="truck" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_pickup_dispatch">Pickup / Dispatch</span></span>
+          <span id="badgeDispatchCount" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">Warehouse</span>
+        </button>
+
+        <button type="button" onclick="switchTab('pickup-drop')" id="nav-pickup-drop" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="navigation" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_pickup_drop">Pickup / Drop (Direct Haul)</span></span>
+          <span id="badgeDirectCount" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300">On-Demand</span>
+        </button>
       </nav>
 
       <!-- Drawer Footer: User Profile & Sign Out -->
@@ -155,45 +165,85 @@
 
         <!-- View 1: Catalog -->
         <section id="view-catalog" class="space-y-6">
-          <!-- Filter Controls -->
-          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
-            <div class="flex flex-wrap items-center gap-3 text-xs w-full sm:w-auto">
-              <div>
-                <label class="block text-[11px] font-bold text-slate-600 mb-1" data-i18n="filter_district">District / Region</label>
-                <select id="filterDistrict" onchange="applyFilters()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 font-medium text-slate-700">
-                  <option value="ALL">All Kathmandu Valley (सबै उपत्यका)</option>
-                  <option value="Kathmandu">Kathmandu (काठमाडौं)</option>
-                  <option value="Lalitpur">Lalitpur (ललितपुर)</option>
-                  <option value="Bhaktapur">Bhaktapur (भक्तपुर)</option>
-                </select>
+          <!-- Area & Radius Spatial Search Console -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              <!-- Area & Keyword Search -->
+              <div class="flex-1 relative">
+                <i data-lucide="map-pin" class="w-4 h-4 text-amber-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="filterAreaInput" oninput="applyFilters()" placeholder="Search by area, landmark or corridor (e.g. Balaju, Kalanki, Birgunj, Chobhar, Bhaktapur)..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-navy/20">
               </div>
 
-              <div>
-                <label class="block text-[11px] font-bold text-slate-600 mb-1" data-i18n="filter_space_type">Space Classification</label>
-                <select id="filterType" onchange="applyFilters()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 font-medium text-slate-700">
-                  <option value="ALL">All Categories (सबै प्रकार)</option>
-                  <option value="dry_storage">Dry Storage (सुख्खा भण्डारण)</option>
-                  <option value="cold_storage">Cold Storage (शीत भण्डार)</option>
-                  <option value="bonded_warehouse">Bonded Warehouse (भन्सार बन्डेड)</option>
-                  <option value="heavy_industrial">Heavy Industrial (भारी औद्योगिक)</option>
-                </select>
-              </div>
+              <!-- Radius Selector -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-xs">
+                  <i data-lucide="radar" class="w-4 h-4 text-sky-600"></i>
+                  <span class="font-bold text-navy">Radius:</span>
+                  <select id="filterRadiusKm" onchange="applyFilters()" class="bg-transparent font-medium text-slate-700 outline-none">
+                    <option value="0">All Distances</option>
+                    <option value="5">Within 5 km</option>
+                    <option value="10">Within 10 km</option>
+                    <option value="25" selected>Within 25 km</option>
+                    <option value="50">Within 50 km</option>
+                    <option value="100">Within 100 km</option>
+                  </select>
+                </div>
 
-              <div>
-                <label class="block text-[11px] font-bold text-slate-600 mb-1" data-i18n="filter_min_space">Minimum Space Needed</label>
-                <select id="filterMinSqft" onchange="applyFilters()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 font-medium text-slate-700 font-mono">
-                  <option value="0">Any Size (कुनै पनि)</option>
-                  <option value="1000">&gt; 1,000 sq ft</option>
-                  <option value="3000">&gt; 3,000 sq ft</option>
-                  <option value="5000">&gt; 5,000 sq ft</option>
-                  <option value="10000">&gt; 10,000 sq ft</option>
-                </select>
+                <!-- GPS Location Button -->
+                <button type="button" onclick="useMyLocation()" id="btnGpsLocation" title="Search near my current GPS location" class="px-3 py-2 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold transition flex items-center gap-1.5 shrink-0">
+                  <i data-lucide="crosshair" class="w-4 h-4 text-sky-600"></i> <span>Near Me</span>
+                </button>
               </div>
             </div>
 
-            <button onclick="loadCatalog()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
-              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_refresh">Refresh Catalog</span>
-            </button>
+            <!-- Quick Hub Filter Pills -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
+              <span class="text-slate-400 font-bold uppercase text-[10px] tracking-wider shrink-0 mr-1">Corridors:</span>
+              <button type="button" onclick="setQuickArea('')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">All Areas</button>
+              <button type="button" onclick="setQuickArea('Balaju')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">Balaju (बालाजु)</button>
+              <button type="button" onclick="setQuickArea('Kalanki')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">Kalanki (कलंकी)</button>
+              <button type="button" onclick="setQuickArea('Chobhar')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">Chobhar Dry Port</button>
+              <button type="button" onclick="setQuickArea('Koteshwor')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">Koteshwor (कोटेश्वर)</button>
+              <button type="button" onclick="setQuickArea('Bhaktapur')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">Bhaktapur (भक्तपुर)</button>
+              <button type="button" onclick="setQuickArea('Lalitpur')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">Lalitpur (ललितपुर)</button>
+              <button type="button" onclick="setQuickArea('Birgunj')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">Birgunj ICP</button>
+              <button type="button" onclick="setQuickArea('Pokhara')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">Pokhara Hub</button>
+            </div>
+
+            <!-- Secondary Filters: Classification & Size -->
+            <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-500 font-bold text-[11px]" data-i18n="filter_space_type">Type:</span>
+                  <select id="filterType" onchange="applyFilters()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-700 font-medium">
+                    <option value="ALL">All Categories</option>
+                    <option value="dry_storage">Dry Storage (सुख्खा)</option>
+                    <option value="cold_storage">Cold Storage (शीत भण्डार)</option>
+                    <option value="bonded_warehouse">Bonded Warehouse (बन्डेड)</option>
+                    <option value="heavy_industrial">Heavy Industrial (औद्योगिक)</option>
+                    <option value="open_yard">Open Yard Storage (खुल्ला यार्ड)</option>
+                  </select>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-500 font-bold text-[11px]" data-i18n="filter_min_space">Min Area:</span>
+                  <select id="filterMinSqft" onchange="applyFilters()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-700 font-mono">
+                    <option value="0">Any Size</option>
+                    <option value="1000">&gt; 1,000 sq ft</option>
+                    <option value="3000">&gt; 3,000 sq ft</option>
+                    <option value="5000">&gt; 5,000 sq ft</option>
+                    <option value="10000">&gt; 10,000 sq ft</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <span id="radiusSearchStatusNote" class="text-[11px] text-slate-500 italic hidden"></span>
+                <button onclick="loadCatalog()" class="text-xs font-semibold text-slate-600 hover:text-navy flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_refresh">Refresh</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Catalog Cards Grid -->
@@ -393,6 +443,229 @@
           </div>
         </section>
 
+        <!-- View 7: Warehouse Freight (Pickup / Dispatch) -->
+        <section id="view-pickup-dispatch" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 grid place-items-center font-bold shrink-0">
+                  <i data-lucide="truck" class="w-5 h-5"></i>
+                </span>
+                <div>
+                  <h3 class="text-base font-bold text-navy" data-i18n="dispatch_title">Warehouse Freight &amp; Logistics (भण्डार ढुवानी)</h3>
+                  <p class="text-xs text-slate-500 mt-0.5" data-i18n="dispatch_sub">Schedule dedicated freight inward from suppliers into your leased space or outward dispatch to your retail &amp; distributor network.</p>
+                </div>
+              </div>
+              <button onclick="openWarehouseDispatchModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-navy hover:bg-slate-800 shadow transition flex items-center gap-1.5 shrink-0">
+                <i data-lucide="plus" class="w-4 h-4 text-amber-400"></i> <span data-i18n="btn_schedule_dispatch">+ Schedule Warehouse Freight</span>
+              </button>
+            </div>
+
+            <div id="warehouseDispatchList" class="mt-4 space-y-3">
+              <div class="p-8 text-center text-slate-400 text-xs">Loading warehouse freight dispatches...</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 8: On-Demand Point-to-Point Direct Haul (Pickup / Drop) -->
+        <section id="view-pickup-drop" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 grid place-items-center font-bold shrink-0">
+                  <i data-lucide="navigation" class="w-5 h-5"></i>
+                </span>
+                <div>
+                  <h3 class="text-base font-bold text-navy" data-i18n="direct_haul_title">On-Demand Point-to-Point Direct Haul (प्रत्यक्ष ढुवानी)</h3>
+                  <p class="text-xs text-slate-500 mt-0.5" data-i18n="direct_haul_sub">On-demand transport across Nepal independent of any KTM-WDC warehouse. Move merchandise directly between suppliers, factories, distributors, or retail outlets.</p>
+                </div>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
+                Independent On-Demand Network
+              </span>
+            </div>
+
+            <!-- Booking Card & Live Estimator -->
+            <form onsubmit="handleDirectHaulSubmit(event)" class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <!-- Route & Contact Details (2 Columns) -->
+              <div class="lg:col-span-2 space-y-4">
+                <!-- Origin -->
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+                  <div class="flex items-center gap-2 text-xs font-bold text-navy uppercase tracking-wider">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600"></i>
+                    <span data-i18n="label_pickup_origin">1. Pickup Origin Point (स्थान जहाँबाट सामान उठाउने)</span>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_pickup_addr">Pickup Physical Address / Landmark *</label>
+                    <input type="text" id="directPickupAddr" required placeholder="e.g. Balaju Industrial Estate Gate 2, Kathmandu" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_pickup_name">Pickup Contact Person *</label>
+                      <input type="text" id="directPickupName" required placeholder="e.g. Suresh Shrestha" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_pickup_phone">Pickup Mobile Phone *</label>
+                      <input type="tel" id="directPickupPhone" required placeholder="98XXXXXXXX" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Destination -->
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+                  <div class="flex items-center gap-2 text-xs font-bold text-navy uppercase tracking-wider">
+                    <i data-lucide="flag" class="w-4 h-4 text-rose-600"></i>
+                    <span data-i18n="label_dest_point">2. Destination Consignee Point (स्थान जहाँ सामान पुर्‍याउने)</span>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_dest_addr">Delivery Physical Address / Hub *</label>
+                    <input type="text" id="directDestAddr" required placeholder="e.g. Main Road Narayangarh, Chitwan / Chobhar Dry Port" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_dest_name">Receiver / Consignee Name *</label>
+                      <input type="text" id="directDestName" required placeholder="e.g. Rajesh Trading Concern" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_dest_phone">Receiver Mobile Phone *</label>
+                      <input type="tel" id="directDestPhone" required placeholder="98XXXXXXXX" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Cargo & Vehicle Class -->
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+                  <div class="flex items-center gap-2 text-xs font-bold text-navy uppercase tracking-wider">
+                    <i data-lucide="package" class="w-4 h-4 text-amber-600"></i>
+                    <span data-i18n="label_cargo_spec">3. Cargo &amp; Vehicle Requirements</span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_cargo_type">Cargo Commodity Classification *</label>
+                      <select id="directCargoType" required onchange="handleDirectCargoChange()" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-medium">
+                        <option value="FMCG & Consumer Packaged Goods">FMCG &amp; Consumer Packaged Goods</option>
+                        <option value="Electronics & Appliance Hardware">Electronics &amp; Appliance Hardware</option>
+                        <option value="Pharmaceuticals & Health Supplies">Pharmaceuticals &amp; Health Supplies</option>
+                        <option value="Garments, Textiles & Footwear">Garments, Textiles &amp; Footwear</option>
+                        <option value="Industrial Raw Materials & Cement">Industrial Raw Materials &amp; Cement</option>
+                        <option value="Agricultural Harvest & Food Grains">Agricultural Harvest &amp; Food Grains</option>
+                        <option value="OTHER">Other Goods (अन्य वस्तुहरू - खुलाउनुहोस्)...</option>
+                      </select>
+                      <div id="directCargoOtherCol" class="hidden mt-2">
+                        <label class="block text-[10px] font-bold text-navy mb-1">Specify Goods Details *</label>
+                        <input type="text" id="directCargoOther" placeholder="e.g. Heavy Machinery, Glass Bottles, Solar Panels" class="w-full px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs font-medium">
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_vehicle_req">Transport Vehicle Category *</label>
+                      <select id="directVehCat" required onchange="handleDirectVehChange(); calcDirectTariff();" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-medium">
+                        <option value="mini_truck">Mini Truck (Tata Ace / Bolero - 1.5 MT)</option>
+                        <option value="two_wheeler">2-Wheeler Express Courier (Up to 25 kg)</option>
+                        <option value="three_wheeler">3-Wheeler Auto Cargo (Up to 500 kg)</option>
+                        <option value="medium_pickup">Medium Pickup (Tata 407 - 3.5 MT)</option>
+                        <option value="six_wheeler">6-Wheeler Heavy Truck (Tata 1613 - 10 MT)</option>
+                        <option value="ten_wheeler">10-Wheeler Multi-Axle (16-20 MT)</option>
+                        <option value="container_trailer">Container Trailer (20/40 Ft Trailer)</option>
+                        <option value="OTHER">Other Vehicle Class (अन्य सवारी - खुलाउनुहोस्)...</option>
+                      </select>
+                      <div id="directVehOtherCol" class="hidden mt-2">
+                        <label class="block text-[10px] font-bold text-navy mb-1">Specify Vehicle Specification *</label>
+                        <input type="text" id="directVehOther" placeholder="e.g. Refrigerated Reefer Truck, Flatbed Low-bed Trailer" class="w-full px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs font-medium">
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_est_dist">Estimated Distance (Kilometers) *</label>
+                      <div class="flex items-center gap-2">
+                        <input type="number" id="directDistKm" min="1" max="1200" step="0.5" value="12" oninput="calcDirectTariff()" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs bg-white">
+                        <span class="text-xs font-mono text-slate-500">km</span>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-4 pt-4">
+                      <label class="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <input type="checkbox" id="directFragile" class="rounded text-navy focus:ring-navy">
+                        <span data-i18n="chk_fragile">Fragile Handling</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <input type="checkbox" id="directPerishable" class="rounded text-navy focus:ring-navy">
+                        <span data-i18n="chk_perishable">Perishable</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Transparent Tariff Preview Card -->
+              <div class="p-5 rounded-2xl bg-navy text-white flex flex-col justify-between shadow-xl">
+                <div>
+                  <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest" data-i18n="tariff_summary_title">Freight Fare Guarantee</span>
+                    <span class="text-[10px] bg-white/10 px-2 py-0.5 rounded font-mono text-slate-300">Nepal IRD 13%</span>
+                  </div>
+
+                  <div class="mt-4 space-y-2.5 font-mono text-xs text-slate-300 border-b border-white/10 pb-4">
+                    <div class="flex justify-between">
+                      <span data-i18n="tariff_carrier_base">Carrier Base Tariff:</span>
+                      <strong class="text-white" id="directBaseTariff">Rs. 2,940</strong>
+                    </div>
+                    <div class="flex justify-between">
+                      <span data-i18n="tariff_platform_fee">KWDC Telemetry &amp; Brokerage (10%):</span>
+                      <strong class="text-amber-400" id="directPlatformFee">Rs. 294</strong>
+                    </div>
+                    <div class="flex justify-between">
+                      <span data-i18n="tariff_vat">13% Statutory VAT:</span>
+                      <strong class="text-emerald-400" id="directVat">Rs. 420</strong>
+                    </div>
+                  </div>
+
+                  <div class="mt-4">
+                    <p class="text-[11px] text-slate-400" data-i18n="tariff_total_payable">Total Guaranteed Freight Outlay</p>
+                    <h4 class="text-2xl font-black text-white font-mono mt-0.5" id="directTotalFare">Rs. 3,654</h4>
+                    <p class="text-[10px] text-emerald-300 mt-1 flex items-center gap-1">
+                      <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Fixed price lock. No roadside extortion.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="pt-6">
+                  <button type="submit" id="btnSubmitDirectHaul" class="w-full py-2.5 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold text-xs shadow transition flex items-center justify-center gap-2">
+                    <i data-lucide="send" class="w-4 h-4"></i> <span data-i18n="btn_dispatch_direct">Confirm On-Demand Haul</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <!-- Table of Client Direct Haul Dispatches -->
+            <div class="mt-8 border-t border-slate-200 pt-6">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="font-bold text-navy text-sm" data-i18n="history_direct_orders">Your Direct Haul Deliveries</h4>
+                <button onclick="loadClientOrders()" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 flex items-center gap-1">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
+                    <tr>
+                      <th class="p-3">Order Ref</th>
+                      <th class="p-3">Cargo</th>
+                      <th class="p-3">Origin &rarr; Destination</th>
+                      <th class="p-3">Assigned Carrier</th>
+                      <th class="p-3">Fare NPR</th>
+                      <th class="p-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="directOrdersTableBody" class="divide-y divide-slate-100 font-mono">
+                    <tr><td colspan="6" class="p-8 text-center text-slate-400 font-sans">Loading direct orders...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -458,7 +731,19 @@
         </div>
         <div>
           <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_intended_cargo">Intended Cargo Type *</label>
-          <input type="text" id="bookCargoType" required placeholder="e.g. FMCG, Electronics" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+          <select id="bookCargoType" required onchange="handleBookCargoChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="FMCG & Consumer Goods">FMCG &amp; Consumer Goods</option>
+            <option value="Electronics & Hardware">Electronics &amp; Hardware</option>
+            <option value="Pharmaceuticals & Medical Supplies">Pharmaceuticals &amp; Medical Supplies</option>
+            <option value="Garments & Textiles">Garments &amp; Textiles</option>
+            <option value="Construction & Building Materials">Construction Materials</option>
+            <option value="Agricultural Harvest & Grains">Agro Harvest &amp; Grains</option>
+            <option value="OTHER">Other Goods (अन्य वस्तु - खुलाउनुहोस्)...</option>
+          </select>
+          <div id="bookCargoOtherCol" class="hidden mt-2">
+            <label class="block text-[10px] font-bold text-navy mb-0.5">Specify Cargo Details *</label>
+            <input type="text" id="bookCargoOther" placeholder="e.g. Solar Equipment, Industrial Parts" class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs font-medium">
+          </div>
         </div>
       </div>
 
@@ -491,6 +776,91 @@
         <button type="button" onclick="document.getElementById('bookSpaceModal').close()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold" data-i18n="btn_cancel">Cancel</button>
         <button type="submit" id="btnSubmitBook" class="px-5 py-2.5 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold shadow transition flex items-center gap-2">
           <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="btn_confirm_lease">Submit Lease Request</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Schedule Warehouse Freight (Pickup / Dispatch) -->
+  <dialog id="warehouseDispatchModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-amber text-navy grid place-items-center font-bold">
+          <i data-lucide="truck" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white" data-i18n="modal_dispatch_title">Schedule Warehouse Freight</h3>
+          <p class="text-xs text-slate-400">Direct inward/outward transport linked to your leased storage space</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('warehouseDispatchModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form onsubmit="handleWarehouseFreightSubmit(event)" class="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+      <div>
+        <label class="block font-bold text-navy mb-1" data-i18n="label_select_warehouse">Select Leased Storage Space *</label>
+        <select id="whDispWarehouseSelect" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-medium">
+          <option value="">Choose Contracted Warehouse...</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Movement Direction *</label>
+        <select id="whDispDirection" required onchange="handleWhDispDirectionChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-medium">
+          <option value="OUTWARD">Outward Dispatch (भण्डारबाट खुद्रा विक्रेता/डेलिभरी सेन्टरतर्फ)</option>
+          <option value="INWARD">Inward Receiving (आपूर्तिकर्ता/कारखानाबाट भण्डारतर्फ)</option>
+        </select>
+      </div>
+
+      <div id="whDispOtherPointBox" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+        <label class="block font-bold text-navy" id="whDispOtherPointTitle">Counterparty Delivery Address *</label>
+        <input type="text" id="whDispOtherAddr" required placeholder="e.g. Bhatbhateni Supermarket, Maharajgunj" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="whDispOtherContact" required placeholder="Contact Person" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
+          <input type="tel" id="whDispOtherPhone" required placeholder="Mobile 98XXXXXXXX" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Cargo Classification *</label>
+          <select id="whDispCargoType" required onchange="handleWhDispCargoChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="FMCG & Consumer Goods">FMCG &amp; Consumer Goods</option>
+            <option value="Electronics & Hardware">Electronics &amp; Hardware</option>
+            <option value="Pharmaceuticals">Pharmaceuticals</option>
+            <option value="Garments & Textiles">Garments &amp; Textiles</option>
+            <option value="OTHER">Other Goods (अन्य वस्तु - खुलाउनुहोस्)...</option>
+          </select>
+          <div id="whDispCargoOtherCol" class="hidden mt-2">
+            <input type="text" id="whDispCargoOther" placeholder="Specify Cargo..." class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs">
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Vehicle Class *</label>
+          <select id="whDispVehCat" required onchange="handleWhDispVehChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="mini_truck">Mini Truck (1.5 MT)</option>
+            <option value="medium_pickup">Medium Pickup (3.5 MT)</option>
+            <option value="six_wheeler">6-Wheeler (10 MT)</option>
+            <option value="two_wheeler">2-Wheeler Express</option>
+            <option value="OTHER">Other Vehicle (अन्य सवारी)...</option>
+          </select>
+          <div id="whDispVehOtherCol" class="hidden mt-2">
+            <input type="text" id="whDispVehOther" placeholder="Specify Vehicle..." class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs">
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Estimated Distance (km) *</label>
+        <input type="number" id="whDispDistKm" min="1" max="500" value="8" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs">
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('warehouseDispatchModal').close()" class="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold" data-i18n="btn_cancel">Cancel</button>
+        <button type="submit" id="btnSubmitWhDisp" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold shadow flex items-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Dispatch Transport Order
         </button>
       </div>
     </form>
@@ -722,7 +1092,37 @@
         label_driver_name: "Driver Full Name *",
         label_unit_count: "Pallet / Unit Count *",
         label_cargo_manifest: "Cargo Manifest Summary *",
-        btn_issue_token: "Generate Digital Pass"
+        btn_issue_token: "Generate Digital Pass",
+        nav_pickup_dispatch: "Pickup / Dispatch",
+        nav_pickup_drop: "Pickup / Drop (Direct Haul)",
+        dispatch_title: "Warehouse Freight & Logistics",
+        dispatch_sub: "Schedule dedicated freight inward from suppliers into your leased space or outward dispatch to your retail & distributor network.",
+        btn_schedule_dispatch: "+ Schedule Warehouse Freight",
+        direct_haul_title: "On-Demand Point-to-Point Direct Haul",
+        direct_haul_sub: "On-demand transport across Nepal independent of any KTM-WDC warehouse. Move merchandise directly between suppliers, factories, distributors, or retail outlets.",
+        label_pickup_origin: "1. Pickup Origin Point",
+        label_pickup_addr: "Pickup Physical Address / Landmark *",
+        label_pickup_name: "Pickup Contact Person *",
+        label_pickup_phone: "Pickup Mobile Phone *",
+        label_dest_point: "2. Destination Consignee Point",
+        label_dest_addr: "Delivery Physical Address / Hub *",
+        label_dest_name: "Receiver / Consignee Name *",
+        label_dest_phone: "Receiver Mobile Phone *",
+        label_cargo_spec: "3. Cargo & Vehicle Requirements",
+        label_cargo_type: "Cargo Commodity Classification *",
+        label_vehicle_req: "Transport Vehicle Category *",
+        label_est_dist: "Estimated Distance (Kilometers) *",
+        chk_fragile: "Fragile Handling",
+        chk_perishable: "Perishable Stock",
+        tariff_summary_title: "Freight Fare Guarantee",
+        tariff_carrier_base: "Carrier Base Tariff:",
+        tariff_platform_fee: "KWDC Telemetry & Brokerage (10%):",
+        tariff_vat: "13% Statutory VAT:",
+        tariff_total_payable: "Total Guaranteed Freight Outlay",
+        btn_dispatch_direct: "Confirm On-Demand Haul",
+        history_direct_orders: "Your Direct Haul Deliveries",
+        modal_dispatch_title: "Schedule Warehouse Freight",
+        label_select_warehouse: "Select Leased Storage Space *"
       },
       ne: {
         drawer_subtitle: "व्यावसायिक ग्राहक हब",
@@ -732,6 +1132,36 @@
         nav_gatepass: "डिजिटल गेट पास",
         nav_invoices: "आन्तरिक राजस्व भ्याट बिजकहरू",
         nav_insurance: "सामान तथा मौज्दात बीमा",
+        nav_pickup_dispatch: "भण्डार ढुवानी (पिकअप/डिस्प्याच)",
+        nav_pickup_drop: "प्रत्यक्ष ढुवानी (पिकअप/ड्रप)",
+        dispatch_title: "गोदाम ढुवानी तथा वितरण व्यवस्थापन",
+        dispatch_sub: "भाडामा लिइएको गोदाममा सामान ल्याउन वा खुद्रा विक्रेता तथा बजारमा पठाउन समर्पित ढुवानी तालिका।",
+        btn_schedule_dispatch: "+ गोदाम ढुवानी तालिका बनाउनुहोस्",
+        direct_haul_title: "माग अनुसार प्रत्यक्ष ढुवानी (पिकअप-ड्रप)",
+        direct_haul_sub: "केटीएम-डब्ल्युडीसी गोदाम नभए पनि नेपालभर एक ठाउँबाट अर्को ठाउँमा सामान ओसारपसार गर्ने प्रत्यक्ष ढुवानी सेवा।",
+        label_pickup_origin: "१. सामान उठाउने स्थान (पिकअप बिन्दु)",
+        label_pickup_addr: "पिकअपको ठेगाना / ल्यान्डमार्क *",
+        label_pickup_name: "पिकअप सम्पर्क व्यक्ति *",
+        label_pickup_phone: "पिकअप मोबाइल नम्बर *",
+        label_dest_point: "२. सामान पुर्‍याउने स्थान (ड्रप बिन्दु)",
+        label_dest_addr: "डेलिभरी हुने ठेगाना / हब *",
+        label_dest_name: "सामान बुझ्ने व्यक्तिको नाम *",
+        label_dest_phone: "सामान बुझ्ने व्यक्तिको मोबाइल *",
+        label_cargo_spec: "३. सामान तथा सवारी विवरण",
+        label_cargo_type: "सामानको प्रकार *",
+        label_vehicle_req: "आवश्यक सवारी वर्ग *",
+        label_est_dist: "अनुमानित दूरी (किलोमिटर) *",
+        chk_fragile: "नाजुक (Fragile) सामान",
+        chk_perishable: "सड्ने/गल्ने सामान",
+        tariff_summary_title: "पारदर्शी ढुवानी भाडा ग्यारेन्टी",
+        tariff_carrier_base: "सवारी आधार भाडा:",
+        tariff_platform_fee: "१०% केटीएम-डब्ल्युडीसी शुल्क:",
+        tariff_vat: "१३% आन्तरिक राजस्व भ्याट:",
+        tariff_total_payable: "कुल निश्चित ढुवानी भाडा",
+        btn_dispatch_direct: "प्रत्यक्ष ढुवानी अर्डर गर्नुहोस्",
+        history_direct_orders: "तपाईंका प्रत्यक्ष ढुवानी अर्डरहरू",
+        modal_dispatch_title: "गोदाम ढुवानी तालिका",
+        label_select_warehouse: "सम्बन्धित भाडाको गोदाम छनोट *",
         insurance_title: "गोदाम सामान तथा मौज्दात बीमा",
         insurance_sub: "नेपालका मान्यता प्राप्त बीमा कम्पनीहरूसँग संस्थागत साझेदारी • आगलागी, बाढीपहिरो तथा सम्पूर्ण जोखिम कभर",
         btn_request_insurance: "बीमा कभर अनुरोध गर्नुहोस्",
@@ -872,7 +1302,7 @@
     }
 
     function switchTab(tabId) {
-      ['catalog', 'bookings', 'calculator', 'gatepass', 'invoices', 'insurance'].forEach(id => {
+      ['catalog', 'bookings', 'calculator', 'gatepass', 'invoices', 'insurance', 'pickup-dispatch', 'pickup-drop'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const nav = document.getElementById('nav-' + id);
         const mob = document.getElementById('mob-' + id);
@@ -902,6 +1332,10 @@
       if (tabId === 'bookings') loadMyBookings();
       if (tabId === 'gatepass') loadClientGatePasses();
       if (tabId === 'insurance') loadClientInsurance();
+      if (tabId === 'pickup-dispatch' || tabId === 'pickup-drop') {
+        loadClientOrders();
+        calcDirectTariff();
+      }
     }
 
     function showToast(msg, isError = false) {
@@ -927,10 +1361,62 @@
     }
 
     let allWarehousesCache = [];
+    let userGps = null;
+
+    function useMyLocation() {
+      if (!navigator.geolocation) {
+        showToast("Geolocation is not supported by your browser.", true);
+        return;
+      }
+      const btn = document.getElementById('btnGpsLocation');
+      if (btn) btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-amber-500"></i> Locating...`;
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          userGps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          if (btn) {
+            btn.innerHTML = `<i data-lucide="crosshair" class="w-3.5 h-3.5 text-emerald-500"></i> Near Me (Active)`;
+            btn.classList.add('border-emerald-400', 'bg-emerald-50', 'text-emerald-700');
+          }
+          showToast(`GPS Location acquired: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+          loadCatalog();
+        },
+        err => {
+          if (btn) btn.innerHTML = `<i data-lucide="crosshair" class="w-3.5 h-3.5 text-amber-500"></i> Near Me`;
+          showToast("Unable to acquire GPS position: " + err.message, true);
+        },
+        { timeout: 10000 }
+      );
+    }
+
+    function quickCorridor(areaName) {
+      const input = document.getElementById('filterAreaInput');
+      if (input) {
+        input.value = areaName;
+        loadCatalog();
+      }
+    }
 
     async function loadCatalog() {
       try {
-        const res = await fetch('/api/warehouses/catalog');
+        const area = document.getElementById('filterAreaInput')?.value?.trim() || '';
+        const radius = document.getElementById('filterRadiusKm')?.value || '';
+        const district = document.getElementById('filterDistrict')?.value || 'ALL';
+        const type = document.getElementById('filterType')?.value || 'ALL';
+        const minSqft = parseFloat(document.getElementById('filterMinSqft')?.value) || 0;
+
+        const params = new URLSearchParams();
+        if (type !== 'ALL') params.append('space_type', type);
+        if (minSqft > 0) params.append('min_sqft', minSqft);
+        if (area) params.append('area', area);
+        if (userGps && userGps.lat && userGps.lng) {
+          params.append('lat', userGps.lat);
+          params.append('lng', userGps.lng);
+        }
+        if (radius && radius !== 'ALL') {
+          params.append('radius_km', radius);
+        }
+
+        const res = await fetch(`/api/warehouses/catalog?${params.toString()}`);
         const grid = document.getElementById('catalogGrid');
         if (!res.ok) {
           grid.innerHTML = `<div class="col-span-full p-8 text-center bg-white rounded-2xl border border-red-200 text-red-600 text-xs">Failed to load marketplace catalog.</div>`;
@@ -940,7 +1426,12 @@
         allWarehousesCache = await res.json();
         document.getElementById('badgeCatalogCount').textContent = allWarehousesCache.length;
         populateWarehouseSelect(allWarehousesCache);
-        applyFilters();
+        
+        let filtered = allWarehousesCache;
+        if (district !== 'ALL') {
+          filtered = filtered.filter(w => w.district === district);
+        }
+        renderCatalogCards(filtered);
       } catch (err) {
         console.error(err);
       }
@@ -948,23 +1439,19 @@
 
     function populateWarehouseSelect(warehouses) {
       const select = document.getElementById('gpWarehouseId');
-      if (!select) return;
-      select.innerHTML = warehouses.map(w => `<option value="${w.id}">${w.title} (${w.municipality || 'Kathmandu'})</option>`).join('');
+      if (select) {
+        select.innerHTML = warehouses.map(w => `<option value="${w.id}">${escapeHtml(w.title)} (${escapeHtml(w.municipality || 'Kathmandu')})</option>`).join('');
+      }
+      const whDispSelect = document.getElementById('whDispWarehouseSelect');
+      if (whDispSelect) {
+        whDispSelect.innerHTML = '<option value="">Choose Contracted Warehouse...</option>' + warehouses.map(w => `
+          <option value="${w.id}">${escapeHtml(w.title)} (${escapeHtml(w.municipality || 'Kathmandu')})</option>
+        `).join('');
+      }
     }
 
     function applyFilters() {
-      const district = document.getElementById('filterDistrict').value;
-      const type = document.getElementById('filterType').value;
-      const minSqft = parseFloat(document.getElementById('filterMinSqft').value) || 0;
-
-      const filtered = allWarehousesCache.filter(w => {
-        if (district !== 'ALL' && w.district !== district) return false;
-        if (type !== 'ALL' && w.space_type !== type) return false;
-        if (w.available_sqft < minSqft) return false;
-        return true;
-      });
-
-      renderCatalogCards(filtered);
+      loadCatalog();
     }
 
     function renderCatalogCards(warehouses) {
@@ -992,9 +1479,14 @@
             <div>
               <div class="flex items-start justify-between gap-3 mb-3">
                 <div>
-                  <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">${w.space_type.replace('_', ' ')}</span>
-                  <h4 class="font-bold text-navy text-base leading-snug mt-1.5">${w.title}</h4>
-                  <p class="text-xs text-slate-500 mt-0.5">${w.municipality || 'Kathmandu'}, ${w.district}</p>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">${w.space_type.replace('_', ' ')}</span>
+                    ${w.distance_km !== null && w.distance_km !== undefined ? `
+                      <span class="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">📍 ${w.distance_km} km</span>
+                    ` : ''}
+                  </div>
+                  <h4 class="font-bold text-navy text-base leading-snug mt-1.5">${escapeHtml(w.title)}</h4>
+                  <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(w.municipality || 'Kathmandu')}, ${escapeHtml(w.district)}</p>
                 </div>
                 <div class="text-right">
                   <span class="text-[10px] text-slate-400 uppercase font-bold">Base Tariff</span>
@@ -1070,16 +1562,25 @@
       document.getElementById('modalTotalMonthly').textContent = 'Rs. ' + totalMonthly.toLocaleString('en-IN');
     }
 
+    function handleBookCargoChange() {
+      const val = document.getElementById('bookCargoType').value;
+      const col = document.getElementById('bookCargoOtherCol');
+      if (col) col.classList.toggle('hidden', val !== 'OTHER');
+    }
+
     async function handleBookSubmit(e) {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitBook');
       btn.disabled = true;
       btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Contracting...`;
 
+      const rawCargo = document.getElementById('bookCargoType').value;
+      const cargoDesc = (rawCargo === 'OTHER') ? (document.getElementById('bookCargoOther').value.trim() || 'Custom Cargo') : rawCargo;
+
       const payload = {
         warehouse_id: parseInt(document.getElementById('bookWarehouseId').value),
         requested_sqft: parseFloat(document.getElementById('bookSqftInput').value),
-        client_intended_use: document.getElementById('bookCargoType').value,
+        client_intended_use: cargoDesc,
         client_pan_vat: document.getElementById('bookPanInput').value.trim() || undefined
       };
 
@@ -1095,14 +1596,279 @@
           document.getElementById('bookSpaceModal').close();
           switchTab('bookings');
         } else {
-          showToast(data.detail || "Booking failed.", true);
+          showToast(formatToastMessage(data.detail) || "Booking failed.", true);
         }
       } catch (err) {
-        showToast("Network error submitting lease.", true);
+        showToast("Network error submitting lease: " + err.message, true);
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Submit Lease Request`;
         lucide.createIcons();
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Warehouse Freight & On-Demand Direct Haul Engine
+    // -------------------------------------------------------------
+    const VEHICLE_RATES = {
+      two_wheeler: [350.0, 25.0],
+      three_wheeler: [800.0, 55.0],
+      mini_truck: [1800.0, 95.0],
+      medium_pickup: [2500.0, 130.0],
+      six_wheeler: [4500.0, 220.0],
+      ten_wheeler: [8500.0, 350.0],
+      container_trailer: [14000.0, 550.0]
+    };
+
+    function handleDirectCargoChange() {
+      const val = document.getElementById('directCargoType').value;
+      const col = document.getElementById('directCargoOtherCol');
+      if (col) col.classList.toggle('hidden', val !== 'OTHER');
+    }
+
+    function handleDirectVehChange() {
+      const val = document.getElementById('directVehCat').value;
+      const col = document.getElementById('directVehOtherCol');
+      if (col) col.classList.toggle('hidden', val !== 'OTHER');
+    }
+
+    function calcDirectTariff() {
+      const vcat = document.getElementById('directVehCat')?.value || 'mini_truck';
+      const dist = Math.max(parseFloat(document.getElementById('directDistKm')?.value) || 12.0, 1.0);
+      const rates = VEHICLE_RATES[vcat] || [1800.0, 95.0];
+      const baseFreight = Math.round(rates[0] + (dist * rates[1]));
+      const platformFee = Math.round(baseFreight * 0.10);
+      const subtotal = baseFreight + platformFee;
+      const vat = Math.round(subtotal * 0.13);
+      const total = subtotal + vat;
+
+      const baseEl = document.getElementById('directBaseTariff');
+      const feeEl = document.getElementById('directPlatformFee');
+      const vatEl = document.getElementById('directVat');
+      const totalEl = document.getElementById('directTotalFare');
+
+      if (baseEl) baseEl.textContent = 'Rs. ' + baseFreight.toLocaleString('en-IN');
+      if (feeEl) feeEl.textContent = 'Rs. ' + platformFee.toLocaleString('en-IN');
+      if (vatEl) vatEl.textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+      if (totalEl) totalEl.textContent = 'Rs. ' + total.toLocaleString('en-IN');
+    }
+
+    async function handleDirectHaulSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitDirectHaul');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin"></div> Contracting...`;
+
+      const rawCargo = document.getElementById('directCargoType').value;
+      const cargoOther = document.getElementById('directCargoOther')?.value?.trim();
+      const rawVeh = document.getElementById('directVehCat').value;
+      const vehOther = document.getElementById('directVehOther')?.value?.trim();
+
+      const payload = {
+        movement_type: "DIRECT_HAUL",
+        cargo_description: rawCargo,
+        cargo_description_other: (rawCargo === 'OTHER') ? cargoOther : undefined,
+        required_vehicle_category: rawVeh,
+        vehicle_category_other: (rawVeh === 'OTHER') ? vehOther : undefined,
+        pickup_address: document.getElementById('directPickupAddr').value.trim(),
+        pickup_contact_name: document.getElementById('directPickupName').value.trim(),
+        pickup_contact_phone: document.getElementById('directPickupPhone').value.trim(),
+        destination_address: document.getElementById('directDestAddr').value.trim(),
+        consignee_name: document.getElementById('directDestName').value.trim(),
+        consignee_phone: document.getElementById('directDestPhone').value.trim(),
+        estimated_distance_km: parseFloat(document.getElementById('directDistKm').value) || 12.0,
+        is_fragile: document.getElementById('directFragile').checked,
+        is_perishable: document.getElementById('directPerishable').checked
+      };
+
+      try {
+        const res = await fetch('/api/fleet/client-orders', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Direct haul order #${data.order_number} confirmed! Dispatched to nearby carriers.`);
+          e.target.reset();
+          calcDirectTariff();
+          loadClientOrders();
+        } else {
+          showToast(formatToastMessage(data.detail) || "Direct haul order submission failed.", true);
+        }
+      } catch (err) {
+        showToast("Network error submitting direct haul order: " + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Confirm On-Demand Haul`;
+        lucide.createIcons();
+      }
+    }
+
+    function openWarehouseDispatchModal() {
+      const select = document.getElementById('whDispWarehouseSelect');
+      if (select && allWarehousesCache.length > 0) {
+        select.innerHTML = '<option value="">Choose Contracted Warehouse...</option>' + allWarehousesCache.map(w => `
+          <option value="${w.id}">${escapeHtml(w.title)} (${escapeHtml(w.municipality || 'Kathmandu')})</option>
+        `).join('');
+      }
+      document.getElementById('warehouseDispatchModal').showModal();
+      lucide.createIcons();
+    }
+
+    function handleWhDispDirectionChange() {
+      const dir = document.getElementById('whDispDirection').value;
+      const title = document.getElementById('whDispOtherPointTitle');
+      if (title) {
+        title.textContent = dir === 'OUTWARD' ? 'Counterparty Delivery Destination *' : 'Supplier Pickup Origin Address *';
+      }
+    }
+
+    function handleWhDispCargoChange() {
+      const val = document.getElementById('whDispCargoType').value;
+      const col = document.getElementById('whDispCargoOtherCol');
+      if (col) col.classList.toggle('hidden', val !== 'OTHER');
+    }
+
+    function handleWhDispVehChange() {
+      const val = document.getElementById('whDispVehCat').value;
+      const col = document.getElementById('whDispVehOtherCol');
+      if (col) col.classList.toggle('hidden', val !== 'OTHER');
+    }
+
+    async function handleWarehouseFreightSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitWhDisp');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Dispatching...`;
+
+      const whId = parseInt(document.getElementById('whDispWarehouseSelect').value);
+      const wh = allWarehousesCache.find(w => w.id === whId) || {};
+      const dir = document.getElementById('whDispDirection').value;
+      const otherAddr = document.getElementById('whDispOtherAddr').value.trim();
+      const otherContact = document.getElementById('whDispOtherContact').value.trim();
+      const otherPhone = document.getElementById('whDispOtherPhone').value.trim();
+
+      const rawCargo = document.getElementById('whDispCargoType').value;
+      const cargoOther = document.getElementById('whDispCargoOther')?.value?.trim();
+      const rawVeh = document.getElementById('whDispVehCat').value;
+      const vehOther = document.getElementById('whDispVehOther')?.value?.trim();
+
+      const isOutward = (dir === 'OUTWARD');
+      const pickupAddr = isOutward ? `${wh.title || 'KTM-WDC Warehouse'}, ${wh.municipality || 'Kathmandu'}` : otherAddr;
+      const pickupContact = isOutward ? 'Warehouse Bay Incharge' : otherContact;
+      const pickupPhone = isOutward ? '9801000001' : otherPhone;
+
+      const destAddr = isOutward ? otherAddr : `${wh.title || 'KTM-WDC Warehouse'}, ${wh.municipality || 'Kathmandu'}`;
+      const destContact = isOutward ? otherContact : 'Warehouse Receiving Dock';
+      const destPhone = isOutward ? otherPhone : '9801000001';
+
+      const payload = {
+        movement_type: "WAREHOUSE_DISPATCH",
+        warehouse_id: whId,
+        cargo_description: rawCargo,
+        cargo_description_other: (rawCargo === 'OTHER') ? cargoOther : undefined,
+        required_vehicle_category: rawVeh,
+        vehicle_category_other: (rawVeh === 'OTHER') ? vehOther : undefined,
+        pickup_address: pickupAddr,
+        pickup_contact_name: pickupContact,
+        pickup_contact_phone: pickupPhone,
+        destination_address: destAddr,
+        consignee_name: destContact,
+        consignee_phone: destPhone,
+        estimated_distance_km: parseFloat(document.getElementById('whDispDistKm').value) || 8.0
+      };
+
+      try {
+        const res = await fetch('/api/fleet/client-orders', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Warehouse dispatch order #${data.order_number} confirmed!`);
+          document.getElementById('warehouseDispatchModal').close();
+          e.target.reset();
+          loadClientOrders();
+        } else {
+          showToast(formatToastMessage(data.detail) || "Dispatch order creation failed.", true);
+        }
+      } catch (err) {
+        showToast("Network error submitting warehouse dispatch: " + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Dispatch Transport Order`;
+        lucide.createIcons();
+      }
+    }
+
+    async function loadClientOrders() {
+      const whList = document.getElementById('warehouseDispatchList');
+      const tbody = document.getElementById('directOrdersTableBody');
+      try {
+        const res = await fetch('/api/fleet/client-orders', { headers: getAuthHeaders() });
+        if (!res.ok) {
+          if (whList) whList.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">Sign in to view your dispatch orders.</div>';
+          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-xs text-slate-400 font-sans">Sign in to view orders.</td></tr>';
+          return;
+        }
+
+        const orders = await res.json();
+        const badgeDisp = document.getElementById('badgeDispatchCount');
+        const badgeDirect = document.getElementById('badgeDirectCount');
+        if (badgeDisp) badgeDisp.textContent = `${orders.length} Orders`;
+        if (badgeDirect) badgeDirect.textContent = `${orders.length} Active`;
+
+        if (orders.length === 0) {
+          if (whList) whList.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-slate-200">No warehouse freight dispatches scheduled yet.</div>';
+          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400 font-sans">No direct haul dispatches active. Submit your first haul above.</td></tr>';
+          return;
+        }
+
+        if (whList) {
+          whList.innerHTML = orders.map(o => `
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-bold text-navy text-xs">${escapeHtml(o.order_number)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.status === 'IN_TRANSIT' ? 'bg-sky-100 text-sky-800' : (o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800')}">${escapeHtml(o.status)}</span>
+                </div>
+                <p class="text-xs text-slate-700 font-medium mt-1">${escapeHtml(o.cargo_description)} • <span class="capitalize font-mono">${escapeHtml(o.required_vehicle_category.replace(/_/g, ' '))}</span></p>
+                <p class="text-[11px] text-slate-500 font-mono mt-0.5">${escapeHtml(o.pickup_address)} &rarr; ${escapeHtml(o.destination_address)} (${o.total_distance_km} km)</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Carrier: <strong>${escapeHtml(o.driver_name)}</strong> (${escapeHtml(o.vehicle_plate)})</p>
+              </div>
+              <div class="text-right shrink-0">
+                <span class="text-[10px] text-slate-400 uppercase font-mono">Guaranteed Fare</span>
+                <p class="text-sm font-black text-navy font-mono">Rs. ${Number(o.total_fare_npr).toLocaleString('en-IN')}</p>
+                <span class="text-[10px] text-emerald-600 font-medium">Inc. 13% IRD VAT</span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        if (tbody) {
+          tbody.innerHTML = orders.map(o => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3 font-bold text-navy">${escapeHtml(o.order_number)}</td>
+              <td class="p-3 font-sans">${escapeHtml(o.cargo_description)}</td>
+              <td class="p-3 font-sans text-slate-600">${escapeHtml(o.pickup_address)} <span class="text-slate-400">&rarr;</span> ${escapeHtml(o.destination_address)}</td>
+              <td class="p-3 font-sans">
+                <p class="font-semibold text-slate-800">${escapeHtml(o.driver_name)}</p>
+                <p class="text-[10px] text-slate-500 font-mono">${escapeHtml(o.vehicle_plate)}</p>
+              </td>
+              <td class="p-3 font-bold text-emerald-700">Rs. ${Number(o.total_fare_npr).toLocaleString('en-IN')}</td>
+              <td class="p-3">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                  ${escapeHtml(o.status)}
+                </span>
+              </td>
+            </tr>
+          `).join('');
+        }
+        lucide.createIcons();
+      } catch (err) {
+        console.error("Failed to load client freight orders:", err);
       }
     }
 

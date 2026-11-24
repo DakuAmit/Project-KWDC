@@ -52,13 +52,17 @@ def get_current_user(
 
     try:
         payload = jwt.decode(jwt_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
+        sub = payload.get("sub")
+        if sub is None:
             return None
     except PyJWTError:
         return None
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    try:
+        user = db.query(User).filter(User.id == int(sub)).first()
+    except (ValueError, TypeError):
+        user = db.query(User).filter(User.email == str(sub).lower()).first()
+
     if not user or not user.is_active:
         return None
     return user

@@ -255,10 +255,14 @@
     <form id="gatePassForm" onsubmit="handleGatePassSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
       <div>
         <label class="block font-semibold text-slate-700">Movement Direction</label>
-        <select id="gpType" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
+        <select id="gpType" onchange="const c = document.getElementById('gpTypeOtherCol'); if(c) c.classList.toggle('hidden', this.value !== 'OTHER');" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
           <option value="inward">Inward (Receiving Goods / Unloading)</option>
           <option value="outward">Outward (Dispatching Cargo / Loading)</option>
+          <option value="OTHER">Other Movement (अन्य - खुलाउनुहोस्)...</option>
         </select>
+        <div id="gpTypeOtherCol" class="hidden mt-1.5">
+          <input type="text" id="gpTypeOther" placeholder="Specify movement type..." class="w-full rounded-xl border border-amber-300 bg-amber-50/40 px-3 py-1.5 text-xs">
+        </div>
       </div>
       <div>
         <label class="block font-semibold text-slate-700">Vehicle License Plate</label>
@@ -294,11 +298,15 @@
     <form id="activityForm" onsubmit="handleActivitySubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
       <div>
         <label class="block font-semibold text-slate-700">Category</label>
-        <select id="actType" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
+        <select id="actType" onchange="const c = document.getElementById('actTypeOtherCol'); if(c) c.classList.toggle('hidden', this.value !== 'OTHER');" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
           <option value="DAILY_SUMMARY">Daily Shift Handover &amp; Summary</option>
           <option value="STOCK_INSPECTION">Pallet Physical Count &amp; Integrity</option>
           <option value="MAINTENANCE_ALERT">Power / Lighting / Ramp Check</option>
+          <option value="OTHER">Other Inspection (अन्य - खुलाउनुहोस्)...</option>
         </select>
+        <div id="actTypeOtherCol" class="hidden mt-1.5">
+          <input type="text" id="actTypeOther" placeholder="Specify inspection category..." class="w-full rounded-xl border border-amber-300 bg-amber-50/40 px-3 py-1.5 text-xs">
+        </div>
       </div>
       <div>
         <label class="block font-semibold text-slate-700">Summary Headline</label>
@@ -324,11 +332,15 @@
     <form id="incidentForm" onsubmit="handleIncidentSubmit(event)" class="p-6 space-y-4 text-xs sm:text-sm">
       <div>
         <label class="block font-semibold text-slate-700">Severity</label>
-        <select id="incSeverity" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
+        <select id="incSeverity" onchange="const c = document.getElementById('incSeverityOtherCol'); if(c) c.classList.toggle('hidden', this.value !== 'OTHER');" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
           <option value="MODERATE">Moderate (Requires scheduled repair)</option>
           <option value="HIGH">High (Immediate space isolation required)</option>
           <option value="CRITICAL">Critical (Water flood / fire / power outage)</option>
+          <option value="OTHER">Other / Custom Level (अन्य - खुलाउनुहोस्)...</option>
         </select>
+        <div id="incSeverityOtherCol" class="hidden mt-1.5">
+          <input type="text" id="incSeverityOther" placeholder="Specify severity details..." class="w-full rounded-xl border border-amber-300 bg-amber-50/40 px-3 py-1.5 text-xs">
+        </div>
       </div>
       <div>
         <label class="block font-semibold text-slate-700">Issue Title</label>
@@ -616,10 +628,13 @@
 
     async function handleGatePassSubmit(e) {
       e.preventDefault();
+      const rawType = document.getElementById('gpType').value;
+      const passType = (rawType === 'OTHER') ? (document.getElementById('gpTypeOther')?.value?.trim() || 'Custom Movement') : rawType;
+
       const payload = {
         warehouse_id: defaultWarehouseId,
         client_id: 1,
-        pass_type: document.getElementById('gpType').value,
+        pass_type: passType,
         vehicle_plate: document.getElementById('gpPlate').value,
         driver_name: document.getElementById('gpDriver').value,
         unit_type: 'pallet',
@@ -640,7 +655,7 @@
           document.getElementById('gatePassForm').reset();
           loadGatePasses();
         } else {
-          showToast(data.detail || 'Failed to issue gate pass.', true);
+          showToast(formatToastMessage(data.detail) || 'Failed to issue gate pass.', true);
         }
       } catch (err) {
         showToast('Connection error: ' + err.message, true);
@@ -649,9 +664,12 @@
 
     async function handleActivitySubmit(e) {
       e.preventDefault();
+      const rawCat = document.getElementById('actType').value;
+      const logType = (rawCat === 'OTHER') ? (document.getElementById('actTypeOther')?.value?.trim() || 'CUSTOM_INSPECTION') : rawCat;
+
       const payload = {
         warehouse_id: defaultWarehouseId,
-        log_type: document.getElementById('actType').value,
+        log_type: logType,
         summary: document.getElementById('actSummary').value,
         detailed_notes: document.getElementById('actNotes').value
       };

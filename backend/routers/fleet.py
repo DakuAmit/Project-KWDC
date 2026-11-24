@@ -16,7 +16,7 @@ from backend.models import (
     Vehicle, Driver, DispatchOrder, DeliveryStop, User, UserRole,
     VehicleCategory, FreightStatus, TaxInvoice, PaymentStatus, KycStatus
 )
-from backend.schemas import VehicleCreate, DriverCreate
+from backend.schemas import VehicleCreate, DriverCreate, ClientDispatchOrderCreate
 from backend.auth_utils import require_user, require_roles
 from backend.services.vat_service import generate_ird_tax_invoice
 
@@ -366,4 +366,141 @@ def get_fleet_earnings(
             }
         ]
     }
+
+
+VEHICLE_BASE_RATES = {
+    VehicleCategory.TWO_WHEELER: (350.0, 25.0),
+    VehicleCategory.THREE_WHEELER: (800.0, 55.0),
+    VehicleCategory.MINI_TRUCK: (1800.0, 95.0),
+    VehicleCategory.MEDIUM_PICKUP: (2500.0, 130.0),
+    VehicleCategory.SIX_WHEELER: (4500.0, 220.0),
+    VehicleCategory.TEN_WHEELER: (8500.0, 350.0),
+    VehicleCategory.CONTAINER_TRAILER: (14000.0, 550.0)
+}
+
+@router.post("/client-orders")
+def create_client_dispatch_order(
+    payload: ClientDispatchOrderCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Commercial Client requests logistics transport:
+    1. 'WAREHOUSE_DISPATCH': Pickup/dispatch linked to leased storage space.
+    2. 'DIRECT_HAUL': On-demand point-to-point freight across Nepal (independent of KTM-WDC warehouses).
+    Includes distance-tiered transparent tariff, platform margin, and 13% IRD VAT.
+    """
+    # Resolve custom cargo description if 'OTHER' selected
+    cargo_desc = payload.cargo_description
+    if cargo_desc == "OTHER" or cargo_desc == "other":
+        cargo_desc = payload.cargo_description_other or "Custom Cargo"
+    elif payload.cargo_description_other:
+        cargo_desc = f"{cargo_desc} ({payload.cargo_description_other})"
+
+    # Resolve custom vehicle class if 'OTHER' selected
+    vcat_input = payload.vehicle_category_other if (payload.required_vehicle_category in ["OTHER", "other"] and payload.vehicle_category_other) else payload.required_vehicle_category
+    vcat = normalize_vehicle_category(vcat_input)
+
+    # Tariff calculation
+    dist_km = max(float(payload.estimated_distance_km or 8.0), 1.0)
+    base_rate, per_km = VEHICLE_BASE_RATES.get(vcat, (1800.0, 95.0))
+    freight_tariff = round(base_rate + (dist_km * per_km), 2)
+    margin_amt = round(freight_tariff * 0.10, 2)
+    subtotal = freight_tariff + margin_amt
+    vat_amt = round(subtotal * 0.13, 2)
+    total_fare = round(subtotal + vat_amt, 2)
+
+    new_order = DispatchOrder(
+        client_id=current_user.id,
+        cargo_description=cargo_desc,
+        required_vehicle_category=vcat,
+        pickup_address=payload.pickup_address,
+        pickup_lat=payload.pickup_lat or 27.7172,
+        pickup_lng=payload.pickup_lng or 85.3240,
+        total_distance_km=dist_km,
+        base_freight_tariff=freight_tariff,
+        kwdc_margin_amount=margin_amt,
+        vat_13_percent=vat_amt,
+        total_fare_npr=total_fare,
+        status=FreightStatus.REQUESTED
+    )
+    db.add(new_order)
+    db.commit()
+    db.refresh(new_order)
+
+    # Create delivery stop
+    stop = DeliveryStop(
+        dispatch_order_id=new_order.id,
+        stop_sequence=1,
+        consignee_name=payload.consignee_name,
+        consignee_phone=payload.consignee_phone,
+        destination_address=payload.destination_address,
+        dest_lat=payload.dest_lat or 27.7000,
+        dest_lng=payload.dest_lng or 85.3000,
+        is_completed=False
+    )
+    db.add(stop)
+    db.commit()
+
+    return {
+        "message": "Freight order successfully submitted! Broadcasted to active KTM-WDC fleet partners.",
+        "order_id": new_order.id,
+        "order_number": f"FRT-2083-{new_order.id:04d}",
+        "movement_type": payload.movement_type,
+        "cargo_description": cargo_desc,
+        "vehicle_category": vcat.value,
+        "pickup_address": new_order.pickup_address,
+        "destination_address": payload.destination_address,
+        "distance_km": dist_km,
+        "freight_tariff_npr": freight_tariff,
+        "kwdc_platform_fee_npr": margin_amt,
+        "vat_13_percent_npr": vat_amt,
+        "total_fare_npr": total_fare,
+        "status": new_order.status.value
+    }
+
+@router.get("/client-orders")
+def get_client_dispatch_orders(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieves all freight orders requested by current commercial client."""
+    orders = db.query(DispatchOrder).filter(
+        DispatchOrder.client_id == current_user.id
+    ).order_by(DispatchOrder.id.desc()).all()
+
+    results = []
+    for o in orders:
+        stop = o.stops[0] if o.stops else None
+        driver_name = o.driver.full_name if o.driver else "Awaiting Fleet Assignment"
+        driver_phone = o.driver.phone_number if o.driver else "N/A"
+        vehicle_plate = o.vehicle.license_plate if o.vehicle else "N/A"
+        vehicle_model = o.vehicle.model_name if o.vehicle else "N/A"
+
+        results.append({
+            "id": o.id,
+            "order_number": f"FRT-2083-{o.id:04d}",
+            "cargo_description": o.cargo_description,
+            "required_vehicle_category": o.required_vehicle_category.value if hasattr(o.required_vehicle_category, 'value') else str(o.required_vehicle_category),
+            "pickup_address": o.pickup_address,
+            "destination_address": stop.destination_address if stop else "Destination",
+            "consignee_name": stop.consignee_name if stop else "Consignee",
+            "consignee_phone": stop.consignee_phone if stop else "N/A",
+            "total_distance_km": o.total_distance_km,
+            "base_freight_tariff": o.base_freight_tariff,
+            "kwdc_margin_amount": o.kwdc_margin_amount,
+            "vat_13_percent": o.vat_13_percent,
+            "total_fare_npr": o.total_fare_npr,
+            "status": o.status.value,
+            "driver_name": driver_name,
+            "driver_phone": driver_phone,
+            "vehicle_plate": vehicle_plate,
+            "vehicle_model": vehicle_model,
+            "live_lat": o.live_lat,
+            "live_lng": o.live_lng,
+            "last_telemetry_at": o.last_telemetry_at.strftime("%Y-%m-%d %H:%M") if o.last_telemetry_at else None,
+            "created_at": o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "Today"
+        })
+
+    return results
 
