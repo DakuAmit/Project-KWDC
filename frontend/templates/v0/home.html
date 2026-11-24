@@ -81,10 +81,10 @@
       </nav>
 
       <div class="flex items-center gap-2" id="v0AuthArea">
-        <button type="button" onclick="openPartnerModal()" class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-navy hover:bg-amber-400">
+        <button type="button" onclick="openPartnerModal()" data-open-signup class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-navy hover:bg-amber-400">
           <i data-lucide="handshake" class="h-4 w-4"></i> Partner With Us
         </button>
-        <button type="button" onclick="openSignInModal()" class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-navy hover:bg-slate-200">
+        <button type="button" onclick="openSignInModal()" data-open-signin class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-navy hover:bg-slate-200">
           <i data-lucide="log-in" class="h-4 w-4"></i> Sign In
         </button>
         <button id="menuBtn" class="lg:hidden grid h-10 w-10 place-items-center rounded-lg text-slate-200 hover:bg-white/10" aria-expanded="false" aria-controls="mobileNav">
@@ -100,10 +100,10 @@
       <a href="#calculator" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Storage Calculator</a>
       <a href="#map-section" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium">Logistics Network</a>
       <div id="mobileAuthArea" class="pt-2 border-t border-white/10 flex flex-col gap-2 mt-2">
-        <button type="button" onclick="openPartnerModal()" class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber px-4 py-2.5 font-semibold text-navy">
+        <button type="button" onclick="openPartnerModal()" data-open-signup class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber px-4 py-2.5 font-semibold text-navy">
           <i data-lucide="handshake" class="h-4 w-4"></i> Partner With Us
         </button>
-        <button type="button" onclick="openSignInModal()" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 font-semibold text-navy">
+        <button type="button" onclick="openSignInModal()" data-open-signin class="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 font-semibold text-navy">
           <i data-lucide="log-in" class="h-4 w-4"></i> Sign In
         </button>
       </div>
@@ -737,16 +737,132 @@
 </dialog>
 
 <script>
-  lucide.createIcons();
+  // Global Number Formatting & Icon Initializer
+  const fmt = n => Number(n || 0).toLocaleString('en-IN');
+  window.fmt = fmt;
+  if (window.lucide) { lucide.createIcons(); }
 
-  // Mobile nav
+  // Dialog & Modal References
+  const dlg = document.getElementById('signup');
+  const sSignIn = document.getElementById('stepSignIn');
+  const s1 = document.getElementById('step1');
+  const s2 = document.getElementById('step2');
+  const done = document.getElementById('done');
   const menuBtn = document.getElementById('menuBtn');
   const mobileNav = document.getElementById('mobileNav');
-  menuBtn.addEventListener('click', () => {
-    const open = mobileNav.classList.toggle('hidden') === false;
-    menuBtn.setAttribute('aria-expanded', String(open));
-  });
-  mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { mobileNav.classList.add('hidden'); menuBtn.setAttribute('aria-expanded', 'false'); }));
+  const role = document.getElementById('role');
+  let currentRegisteredEmail = '';
+  let timer = null;
+
+  const ROLE_HINTS = {
+    owner: 'Monetize empty basements, shutters or godowns. We inspect and verify specifications with Rs. 0 holding liability until rented.',
+    fleet: 'Add trucks, pickups and 2-wheelers with drivers. Get matched to freight loads with live telemetry.',
+    client: 'Book exactly the partitioned space you need and schedule freight, with IRD-compliant 13% VAT invoices.',
+    incharge: 'Run facility inspections, gate check-in/out and stock movement logs for assigned warehouses.'
+  };
+
+  if (role) {
+    role.addEventListener('change', () => { 
+      const hint = document.getElementById('roleHint');
+      if (hint) hint.textContent = ROLE_HINTS[role.value] || ''; 
+      role.removeAttribute('aria-invalid'); 
+    });
+  }
+
+  function showStep(n) {
+    if (sSignIn) sSignIn.classList.add('hidden');
+    if (s1) s1.classList.toggle('hidden', n !== 1);
+    if (s2) s2.classList.toggle('hidden', n !== 2);
+    if (done) done.classList.toggle('hidden', n !== 3);
+    const st1 = document.getElementById('st1'), st2 = document.getElementById('st2');
+    if (st1 && st2) {
+      st1.toggleAttribute('aria-current', n === 1); 
+      st2.toggleAttribute('aria-current', n === 2);
+      st2.className = `flex items-center gap-2 ${n >= 2 ? 'text-white' : 'text-slate-500'}`;
+      if (st2.firstElementChild) {
+        st2.firstElementChild.className = `grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${n >= 2 ? 'bg-emerald-500 text-white' : 'bg-white/10'}`;
+      }
+      if (st1.firstElementChild) {
+        st1.firstElementChild.innerHTML = n >= 2 ? '&#10003;' : '1';
+      }
+      const stBar = document.getElementById('stBar');
+      if (stBar) stBar.style.width = n >= 2 ? '100%' : '0';
+    }
+  }
+
+  window.openPartnerModal = function() {
+    if (mobileNav) mobileNav.classList.add('hidden');
+    const title = document.getElementById('signupTitle');
+    if (title) title.textContent = 'Create Your KTM-WDC Account';
+    const banner = document.getElementById('bookingBannerContainer');
+    if (banner) banner.classList.add('hidden');
+    if (sSignIn) sSignIn.classList.add('hidden');
+    showStep(1);
+    if (dlg) {
+      if (typeof dlg.showModal === 'function') {
+        try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); }
+      } else {
+        dlg.setAttribute('open', '');
+      }
+    }
+    if (window.lucide) lucide.createIcons();
+    if (role) role.focus();
+  };
+
+  window.openSignInModal = function() {
+    if (mobileNav) mobileNav.classList.add('hidden');
+    const title = document.getElementById('signupTitle');
+    if (title) title.textContent = 'KTM-WDC Account Sign In';
+    const banner = document.getElementById('bookingBannerContainer');
+    if (banner) banner.classList.add('hidden');
+    if (s1) s1.classList.add('hidden');
+    if (s2) s2.classList.add('hidden');
+    if (done) done.classList.add('hidden');
+    if (sSignIn) sSignIn.classList.remove('hidden');
+    if (dlg) {
+      if (typeof dlg.showModal === 'function') {
+        try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); }
+      } else {
+        dlg.setAttribute('open', '');
+      }
+    }
+    if (window.lucide) lucide.createIcons();
+    const loginEmail = document.getElementById('loginEmail');
+    if (loginEmail) loginEmail.focus();
+  };
+
+  const closeDialog = () => {
+    if (dlg) {
+      if (typeof dlg.close === 'function') {
+        try { dlg.close(); } catch(e) { dlg.removeAttribute('open'); }
+      } else {
+        dlg.removeAttribute('open');
+      }
+    }
+    if (timer) clearInterval(timer);
+  };
+
+  const closeBtn = document.getElementById('signupClose');
+  if (closeBtn) closeBtn.addEventListener('click', closeDialog);
+  if (dlg) {
+    dlg.addEventListener('click', e => { if (e.target === dlg) closeDialog(); });
+    dlg.addEventListener('close', () => { if (timer) clearInterval(timer); });
+  }
+
+  document.querySelectorAll('[data-open-signup]').forEach(b => b.addEventListener('click', window.openPartnerModal));
+  document.querySelectorAll('[data-open-signin]').forEach(b => b.addEventListener('click', window.openSignInModal));
+
+  // Mobile nav toggle
+  if (menuBtn && mobileNav) {
+    menuBtn.addEventListener('click', () => {
+      const open = mobileNav.classList.toggle('hidden') === false;
+      menuBtn.setAttribute('aria-expanded', String(open));
+    });
+    mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { 
+      mobileNav.classList.add('hidden'); 
+      menuBtn.setAttribute('aria-expanded', 'false'); 
+    }));
+  }
 
   // Continuous Square Footage Calculator
   let selectedTariffRate = 22;
@@ -755,7 +871,8 @@
   window.syncSqftInput = function(val) {
     let num = parseInt(val) || 500;
     num = Math.max(100, Math.min(100000, num));
-    document.getElementById('calcSqftSlider').value = Math.min(25000, num);
+    const slider = document.getElementById('calcSqftSlider');
+    if (slider) slider.value = Math.min(25000, num);
     updateStorageCalc(num);
   };
 
@@ -771,12 +888,16 @@
 
   window.updateStorageCalc = function(explicitSqft) {
     const slider = document.getElementById('calcSqftSlider');
-    const sqft = explicitSqft !== undefined ? explicitSqft : parseInt(slider.value) || 2500;
+    const sqft = explicitSqft !== undefined ? explicitSqft : (slider ? parseInt(slider.value) : 2500) || 2500;
     
-    document.getElementById('calcSqftDisplay').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
-    document.getElementById('calcSqftInput').value = sqft;
-    document.getElementById('calcContractedSqft').textContent = sqft.toLocaleString('en-IN') + ' sq ft';
-    document.getElementById('calcRateLabel').textContent = 'Rs. ' + selectedTariffRate.toFixed(2) + ' / sq ft';
+    const disp = document.getElementById('calcSqftDisplay');
+    if (disp) disp.textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+    const input = document.getElementById('calcSqftInput');
+    if (input) input.value = sqft;
+    const contracted = document.getElementById('calcContractedSqft');
+    if (contracted) contracted.textContent = sqft.toLocaleString('en-IN') + ' sq ft';
+    const rateLbl = document.getElementById('calcRateLabel');
+    if (rateLbl) rateLbl.textContent = 'Rs. ' + selectedTariffRate.toFixed(2) + ' / sq ft';
 
     const baseRent = sqft * selectedTariffRate;
     const margin = Math.round(baseRent * 0.10);
@@ -784,133 +905,82 @@
     const vat = Math.round(taxable * 0.13);
     const grossTotal = taxable + vat;
 
-    document.getElementById('calcBaseRent').textContent = 'Rs. ' + baseRent.toLocaleString('en-IN');
-    document.getElementById('calcMargin').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
-    document.getElementById('calcVat').textContent = 'Rs. ' + vat.toLocaleString('en-IN');
-    document.getElementById('calcGrossTotal').textContent = 'Rs. ' + grossTotal.toLocaleString('en-IN');
+    const baseEl = document.getElementById('calcBaseRent');
+    if (baseEl) baseEl.textContent = 'Rs. ' + baseRent.toLocaleString('en-IN');
+    const marginEl = document.getElementById('calcMargin');
+    if (marginEl) marginEl.textContent = 'Rs. ' + margin.toLocaleString('en-IN');
+    const vatEl = document.getElementById('calcVat');
+    if (vatEl) vatEl.textContent = 'Rs. ' + vat.toLocaleString('en-IN');
+    const grossEl = document.getElementById('calcGrossTotal');
+    if (grossEl) grossEl.textContent = 'Rs. ' + grossTotal.toLocaleString('en-IN');
   };
 
   window.bookFromCalculator = function() {
-    const sqft = parseInt(document.getElementById('calcSqftInput').value) || 2500;
+    const input = document.getElementById('calcSqftInput');
+    const sqft = input ? parseInt(input.value) : 2500;
     bookStorageSpace('CALC-CUSTOM', selectedBenchmarkName, sqft, selectedTariffRate);
   };
 
   // Initial calculation trigger
   setTimeout(updateStorageCalc, 100);
 
-  // Map
-  const map = L.map('map', { zoomControl: true, scrollWheelZoom: false, attributionControl: true, minZoom: 6, maxZoom: 15 });
-  map.attributionControl.setPrefix(false).addAttribution('Boundaries: Survey Dept. Nepal / OCHA');
-  const nepal = L.geoJSON(window.NEPAL_PROVINCES, {
-    style: f => ({ color: '#334155', weight: 1, fillColor: f.properties.name === 'Bagmati' || f.properties.name === 'Madhesh' ? '#1e3a8a' : '#1e293b', fillOpacity: 0.9 }),
-    onEachFeature: (f, layer) => layer.bindTooltip(`${f.properties.name} Province`, { sticky: true, direction: 'top', className: '' })
-  }).addTo(map);
-  const nepalBounds = nepal.getBounds();
-  map.fitBounds(nepalBounds, { padding: [10, 10] });
-  map.setMaxBounds(nepalBounds.pad(0.6));
+  // Map Initialization (Defensively Wrapped)
+  try {
+    if (typeof L !== 'undefined' && document.getElementById('map')) {
+      const map = L.map('map', { zoomControl: true, scrollWheelZoom: false, attributionControl: true, minZoom: 6, maxZoom: 15 });
+      map.attributionControl.setPrefix(false).addAttribution('Boundaries: Survey Dept. Nepal / OCHA');
+      const nepal = L.geoJSON(window.NEPAL_PROVINCES, {
+        style: f => ({ color: '#334155', weight: 1, fillColor: f.properties.name === 'Bagmati' || f.properties.name === 'Madhesh' ? '#1e3a8a' : '#1e293b', fillOpacity: 0.9 }),
+        onEachFeature: (f, layer) => layer.bindTooltip(`${f.properties.name} Province`, { sticky: true, direction: 'top', className: '' })
+      }).addTo(map);
+      const nepalBounds = nepal.getBounds();
+      map.fitBounds(nepalBounds, { padding: [10, 10] });
+      map.setMaxBounds(nepalBounds.pad(0.6));
 
-  const sites = [
-    { name: 'Teku Community Warehouse', city: 'Kathmandu', lat: 27.6950, lng: 85.3060, free: 6000, total: 10000 },
-    { name: 'Balaju Industrial Store', city: 'Kathmandu', lat: 27.7350, lng: 85.3010, free: 2400, total: 8000 },
-    { name: 'Koteshwor Cold Hub', city: 'Kathmandu', lat: 27.6785, lng: 85.3490, free: 0, total: 5000 },
-    { name: 'Kalimati Agro Depot', city: 'Kathmandu', lat: 27.6985, lng: 85.2930, free: 1500, total: 6000 },
-    { name: 'Patan Industrial Estate', city: 'Lalitpur', lat: 27.6660, lng: 85.3140, free: 4200, total: 12000 },
-    { name: 'Satdobato Hub', city: 'Lalitpur', lat: 27.6580, lng: 85.3260, free: 3000, total: 7000 },
-    { name: 'Imadol Micro-Storage', city: 'Lalitpur', lat: 27.6620, lng: 85.3450, free: 0, total: 2500 },
-    { name: 'Sirsiya ICD Dry Port', city: 'Birgunj', lat: 27.0330, lng: 84.8580, free: 18000, total: 40000 },
-    { name: 'Birgunj Bypass Godown', city: 'Birgunj', lat: 27.0050, lng: 84.8900, free: 5000, total: 15000 },
-    { name: 'Parwanipur Logistics Yard', city: 'Birgunj', lat: 27.0620, lng: 84.9300, free: 7500, total: 20000 },
-  ];
+      const sites = [
+        { name: 'Teku Community Warehouse', city: 'Kathmandu', lat: 27.6950, lng: 85.3060, free: 6000, total: 10000 },
+        { name: 'Balaju Industrial Store', city: 'Kathmandu', lat: 27.7350, lng: 85.3010, free: 2400, total: 8000 },
+        { name: 'Koteshwor Cold Hub', city: 'Kathmandu', lat: 27.6785, lng: 85.3490, free: 0, total: 5000 },
+        { name: 'Kalimati Agro Depot', city: 'Kathmandu', lat: 27.6985, lng: 85.2930, free: 1500, total: 6000 },
+        { name: 'Patan Industrial Estate', city: 'Lalitpur', lat: 27.6660, lng: 85.3140, free: 4200, total: 12000 },
+        { name: 'Satdobato Hub', city: 'Lalitpur', lat: 27.6580, lng: 85.3260, free: 3000, total: 7000 },
+        { name: 'Imadol Micro-Storage', city: 'Lalitpur', lat: 27.6620, lng: 85.3450, free: 0, total: 2500 },
+        { name: 'Sirsiya ICD Dry Port', city: 'Birgunj', lat: 27.0330, lng: 84.8580, free: 18000, total: 40000 },
+        { name: 'Birgunj Bypass Godown', city: 'Birgunj', lat: 27.0050, lng: 84.8900, free: 5000, total: 15000 },
+        { name: 'Parwanipur Logistics Yard', city: 'Birgunj', lat: 27.0620, lng: 84.9300, free: 7500, total: 20000 },
+      ];
 
-  L.polyline([[27.033, 84.858], [27.43, 85.03], [27.70, 85.17], [27.695, 85.306]], { color: '#3b82f6', weight: 3, dashArray: '6 8', opacity: 0.9 }).addTo(map)
-    .bindTooltip('Birgunj – Kathmandu freight corridor (~135 km)', { sticky: true });
+      L.polyline([[27.033, 84.858], [27.43, 85.03], [27.70, 85.17], [27.695, 85.306]], { color: '#3b82f6', weight: 3, dashArray: '6 8', opacity: 0.9 }).addTo(map)
+        .bindTooltip('Birgunj – Kathmandu freight corridor (~135 km)', { sticky: true });
 
-  sites.forEach(s => {
-    const full = s.free === 0;
-    const icon = L.divIcon({ className: '', html: `<div class="pin ${full ? 'full' : 'pin-pulse'}" style="background:${full ? '#94a3b8' : '#f59e0b'}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
-    const pct = Math.round((1 - s.free / s.total) * 100);
-    L.marker([s.lat, s.lng], { icon, title: `${s.name}, ${s.city}`, keyboard: true }).addTo(map).bindPopup(`
-      <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;margin:0">${s.city}</p>
-      <p style="font-weight:600;font-size:14px;color:#fff;margin:4px 0 8px">${s.name}</p>
-      <div style="height:6px;border-radius:9px;background:#1e293b;overflow:hidden"><div style="height:100%;width:${pct}%;background:${full ? '#94a3b8' : '#3b82f6'}"></div></div>
-      <p style="font-size:12px;color:#cbd5e1;margin:8px 0 0">${full ? 'Fully booked' : `<b style="color:#f59e0b">${fmt(s.free)} sq ft</b> free of ${fmt(s.total)}`}</p>`);
-  });
+      sites.forEach(s => {
+        const full = s.free === 0;
+        const icon = L.divIcon({ className: '', html: `<div class="pin ${full ? 'full' : 'pin-pulse'}" style="background:${full ? '#94a3b8' : '#f59e0b'}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
+        const pct = Math.round((1 - s.free / s.total) * 100);
+        L.marker([s.lat, s.lng], { icon, title: `${s.name}, ${s.city}`, keyboard: true }).addTo(map).bindPopup(`
+          <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;margin:0">${s.city}</p>
+          <p style="font-weight:600;font-size:14px;color:#fff;margin:4px 0 8px">${s.name}</p>
+          <div style="height:6px;border-radius:9px;background:#1e293b;overflow:hidden"><div style="height:100%;width:${pct}%;background:${full ? '#94a3b8' : '#3b82f6'}"></div></div>
+          <p style="font-size:12px;color:#cbd5e1;margin:8px 0 0">${full ? 'Fully booked' : `<b style="color:#f59e0b">${fmt(s.free)} sq ft</b> free of ${fmt(s.total)}`}</p>`);
+      });
 
-  const views = {
-    nepal: () => map.flyToBounds(nepalBounds, { padding: [10, 10], duration: 1 }),
-    ktm: () => map.flyTo([27.705, 85.315], 13, { duration: 1.2 }),
-    ltp: () => map.flyTo([27.664, 85.328], 14, { duration: 1.2 }),
-    bgj: () => map.flyTo([27.03, 84.89], 12, { duration: 1.2 }),
-  };
-  document.querySelectorAll('.fly').forEach(btn => btn.addEventListener('click', () => {
-    document.querySelectorAll('.fly').forEach(b => { b.setAttribute('aria-pressed', 'false'); b.classList.remove('bg-white', 'text-navy'); });
-    btn.setAttribute('aria-pressed', 'true'); btn.classList.add('bg-white', 'text-navy');
-    views[btn.dataset.fly]();
-  }));
-  document.querySelector('.fly[aria-pressed="true"]').classList.add('bg-white', 'text-navy');
-
-  // Connected Authentication & Real API Engine
-  const dlg = document.getElementById('signup');
-  const sSignIn = document.getElementById('stepSignIn');
-  const s1 = document.getElementById('step1');
-  const s2 = document.getElementById('step2');
-  const done = document.getElementById('done');
-  let currentRegisteredEmail = '';
-
-  const ROLE_HINTS = {
-    owner: 'Monetize empty basements, shutters or godowns. We inspect and verify specifications with Rs. 0 holding liability until rented.',
-    fleet: 'Add trucks, pickups and 2-wheelers with drivers. Get matched to freight loads with live telemetry.',
-    client: 'Book exactly the partitioned space you need and schedule freight, with IRD-compliant 13% VAT invoices.',
-    incharge: 'Run facility inspections, gate check-in/out and stock movement logs for assigned warehouses.'
-  };
-  const role = document.getElementById('role');
-  role.addEventListener('change', () => { 
-    document.getElementById('roleHint').textContent = ROLE_HINTS[role.value] || ''; 
-    role.removeAttribute('aria-invalid'); 
-  });
-
-  function showStep(n) {
-    if (sSignIn) sSignIn.classList.add('hidden');
-    s1.classList.toggle('hidden', n !== 1);
-    s2.classList.toggle('hidden', n !== 2);
-    done.classList.toggle('hidden', n !== 3);
-    const st1 = document.getElementById('st1'), st2 = document.getElementById('st2');
-    if (st1 && st2) {
-      st1.toggleAttribute('aria-current', n === 1); 
-      st2.toggleAttribute('aria-current', n === 2);
-      st2.className = `flex items-center gap-2 ${n >= 2 ? 'text-white' : 'text-slate-500'}`;
-      st2.firstElementChild.className = `grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${n >= 2 ? 'bg-emerald-500 text-white' : 'bg-white/10'}`;
-      st1.firstElementChild.innerHTML = n >= 2 ? '&#10003;' : '1';
-      document.getElementById('stBar').style.width = n >= 2 ? '100%' : '0';
+      const views = {
+        nepal: () => map.flyToBounds(nepalBounds, { padding: [10, 10], duration: 1 }),
+        ktm: () => map.flyTo([27.705, 85.315], 13, { duration: 1.2 }),
+        ltp: () => map.flyTo([27.664, 85.328], 14, { duration: 1.2 }),
+        bgj: () => map.flyTo([27.03, 84.89], 12, { duration: 1.2 }),
+      };
+      document.querySelectorAll('.fly').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('.fly').forEach(b => { b.setAttribute('aria-pressed', 'false'); b.classList.remove('bg-white', 'text-navy'); });
+        btn.setAttribute('aria-pressed', 'true'); btn.classList.add('bg-white', 'text-navy');
+        if (views[btn.dataset.fly]) views[btn.dataset.fly]();
+      }));
+      const defFly = document.querySelector('.fly[aria-pressed="true"]');
+      if (defFly) defFly.classList.add('bg-white', 'text-navy');
     }
+  } catch (err) {
+    console.warn("Leaflet map initialization skipped or notice:", err);
   }
-
-  window.openPartnerModal = function() {
-    mobileNav.classList.add('hidden');
-    document.getElementById('signupTitle').textContent = 'Create Your KTM-WDC Account';
-    if (sSignIn) sSignIn.classList.add('hidden');
-    showStep(1);
-    dlg.showModal();
-    lucide.createIcons();
-    role.focus();
-  };
-
-  window.openSignInModal = function() {
-    mobileNav.classList.add('hidden');
-    document.getElementById('signupTitle').textContent = 'KTM-WDC Account Sign In';
-    s1.classList.add('hidden');
-    s2.classList.add('hidden');
-    done.classList.add('hidden');
-    if (sSignIn) sSignIn.classList.remove('hidden');
-    dlg.showModal();
-    lucide.createIcons();
-    document.getElementById('loginEmail').focus();
-  };
-
-  document.querySelectorAll('[data-open-signup]').forEach(b => b.addEventListener('click', window.openPartnerModal));
-  document.getElementById('signupClose').addEventListener('click', () => dlg.close());
-  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
-  dlg.addEventListener('close', () => clearInterval(timer));
 
   // Password Visibility Toggle
   document.querySelectorAll('[data-toggle]').forEach(btn => btn.addEventListener('click', () => {
@@ -1087,7 +1157,6 @@
   });
   function resetOtp() { boxes.forEach(b => b.value = ''); sync(); setTimeout(() => boxes[0].focus(), 50); }
 
-  let timer;
   const resend = document.getElementById('resend');
   function startTimer() {
     let t = 30; clearInterval(timer);
@@ -1255,16 +1324,43 @@
     
     // Show Sign In by default with quick register toggle
     if (sSignIn) sSignIn.classList.remove('hidden');
-    s1.classList.add('hidden');
-    s2.classList.add('hidden');
-    done.classList.add('hidden');
+    if (s1) s1.classList.add('hidden');
+    if (s2) s2.classList.add('hidden');
+    if (done) done.classList.add('hidden');
     
-    dlg.showModal();
-    lucide.createIcons();
-    document.getElementById('loginEmail').focus();
+    if (dlg) {
+      if (typeof dlg.showModal === 'function') {
+        try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); }
+      } else {
+        dlg.setAttribute('open', '');
+      }
+    }
+    if (window.lucide) lucide.createIcons();
+    const loginEmail = document.getElementById('loginEmail');
+    if (loginEmail) loginEmail.focus();
   };
 
-  document.addEventListener('DOMContentLoaded', updateV0AuthHeader);
+  // Auto-open modal based on URL path, query params, or hash
+  (function checkAuthTrigger() {
+    try {
+      const p = (window.location && window.location.pathname) ? window.location.pathname.toLowerCase() : '';
+      const params = (window.location && window.location.search) ? new URLSearchParams(window.location.search) : new URLSearchParams();
+      const hash = (window.location && window.location.hash) ? window.location.hash.replace('#', '').toLowerCase() : '';
+      const authAction = params.get('auth') || params.get('action') || hash;
+      
+      if (p === '/login' || p === '/signin' || authAction === 'login' || authAction === 'signin') {
+        setTimeout(() => { if (typeof window.openSignInModal === 'function') window.openSignInModal(); }, 120);
+      } else if (p === '/register' || p === '/signup' || authAction === 'register' || authAction === 'signup' || authAction === 'partner') {
+        setTimeout(() => { if (typeof window.openPartnerModal === 'function') window.openPartnerModal(); }, 120);
+      }
+    } catch (e) {
+      console.warn("Auth trigger notice:", e);
+    }
+  })();
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof updateV0AuthHeader === 'function') updateV0AuthHeader();
+  });
 </script>
 <script>
 (function(){

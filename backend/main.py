@@ -86,6 +86,10 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 # Frontend Page Renderers (Native v0 Design System & Executive Admin)
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
+@app.get("/login", response_class=HTMLResponse)
+@app.get("/signin", response_class=HTMLResponse)
+@app.get("/register", response_class=HTMLResponse)
+@app.get("/signup", response_class=HTMLResponse)
 def index_page(request: Request):
     return templates.TemplateResponse(request=request, name="v0/home.html", context={"app_name": settings.APP_NAME})
 
