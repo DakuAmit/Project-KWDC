@@ -381,7 +381,12 @@ def run_audit():
             record_fail("Admin User Directory", f"Status {res.status_code}: {res.text}")
 
         # 3.10 SuperAdmin Review & Verify Property Owner KYC
-        owner_user_id = 2
+        db = SessionLocal()
+        try:
+            owner_row = db.query(models.User).filter(models.User.email == owner_email).first()
+            owner_user_id = owner_row.id if owner_row else 2
+        finally:
+            db.close()
         res_admin_kyc = client.get(f"/api/admin/users/{owner_user_id}/kyc", headers=admin_headers)
         if res_admin_kyc.status_code == 200:
             dossier = res_admin_kyc.json()

@@ -156,6 +156,50 @@ def test_feedback_fixes():
     assert 'window.ownerKycStatus' in owner_html
     assert 'id="listSpaceForm" novalidate' in owner_html
 
+    # 4. Verify ALL Admin GET endpoints including /incharge-logs with a real WarehouseActivityLog row
+    admin_res = client.post("/api/auth/login", json={"email": "admin@kwdc.com.np", "password": "Admin@123"})
+    assert admin_res.status_code == 200
+    admin_hdrs = {"Authorization": f"Bearer {admin_res.json()['access_token']}"}
+
+    from backend.database import SessionLocal
+    import backend.models as models
+    db = SessionLocal()
+    try:
+        wh = db.query(models.Warehouse).first()
+        admin_u = db.query(models.User).filter(models.User.email == "admin@kwdc.com.np").first()
+        if wh and admin_u:
+            db.add(models.WarehouseActivityLog(
+                warehouse_id=wh.id,
+                incharge_id=admin_u.id,
+                log_type="SECURITY_CHECK",
+                summary="Smoke test shift log",
+                detailed_notes="Automated verification of created_at formatting"
+            ))
+            db.commit()
+    finally:
+        db.close()
+
+    admin_gets = [
+        "/api/admin/pending-warehouses",
+        "/api/admin/pending",
+        "/api/admin/bookings",
+        "/api/admin/incharges",
+        "/api/admin/incharge-logs",
+        "/api/admin/fleet-radar",
+        "/api/admin/payouts",
+        "/api/admin/maintenance-holds",
+        "/api/admin/users",
+        "/api/admin/system-status",
+        "/api/admin/invoices",
+        "/api/admin/fare-config",
+        "/api/admin/lien-overdue-leases",
+        "/api/admin/auctions",
+        "/api/admin/change-requests",
+    ]
+    for ep in admin_gets:
+        r = client.get(ep, headers=admin_hdrs)
+        assert r.status_code == 200, f"{ep} failed: {r.status_code} {r.text}"
+
     print("ALL USER FEEDBACK FIXES VERIFIED SUCCESSFULLY!")
 
 

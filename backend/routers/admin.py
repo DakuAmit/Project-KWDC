@@ -438,7 +438,7 @@ def get_incharge_logs(
     db: Session = Depends(get_db)
 ):
     """Lists all activity and inspection logs submitted by Warehouse Incharges."""
-    logs = db.query(WarehouseActivityLog).order_by(WarehouseActivityLog.timestamp.desc()).all()
+    logs = db.query(WarehouseActivityLog).order_by(WarehouseActivityLog.created_at.desc()).all()
     results = []
     for l in logs:
         wh = db.query(Warehouse).filter(Warehouse.id == l.warehouse_id).first()
@@ -452,7 +452,7 @@ def get_incharge_logs(
             "detailed_notes": l.detailed_notes,
             "admin_reviewed": l.admin_reviewed,
             "admin_feedback": l.admin_feedback,
-            "timestamp": l.timestamp.strftime("%Y-%m-%d %H:%M")
+            "timestamp": l.created_at.strftime("%Y-%m-%d %H:%M") if l.created_at else "Recent"
         })
     return results
 
