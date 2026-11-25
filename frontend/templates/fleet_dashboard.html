@@ -209,7 +209,7 @@
           <div class="bg-navy text-white p-4 rounded-2xl shadow-sm">
             <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider" data-i18n="kpi_freight_jobs">Freight Dispatches</span>
             <div class="flex items-baseline gap-2 mt-1">
-              <span class="text-2xl font-black text-emerald-400 font-mono" id="hudActiveJobs">3</span>
+              <span class="text-2xl font-black text-emerald-400 font-mono" id="hudActiveJobs">0</span>
               <span class="text-xs text-slate-300" data-i18n="kpi_in_transit">in transit</span>
             </div>
           </div>
@@ -223,7 +223,7 @@
           <div class="bg-navy text-white p-4 rounded-2xl shadow-sm">
             <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider" data-i18n="kpi_daily_yield">Today's Freight Yield</span>
             <div class="flex items-baseline gap-2 mt-1">
-              <span class="text-xl font-black text-white font-mono" id="hudEarnings">Rs. 41,220</span>
+              <span class="text-xl font-black text-white font-mono" id="hudEarnings">Rs. 0</span>
             </div>
           </div>
         </div>
@@ -331,17 +331,17 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="earning_total_freight">Total Freight Billed</span>
-              <h3 class="text-2xl font-black text-navy mt-1" id="earnGrossTotal">Rs. 45,800</h3>
+              <h3 class="text-2xl font-black text-navy mt-1" id="earnGrossTotal">Rs. 0</h3>
               <p class="text-[11px] text-slate-400 mt-1" data-i18n="earning_gross_sub">Billed across completed deliveries</p>
             </div>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span class="text-xs font-semibold text-amber-600 uppercase tracking-wider" data-i18n="earning_platform_fee">KWDC Logistics Margin (10%)</span>
-              <h3 class="text-2xl font-black text-amber-600 mt-1" id="earnPlatformTotal">Rs. 4,580</h3>
+              <h3 class="text-2xl font-black text-amber-600 mt-1" id="earnPlatformTotal">Rs. 0</h3>
               <p class="text-[11px] text-slate-400 mt-1" data-i18n="earning_margin_sub">Platform brokerage & telemetry</p>
             </div>
             <div class="bg-white p-5 rounded-2xl border border-emerald-200 bg-emerald-50/50 shadow-sm">
               <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider" data-i18n="earning_net_payout">Net Fleet Settlement</span>
-              <h3 class="text-2xl font-black text-emerald-700 mt-1" id="earnNetTotal">Rs. 41,220</h3>
+              <h3 class="text-2xl font-black text-emerald-700 mt-1" id="earnNetTotal">Rs. 0</h3>
               <p class="text-[11px] text-emerald-600 mt-1" data-i18n="earning_payout_sub">ConnectIPS direct bank transfer</p>
             </div>
           </div>
@@ -464,50 +464,36 @@
   </dialog>
 
   <!-- Modal: Register Driver with Comprehensive KYC -->
-  <dialog id="driverModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+  <dialog id="driverModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-xl border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
       <div class="flex items-center gap-2.5">
         <span class="w-8 h-8 rounded-lg bg-indigo-500 text-white grid place-items-center font-bold">
           <i data-lucide="user-plus" class="w-5 h-5"></i>
         </span>
         <div>
-          <h3 class="font-bold text-base text-white" data-i18n="modal_driver_title">Add Commercial Driver (KYC Compliant)</h3>
-          <p class="text-xs text-slate-400">Nepal DoTM Driving License &amp; Emergency Crew Roster</p>
+          <h3 id="driverModalTitle" class="font-bold text-base text-white" data-i18n="modal_driver_title">Add Commercial Driver (KYC Compliant)</h3>
+          <p id="driverModalSub" class="text-xs text-slate-400">Mandatory Nepal DoTM Driving License, ID Proof &amp; 4-Digit Cab PIN</p>
         </div>
       </div>
       <button onclick="document.getElementById('driverModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
-    <form onsubmit="handleDriverSubmit(event)" class="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+    <form id="driverKycForm" novalidate onsubmit="handleDriverSubmit(event)" class="p-6 space-y-4 text-xs max-h-[82vh] overflow-y-auto">
+      <input type="hidden" id="drvIsSelfDriver" value="false" />
+      <div id="selfDriverBanner" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-[11px]">
+        <strong>Independent Driver Onboarding:</strong> Complete your mandatory DoTM Driving License, Citizenship/NID Front &amp; Back, and create your 4-digit Cab PIN to receive your Driver App link.
+      </div>
+
       <div>
         <label class="block font-bold text-navy mb-1" data-i18n="label_driver_full">Driver Full Name *</label>
         <input type="text" id="drvName" required placeholder="e.g. Shyam Sundar Shrestha" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs">
       </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block font-bold text-navy mb-1" data-i18n="label_driver_license">Driving License # *</label>
-          <input type="text" id="drvLicense" required placeholder="e.g. 01-06-992819" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
-        </div>
-        <div>
-          <label class="block font-bold text-navy mb-1">License Category (सवारी वर्ग) *</label>
-          <select id="drvCategory" required onchange="handleDrvCategoryChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
-            <option value="Category B (Van / Pickup / Light 4-Wheeler)">Category B (Van / Pickup / 4-Wheeler)</option>
-            <option value="Category H (Heavy Truck / Multi-Axle / Tipper)">Category H (Heavy Truck / Multi-Axle)</option>
-            <option value="Category G (Tractor / Agro-Carrier)">Category G (Tractor / Agro-Carrier)</option>
-            <option value="Category A (Motorcycle / Courier Bike)">Category A (Motorcycle / Delivery Bike)</option>
-            <option value="OTHER">Other Category (अन्य सवारी वर्ग - खुलाउनुहोस्)...</option>
-          </select>
-          <div id="drvCategoryOtherCol" class="hidden mt-1.5">
-            <input type="text" id="drvCategoryOther" placeholder="Specify License Category..." class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs">
-          </div>
-        </div>
-      </div>
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block font-bold text-navy mb-1">Nepali Citizenship # *</label>
-          <input type="text" id="drvCitizenship" required placeholder="e.g. 27-01-74-09812" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+          <label class="block font-bold text-navy mb-1" data-i18n="label_driver_license">Driving License # (Mandatory) *</label>
+          <input type="text" id="drvLicense" required placeholder="e.g. 01-06-992819" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
         </div>
         <div>
           <label class="block font-bold text-navy mb-1">Blood Group (रक्त समूह) *</label>
@@ -520,10 +506,87 @@
             <option value="A-">A-</option>
             <option value="B-">B-</option>
             <option value="AB-">AB-</option>
-            <option value="OTHER">Other / Unknown (अन्य - खुलाउनुहोस्)...</option>
+            <option value="OTHER">Other / Unknown...</option>
           </select>
           <div id="drvBloodGroupOtherCol" class="hidden mt-1.5">
             <input type="text" id="drvBloodGroupOther" placeholder="Specify Blood Group..." class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs">
+          </div>
+        </div>
+      </div>
+
+      <!-- Multiple License Categories -->
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+        <label class="block font-bold text-navy">License Categories (सवारी वर्ग — Select One or Multiple) *</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-indigo-300">
+            <input type="checkbox" name="drvCategories" value="Category A (Motorcycle / Courier Bike)" class="rounded text-indigo-600">
+            <span><strong>Cat A</strong> — Bike / Scooter</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-indigo-300">
+            <input type="checkbox" name="drvCategories" value="Category B (Van / Pickup / Light 4-Wheeler)" checked class="rounded text-indigo-600">
+            <span><strong>Cat B</strong> — Van / Pickup / Jeep</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-indigo-300">
+            <input type="checkbox" name="drvCategories" value="Category F (Minibus / Mini-Truck)" class="rounded text-indigo-600">
+            <span><strong>Cat F</strong> — Mini-Truck / Minibus</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-indigo-300">
+            <input type="checkbox" name="drvCategories" value="Category G (Heavy / Multi-Axle Truck)" class="rounded text-indigo-600">
+            <span><strong>Cat G</strong> — Heavy Truck / Tipper</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-indigo-300">
+            <input type="checkbox" name="drvCategories" value="Category H (Tractor / Trailer)" class="rounded text-indigo-600">
+            <span><strong>Cat H</strong> — Tractor / Trailer</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-indigo-300">
+            <input type="checkbox" id="drvCategoryOtherCheck" onchange="toggleDrvOtherCat()" class="rounded text-indigo-600">
+            <span><strong>Other</strong> (Specify)...</span>
+          </label>
+        </div>
+        <div id="drvCategoryOtherCol" class="hidden mt-1.5">
+          <input type="text" id="drvCategoryOther" placeholder="Specify other DoTM license category (e.g. K, C, E)..." class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/40 text-xs">
+        </div>
+      </div>
+
+      <!-- Identity Document Type (Citizenship / NID) with Front & Back -->
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+        <span class="font-bold text-navy block text-[11px] uppercase tracking-wider">Identity Document Verification (Citizenship / National ID)</span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-navy mb-1">Document Type *</label>
+            <select id="drvDocType" onchange="updateDrvDocTypeLabels()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+              <option value="CITIZENSHIP">Nepali Citizenship (नागरिकता)</option>
+              <option value="NID">National Identity Card / NID (राष्ट्रिय परिचयपत्र)</option>
+            </select>
+          </div>
+          <div>
+            <label id="drvDocNumberLabel" class="block font-bold text-navy mb-1">Citizenship Number *</label>
+            <input type="text" id="drvCitizenship" required placeholder="e.g. 27-01-74-09812" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label id="drvDocFrontLabel" class="block text-[10px] font-bold text-slate-600 mb-1">Citizenship Front Side Photo URL *</label>
+            <input type="text" id="drvIdFrontPhoto" required placeholder="https://... (Front Side)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+          </div>
+          <div>
+            <label id="drvDocBackLabel" class="block text-[10px] font-bold text-slate-600 mb-1">Citizenship Back Side Photo URL *</label>
+            <input type="text" id="drvIdBackPhoto" required placeholder="https://... (Back Side)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+          </div>
+        </div>
+      </div>
+
+      <!-- Mandatory License Front & Back -->
+      <div class="space-y-2">
+        <label class="block font-bold text-navy">Driving License Document Proofs (Mandatory) *</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">License Front Photo URL *</label>
+            <input type="text" id="drvLicensePhotoFront" required placeholder="https://... (License Front)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">License Back Photo URL</label>
+            <input type="text" id="drvLicensePhotoBack" placeholder="https://... (License Back)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
           </div>
         </div>
       </div>
@@ -534,16 +597,22 @@
           <input type="tel" id="drvPhone" required placeholder="98XXXXXXXX" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
         </div>
         <div>
-          <label class="block font-bold text-navy mb-1">Driver 4-Digit Login PIN *</label>
-          <input type="text" id="drvPin" required pattern="[0-9]{4,6}" maxlength="6" value="1234" placeholder="1234" class="w-full px-3.5 py-2 rounded-xl border border-indigo-300 bg-indigo-50/40 text-xs font-mono font-bold">
+          <label class="block font-bold text-navy mb-1">Create 4-Digit Cab Login PIN *</label>
+          <input type="text" id="drvPin" required pattern="[0-9]{4,6}" maxlength="6" placeholder="e.g. 4821" class="w-full px-3.5 py-2 rounded-xl border border-indigo-300 bg-indigo-50/40 text-xs font-mono font-bold">
         </div>
       </div>
 
-      <div>
-        <label class="block font-bold text-navy mb-1">Assign Active Vehicle</label>
-        <select id="drvVehicle" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
-          <option value="">Unassigned (Standby)</option>
-        </select>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+        <div>
+          <label class="block font-bold text-navy mb-1">Assign Active Vehicle</label>
+          <select id="drvVehicle" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium">
+            <option value="">Unassigned (Standby)</option>
+          </select>
+        </div>
+        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-amber-200 bg-amber-50/60 cursor-pointer">
+          <input type="checkbox" id="drvIsStandby" class="rounded text-amber-600 focus:ring-amber-500">
+          <span class="text-[11px] font-bold text-amber-900">Standby / Backup Driver (जगेडा चालक)</span>
+        </label>
       </div>
 
       <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
@@ -560,15 +629,7 @@
         </div>
       </div>
 
-      <div class="space-y-2">
-        <label class="block font-bold text-navy">License &amp; ID Document Proofs</label>
-        <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="drvLicensePhoto" placeholder="License Front Doc Ref / URL" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
-          <input type="text" id="drvCitizenshipPhoto" placeholder="Citizenship Doc Ref / URL" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
-        </div>
-      </div>
-
-      <div class="pt-2">
+      <div class="pt-1">
         <label class="flex items-start gap-2 p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 cursor-pointer">
           <input type="checkbox" id="drvCleanRecord" checked required class="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500">
           <span class="text-[11px] text-emerald-900 leading-tight">
@@ -579,11 +640,66 @@
 
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
         <button type="button" onclick="document.getElementById('driverModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs" data-i18n="btn_cancel">Cancel</button>
-        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
-          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="btn_save_driver">Assign KYC-Verified Driver</span>
+        <button type="submit" id="btnSaveDriverSubmit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="btn_save_driver">Save KYC &amp; Activate PIN</span>
         </button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Modal: Driver App Launch & Store Links (Shown after Independent Driver KYC + PIN setup) -->
+  <dialog id="driverAppLinkModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/70">
+    <div class="p-5 bg-navy text-white rounded-t-2xl flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <span class="w-9 h-9 rounded-xl bg-emerald-500 text-white grid place-items-center font-bold">
+          <i data-lucide="smartphone" class="w-5 h-5"></i>
+        </span>
+        <div>
+          <h3 class="font-bold text-base text-white">Driver KYC &amp; PIN Ready!</h3>
+          <p class="text-[11px] text-emerald-300">Use your Cab App link and PIN below to log in</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('driverAppLinkModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4 text-xs">
+      <div class="p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 font-mono">
+        <div class="flex justify-between">
+          <span class="text-slate-500">Login Mobile:</span>
+          <strong id="appModalDriverPhone" class="text-navy">-</strong>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500">Generated Cab PIN:</span>
+          <strong id="appModalDriverPin" class="text-lg text-indigo-700 bg-white px-2.5 py-0.5 rounded border border-indigo-300 tracking-widest">----</strong>
+        </div>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+        <label class="block font-bold text-navy text-[11px] uppercase tracking-wider">Active Web Cab App Link (Live Now)</label>
+        <div class="flex items-center gap-2">
+          <input type="text" id="driverWebAppUrlInput" readonly class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white font-mono text-[11px] text-navy">
+          <button type="button" onclick="copyDriverAppUrl()" class="px-3 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-navy font-bold shrink-0">Copy</button>
+        </div>
+        <a href="/driver" target="_blank" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow transition">
+          <i data-lucide="external-link" class="w-4 h-4"></i> Open Driver Cab App (/driver) Now
+        </a>
+      </div>
+
+      <div class="p-3.5 rounded-xl border border-dashed border-slate-300 bg-white space-y-2">
+        <span class="block font-bold text-slate-600 text-[11px] uppercase tracking-wider">Mobile Apps (Upcoming Release Links)</span>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="p-2.5 rounded-xl bg-slate-900 text-white text-center opacity-90">
+            <span class="block text-[9px] text-slate-400">ANDROID APK / STORE</span>
+            <span class="font-bold text-xs text-emerald-400">Google Play (Soon)</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-900 text-white text-center opacity-90">
+            <span class="block text-[9px] text-slate-400">IPHONE / iPAD</span>
+            <span class="font-bold text-xs text-sky-400">App Store (Soon)</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </dialog>
 
   <!-- Modal: Emergency Breakdown & Rescue Reassignment -->
@@ -1495,8 +1611,8 @@
 
         document.getElementById('badgeVehicleCount').textContent = data.vehicles.length;
         document.getElementById('badgeDriverCount').textContent = data.drivers.length;
-        document.getElementById('hudActiveVehicles').textContent = data.vehicles.length || 3;
-        document.getElementById('hudActiveDrivers').textContent = data.drivers.length || 3;
+        document.getElementById('hudActiveVehicles').textContent = data.vehicles.length;
+        document.getElementById('hudActiveDrivers').textContent = data.drivers.length;
 
         if (data.drivers && data.drivers.length > 0) {
           const pinEl = document.getElementById('ownerCabPinDisplay');
@@ -1535,9 +1651,16 @@
           dList.innerHTML = data.drivers.map(d => `
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
               <div>
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase">${escapeHtml(d.license_category || 'Category B')}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">KYC VERIFIED</span>
+                <div class="flex flex-wrap items-center justify-between gap-1.5">
+                  <div class="flex flex-wrap gap-1">
+                    ${(d.license_categories && d.license_categories.length ? d.license_categories : [d.license_category || 'Category B']).map(cat => `
+                      <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">${escapeHtml(cat.split('(')[0].trim())}</span>
+                    `).join('')}
+                  </div>
+                  <div class="flex items-center gap-1">
+                    ${d.is_standby ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">STANDBY</span>` : ''}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">${escapeHtml(d.kyc_status || 'VERIFIED')}</span>
+                  </div>
                 </div>
                 <div class="flex items-center gap-3 mt-3">
                   <div class="w-10 h-10 rounded-full bg-slate-200 text-navy font-bold grid place-items-center shrink-0">
@@ -1550,7 +1673,7 @@
                 </div>
                 <div class="mt-3 py-2 border-t border-slate-200 space-y-1 text-[11px] font-mono text-slate-600">
                   <div class="flex justify-between">
-                    <span class="text-slate-400">Citizenship:</span>
+                    <span class="text-slate-400">${d.id_document_type === 'NID' ? 'National ID (NID):' : 'Citizenship:'}</span>
                     <span>${escapeHtml(d.citizenship_no)}</span>
                   </div>
                   <div class="flex justify-between">
@@ -1582,15 +1705,15 @@
                 <span class="text-emerald-700 flex items-center gap-1 font-semibold">
                   <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Cleared
                 </span>
-                <a href="/driver" target="_blank" class="text-indigo-600 hover:text-indigo-900 font-bold flex items-center gap-1">
-                  <span>Cab App</span> <i data-lucide="external-link" class="w-3 h-3"></i>
-                </a>
+                <button type="button" onclick="openDriverAppLinkModal('${escapeHtml(d.phone_number)}', '${escapeHtml(d.login_pin || '1234')}')" class="text-indigo-600 hover:text-indigo-900 font-bold flex items-center gap-1">
+                  <span>Cab App &amp; Store Links</span> <i data-lucide="external-link" class="w-3 h-3"></i>
+                </button>
               </div>
             </div>
           `).join('');
           lucide.createIcons();
         } else {
-          dList.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400"><p class="text-xs">No drivers registered yet. Add commercial drivers to assign trips.</p></div>`;
+          dList.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400"><p class="text-xs">No drivers registered yet. Add commercial drivers or complete your Individual Driver KYC.</p></div>`;
         }
       } catch (err) {
         console.error(err);
@@ -1605,22 +1728,20 @@
         let data = {};
         if (res.ok) data = await res.json();
 
-        document.getElementById('earnGrossTotal').textContent = 'Rs. ' + Number(data.total_gross_npr || 45800).toLocaleString('en-IN');
-        document.getElementById('earnPlatformTotal').textContent = 'Rs. ' + Number(data.kwdc_platform_fee_npr || 4580).toLocaleString('en-IN');
-        document.getElementById('earnNetTotal').textContent = 'Rs. ' + Number(data.net_fleet_earnings_npr || 41220).toLocaleString('en-IN');
-        document.getElementById('hudEarnings').textContent = 'Rs. ' + Number(data.net_fleet_earnings_npr || 41220).toLocaleString('en-IN');
+        const gross = Number(data.total_gross_npr ?? 0);
+        const margin = Number(data.kwdc_platform_fee_npr ?? 0);
+        const net = Number(data.net_fleet_earnings_npr ?? 0);
 
-        const settlements = data.settlements || [
-          {
-            period: "Baisakh 2083 (Current Cycle)",
-            trips: 4,
-            gross_fare: 45800.0,
-            platform_fee: 4580.0,
-            net_payout: 41220.0,
-            status: "PROCESSING",
-            payout_method: "ConnectIPS to Nabil Bank Ltd"
-          }
-        ];
+        document.getElementById('earnGrossTotal').textContent = 'Rs. ' + gross.toLocaleString('en-IN');
+        document.getElementById('earnPlatformTotal').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
+        document.getElementById('earnNetTotal').textContent = 'Rs. ' + net.toLocaleString('en-IN');
+        document.getElementById('hudEarnings').textContent = 'Rs. ' + net.toLocaleString('en-IN');
+
+        const settlements = data.settlements || [];
+        if (settlements.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 text-xs">No completed freight settlements recorded yet. Accept or complete a dispatch order to track payouts.</td></tr>`;
+          return;
+        }
 
         tbody.innerHTML = settlements.map(s => `
           <tr class="hover:bg-slate-50 transition">
@@ -1649,15 +1770,74 @@
 
     let cachedVehicles = [];
 
-    function openDriverModal() {
+    function toggleDrvOtherCat() {
+      const cb = document.getElementById('drvCategoryOtherCheck');
+      document.getElementById('drvCategoryOtherCol')?.classList.toggle('hidden', !cb?.checked);
+    }
+
+    function updateDrvDocTypeLabels() {
+      const t = document.getElementById('drvDocType')?.value || 'CITIZENSHIP';
+      const numLbl = document.getElementById('drvDocNumberLabel');
+      const frontLbl = document.getElementById('drvDocFrontLabel');
+      const backLbl = document.getElementById('drvDocBackLabel');
+      const numInput = document.getElementById('drvCitizenship');
+      if (t === 'NID') {
+        if (numLbl) numLbl.textContent = 'National ID (NID) Number *';
+        if (frontLbl) frontLbl.textContent = 'National ID Front Side Photo URL *';
+        if (backLbl) backLbl.textContent = 'National ID Back Side Photo URL *';
+        if (numInput) numInput.placeholder = 'e.g. 123-456-789-0';
+      } else {
+        if (numLbl) numLbl.textContent = 'Citizenship Number *';
+        if (frontLbl) frontLbl.textContent = 'Citizenship Front Side Photo URL *';
+        if (backLbl) backLbl.textContent = 'Citizenship Back Side Photo URL *';
+        if (numInput) numInput.placeholder = 'e.g. 27-01-74-09812';
+      }
+    }
+
+    function openDriverModal(isSelfOnboarding = false) {
       const vSelect = document.getElementById('drvVehicle');
-      if (vSelect && cachedVehicles.length > 0) {
-        vSelect.innerHTML = '<option value="">Unassigned (Standby)</option>' + cachedVehicles.map(v => `
-          <option value="${v.id}">${v.license_plate} (${v.model_name})</option>
+      if (vSelect) {
+        vSelect.innerHTML = '<option value="">Unassigned (Standby)</option>' + (cachedVehicles || []).map(v => `
+          <option value="${v.id}">${escapeHtml(v.license_plate)} (${escapeHtml(v.model_name)})</option>
         `).join('');
       }
+      document.getElementById('driverKycForm')?.reset();
+      document.getElementById('drvIsSelfDriver').value = isSelfOnboarding ? 'true' : 'false';
+      document.getElementById('selfDriverBanner')?.classList.toggle('hidden', !isSelfOnboarding);
+
+      const titleEl = document.getElementById('driverModalTitle');
+      const subEl = document.getElementById('driverModalSub');
+      if (isSelfOnboarding) {
+        if (titleEl) titleEl.textContent = 'Complete Your Independent Driver KYC & PIN';
+        if (subEl) subEl.textContent = 'Required before activating your Cab App & Play Store / App Store link';
+        const user = JSON.parse(localStorage.getItem('kwdc_user') || '{}');
+        if (user.full_name) document.getElementById('drvName').value = user.full_name;
+        if (user.phone_number) document.getElementById('drvPhone').value = user.phone_number;
+      } else {
+        if (titleEl) titleEl.textContent = 'Add Commercial Driver (KYC Compliant)';
+        if (subEl) subEl.textContent = 'Mandatory Nepal DoTM Driving License, ID Proof & 4-Digit Cab PIN';
+      }
+      updateDrvDocTypeLabels();
+      toggleDrvOtherCat();
       document.getElementById('driverModal').showModal();
       lucide.createIcons();
+    }
+
+    function openDriverAppLinkModal(phone, pin) {
+      const url = `${window.location.origin}/driver`;
+      document.getElementById('appModalDriverPhone').textContent = phone || '-';
+      document.getElementById('appModalDriverPin').textContent = pin || '1234';
+      document.getElementById('driverWebAppUrlInput').value = url;
+      document.getElementById('driverAppLinkModal')?.showModal();
+      lucide.createIcons();
+    }
+
+    function copyDriverAppUrl() {
+      const inp = document.getElementById('driverWebAppUrlInput');
+      if (inp && inp.value) {
+        navigator.clipboard?.writeText(inp.value);
+        showToast('Driver Cab App link copied to clipboard!');
+      }
     }
 
     async function handleVehicleSubmit(e) {
@@ -1695,26 +1875,82 @@
 
     async function handleDriverSubmit(e) {
       e.preventDefault();
-      const vehId = document.getElementById('drvVehicle').value;
-      const rawCat = document.getElementById('drvCategory').value;
-      const effectiveCat = (rawCat === 'OTHER') ? (document.getElementById('drvCategoryOther')?.value?.trim() || 'Category B') : rawCat;
+      const fullName = document.getElementById('drvName').value.trim();
+      const licenseNo = document.getElementById('drvLicense').value.trim();
+      const docType = document.getElementById('drvDocType')?.value || 'CITIZENSHIP';
+      const docNumber = document.getElementById('drvCitizenship').value.trim();
+      const idFront = document.getElementById('drvIdFrontPhoto').value.trim();
+      const idBack = document.getElementById('drvIdBackPhoto').value.trim();
+      const licFront = document.getElementById('drvLicensePhotoFront').value.trim();
+      const licBack = document.getElementById('drvLicensePhotoBack').value.trim();
+      const phone = document.getElementById('drvPhone').value.trim();
+      const pinVal = document.getElementById('drvPin')?.value.trim() || '';
+      const emerName = document.getElementById('drvEmergencyName').value.trim();
+      const emerPhone = document.getElementById('drvEmergencyPhone').value.trim();
 
+      const checkedCats = Array.from(document.querySelectorAll('input[name="drvCategories"]:checked')).map(cb => cb.value);
+      if (document.getElementById('drvCategoryOtherCheck')?.checked) {
+        const otherCat = document.getElementById('drvCategoryOther')?.value?.trim();
+        if (otherCat) checkedCats.push(otherCat);
+      }
+
+      if (!fullName || !licenseNo) {
+        showToast("Driver full name and mandatory Driving License # are required.", true);
+        return;
+      }
+      if (checkedCats.length === 0) {
+        showToast("Please select at least one DoTM Driving License Category.", true);
+        return;
+      }
+      if (!docNumber || !idFront || !idBack) {
+        showToast(`Please enter your ${docType === 'NID' ? 'National ID' : 'Citizenship'} number along with BOTH Front & Back document URLs.`, true);
+        return;
+      }
+      if (!licFront) {
+        showToast("Driving License Front photo proof URL is mandatory.", true);
+        return;
+      }
+      if (!phone || !/^[0-9]{4,6}$/.test(pinVal)) {
+        showToast("Valid mobile number and 4 to 6 digit Driver Login PIN are required.", true);
+        return;
+      }
+      if (!emerName || !emerPhone) {
+        showToast("Emergency contact person name and phone are required.", true);
+        return;
+      }
+      if (!document.getElementById('drvCleanRecord').checked) {
+        showToast("Traffic Police Clean Record confirmation is mandatory.", true);
+        return;
+      }
+
+      const vehId = document.getElementById('drvVehicle').value;
       const rawBlood = document.getElementById('drvBloodGroup').value;
       const effectiveBlood = (rawBlood === 'OTHER') ? (document.getElementById('drvBloodGroupOther')?.value?.trim() || 'Unknown') : rawBlood;
+      const isSelf = document.getElementById('drvIsSelfDriver')?.value === 'true';
+      const isStandby = Boolean(document.getElementById('drvIsStandby')?.checked);
 
       const payload = {
-        full_name: document.getElementById('drvName').value.trim(),
-        phone_number: document.getElementById('drvPhone').value.trim(),
-        login_pin: document.getElementById('drvPin')?.value.trim() || '1234',
-        license_number: document.getElementById('drvLicense').value.trim(),
-        license_category: effectiveCat,
-        citizenship_no: document.getElementById('drvCitizenship').value.trim(),
+        full_name: fullName,
+        phone_number: phone,
+        login_pin: pinVal,
+        license_number: licenseNo,
+        license_categories: checkedCats,
+        license_category: checkedCats.join(', '),
+        id_document_type: docType,
+        citizenship_no: docNumber,
+        id_document_number: docNumber,
+        id_doc_front_url: idFront,
+        id_doc_back_url: idBack,
+        citizenship_photo_url: idFront,
+        license_photo_url: licFront,
+        license_photo_front_url: licFront,
+        license_photo_back_url: licBack || undefined,
         blood_group: effectiveBlood,
-        emergency_contact_name: document.getElementById('drvEmergencyName').value.trim(),
-        emergency_contact_phone: document.getElementById('drvEmergencyPhone').value.trim(),
-        license_photo_url: document.getElementById('drvLicensePhoto').value.trim() || undefined,
-        citizenship_photo_url: document.getElementById('drvCitizenshipPhoto').value.trim() || undefined,
-        has_clean_traffic_record: document.getElementById('drvCleanRecord').checked,
+        emergency_contact_name: emerName,
+        emergency_contact_phone: emerPhone,
+        has_clean_traffic_record: true,
+        is_standby: isStandby,
+        is_self_driver: isSelf,
         assigned_vehicle_id: vehId ? parseInt(vehId) : undefined
       };
 
@@ -1727,9 +1963,12 @@
         if (handleApiAuthError(res)) return;
         const data = await res.json();
         if (res.ok) {
-          showToast(`Driver ${data.full_name || ''} registered with PIN ${payload.login_pin}!`);
+          showToast(`Driver KYC verified & PIN ${data.login_pin || payload.login_pin} generated!`);
           document.getElementById('driverModal').close();
           loadMyFleet();
+          if (isSelf) {
+            openDriverAppLinkModal(data.phone_number || phone, data.login_pin || payload.login_pin);
+          }
         } else {
           showToast(formatToastMessage(data.detail) || "Driver registration failed.", true);
         }
@@ -1756,6 +1995,9 @@
         const alreadyClassified = localStorage.getItem('kwdc_fleet_classified') === 'true';
         if (data.needs_onboarding && !alreadyClassified) {
           openOperatorTypeModal(true); // true = 1st login onboarding mode
+        } else if (data.operator_type === 'INDEPENDENT_OWNER' && data.needs_driver_kyc) {
+          showToast("Complete your Driver KYC & PIN setup to launch your Cab App.", false);
+          openDriverModal(true);
         }
       } catch (err) {
         console.error("loadOperatorProfile error:", err);
@@ -1846,6 +2088,9 @@
           showToast(data.message || "Operating classification updated!");
           document.getElementById('operatorTypeModal').close();
           loadMyFleet();
+          if (selected === 'INDEPENDENT_OWNER' && data.needs_driver_kyc) {
+            openDriverModal(true);
+          }
         } else {
           showToast(formatToastMessage(data.detail) || "Failed to update operator type.", true);
         }

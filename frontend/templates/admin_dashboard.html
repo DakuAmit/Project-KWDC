@@ -219,6 +219,18 @@
 
       <!-- Main Panels Container -->
       <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+        <!-- Ephemeral DB Warning Banner (Shown if deployed without shared PostgreSQL Pooler) -->
+        <div id="dbHealthBanner" class="hidden rounded-2xl border border-red-300 bg-red-50 p-4 text-xs text-red-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-start gap-2.5">
+            <i data-lucide="database-zap" class="w-5 h-5 text-red-600 shrink-0 mt-0.5"></i>
+            <div>
+              <strong class="block text-sm text-red-800">Ephemeral SQLite Fallback Active (<span id="dbHealthLabel">SQLite</span>)</strong>
+              <span class="block mt-0.5 leading-relaxed">
+                This deployment could not connect to your remote PostgreSQL host (likely because Supabase direct host <code class="font-mono bg-red-100 px-1 rounded">db.*.supabase.co</code> is IPv6-only on Vercel). Accounts and jobs created on different serverless instances will NOT sync until you set Vercel&apos;s <code class="font-mono bg-red-100 px-1 rounded">DATABASE_URL</code> to your <strong>Supabase IPv4 Session/Transaction Pooler</strong> (<code class="font-mono bg-red-100 px-1 rounded">aws-0-*.pooler.supabase.com:6543</code>).
+              </span>
+            </div>
+          </div>
+        </div>
         
         <!-- View 1: Overview KPIs -->
         <section id="view-overview" class="space-y-6">
@@ -2902,9 +2914,25 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
         }
       }
       checkSystemStatus();
+      checkDbHealthWarning();
       refreshData();
       lucide.createIcons();
     });
+
+    async function checkDbHealthWarning() {
+      try {
+        const res = await fetch('/health');
+        if (!res.ok) return;
+        const data = await res.json();
+        const banner = document.getElementById('dbHealthBanner');
+        const isRemoteHost = !['localhost', '127.0.0.1'].includes(window.location.hostname);
+        if (banner && data.is_sqlite_fallback && isRemoteHost) {
+          const lbl = document.getElementById('dbHealthLabel');
+          if (lbl) lbl.textContent = data.database || 'SQLite Fallback';
+          banner.classList.remove('hidden');
+        }
+      } catch (e) {}
+    }
   </script>
 </body>
 </html>

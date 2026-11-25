@@ -149,7 +149,7 @@ def run_audit():
     print("\n--- 2. Testing Property Owner Operations ---")
     warehouse_id = None
     try:
-        # 2.1 List new storage space (Continuous sq ft)
+        # 2.0 Verify KYC Gate blocks unverified Property Owner from listing space
         prop_payload = {
             "title": "Balaju Industrial Logistics Hub #7",
             "space_type": "dry_storage",
@@ -166,6 +166,33 @@ def run_audit():
             "has_forklift_access": True,
             "has_fire_safety": True
         }
+        blocked_res = client.post("/api/warehouses/list-space", headers=owner_headers, json=prop_payload)
+        if blocked_res.status_code == 403:
+            record_pass("Owner Unverified KYC Gate", "Blocked pending-KYC owner from listing space (HTTP 403)")
+        else:
+            record_fail("Owner Unverified KYC Gate", f"Expected 403, got {blocked_res.status_code}: {blocked_res.text}")
+
+        # Submit & Admin-verify Owner KYC before listing space
+        owner_kyc_init = {
+            "citizenship_number": "27-01-78-09876",
+            "citizenship_front_url": "https://kwdc-docs.s3.amazonaws.com/kyc/ctz-front-ram.jpg",
+            "citizenship_back_url": "https://kwdc-docs.s3.amazonaws.com/kyc/ctz-back-ram.jpg",
+            "bank_name": "Nabil Bank Ltd.",
+            "bank_account_name": "Ram Bahadur Shrestha",
+            "bank_account_number": "01201017500123",
+            "bank_branch": "Balaju Branch, Kathmandu",
+            "bank_proof_doc_url": "https://kwdc-docs.s3.amazonaws.com/kyc/cheque-leaf-ram.jpg"
+        }
+        client.post("/api/auth/submit-kyc", headers=owner_headers, json=owner_kyc_init)
+        db = SessionLocal()
+        try:
+            owner_u = db.query(models.User).filter(models.User.email == owner_email).first()
+            if owner_u:
+                client.post(f"/api/admin/users/{owner_u.id}/kyc-verify", headers=admin_headers, json={"kyc_status": "VERIFIED"})
+        finally:
+            db.close()
+
+        # 2.1 List new storage space (Continuous sq ft)
         res = client.post("/api/warehouses/list-space", headers=owner_headers, json=prop_payload)
         if res.status_code == 200:
             data = res.json()
@@ -696,26 +723,35 @@ def run_audit():
             record_fail("Fleet Operator Profile", f"Status {res_prof.status_code}: {res_prof.text}")
 
         res_toggle = client.post("/api/fleet/operator-type", headers=fleet_headers, json={"operator_type": "INDEPENDENT_OWNER"})
-        if res_toggle.status_code == 200:
-            record_pass("Fleet Toggle Operator Type", "Updated to INDEPENDENT_OWNER (Auto-linked driver)")
+        if res_toggle.status_code == 200 and res_toggle.json().get("needs_driver_kyc") is True:
+            record_pass("Fleet Toggle Operator Type", "Updated to INDEPENDENT_OWNER (prompts Driver KYC & PIN setup)")
         else:
             record_fail("Fleet Toggle Operator Type", f"Status {res_toggle.status_code}: {res_toggle.text}")
 
         # Restore to COMMERCIAL_3PL for multi-crew testing
         client.post("/api/fleet/operator-type", headers=fleet_headers, json={"operator_type": "COMMERCIAL_3PL"})
 
-        # 6.10 Dedicated Driver Registration with PIN & Reset PIN
+        # 6.10 Dedicated Driver Registration with PIN, Multi-Category, NID Front/Back & Standby Flag + Reset PIN
         driver_test_phone = f"+977-9818{random.randint(100000, 999999)}"
         drv_pin_payload = {
             "full_name": "Manish Shrestha",
             "phone_number": driver_test_phone,
             "login_pin": "4321",
             "license_number": f"01-08-{random.randint(100000, 999999)}",
-            "license_category": "Category B (Delivery Van / Pickup)",
-            "citizenship_no": "27-01-72-99881",
+            "license_categories": [
+                "Category B (Van / Pickup / Light 4-Wheeler)",
+                "Category G (Heavy / Multi-Axle Truck)"
+            ],
+            "id_document_type": "NID",
+            "id_document_number": "123-456-789-0",
+            "id_doc_front_url": "https://kwdc-docs.s3.amazonaws.com/drivers/nid-front.jpg",
+            "id_doc_back_url": "https://kwdc-docs.s3.amazonaws.com/drivers/nid-back.jpg",
+            "license_photo_front_url": "https://kwdc-docs.s3.amazonaws.com/drivers/lic-front.jpg",
+            "license_photo_back_url": "https://kwdc-docs.s3.amazonaws.com/drivers/lic-back.jpg",
             "blood_group": "B+",
             "emergency_contact_name": "Sita Shrestha",
             "emergency_contact_phone": "+977-9818001122",
+            "is_standby": True,
             "has_clean_traffic_record": True
         }
         res_drv2 = client.post("/api/fleet/drivers", headers=fleet_headers, json=drv_pin_payload)

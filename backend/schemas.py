@@ -232,9 +232,12 @@ class VehicleCreate(BaseModel):
 class DriverCreate(BaseModel):
     full_name: str
     phone_number: str
-    license_number: str
-    license_category: Optional[str] = "Category B (Delivery Van / Pickup)"
-    citizenship_no: Optional[str] = "CTZ-VERIFIED"
+    license_number: str = Field(..., min_length=3, description="Mandatory Commercial Driving License Number")
+    license_category: Optional[str] = "Category B (Van / Pickup / Light 4-Wheeler)"
+    license_categories: Optional[List[str]] = None
+    id_document_type: Optional[str] = "CITIZENSHIP"  # CITIZENSHIP or NID
+    citizenship_no: Optional[str] = None
+    id_document_number: Optional[str] = None
     blood_group: Optional[str] = "O+"
     emergency_contact_name: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
@@ -242,9 +245,25 @@ class DriverCreate(BaseModel):
     license_photo_front_url: Optional[str] = None
     license_photo_back_url: Optional[str] = None
     citizenship_photo_url: Optional[str] = None
+    id_doc_front_url: Optional[str] = None
+    id_doc_back_url: Optional[str] = None
     has_clean_traffic_record: Optional[bool] = True
+    is_standby: Optional[bool] = False
+    is_self_driver: Optional[bool] = False
     assigned_vehicle_id: Optional[int] = None
     login_pin: Optional[str] = "1234"
+
+    @model_validator(mode="after")
+    def normalize_driver_fields(self):
+        if self.license_categories and len(self.license_categories) > 0:
+            cleaned = [c.strip() for c in self.license_categories if c and c.strip()]
+            if cleaned:
+                self.license_category = ", ".join(cleaned)
+        if not self.citizenship_no and self.id_document_number:
+            self.citizenship_no = self.id_document_number.strip()
+        if not self.id_doc_front_url and self.citizenship_photo_url:
+            self.id_doc_front_url = self.citizenship_photo_url
+        return self
 
 class DriverLoginRequest(BaseModel):
     phone_number: str

@@ -54,14 +54,25 @@ def ensure_db_schema_extensions():
                 with engine.begin() as conn:
                     conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def};"))
 
-        add_col_if_missing("drivers", "license_category", "VARCHAR(50) DEFAULT 'Category B (Delivery Van / Pickup)'")
+        add_col_if_missing("drivers", "license_category", "VARCHAR(255) DEFAULT 'Category B (Van / Pickup / Light 4-Wheeler)'")
+        add_col_if_missing("drivers", "id_document_type", "VARCHAR(50) DEFAULT 'CITIZENSHIP'")
         add_col_if_missing("drivers", "license_photo_front_url", "VARCHAR(500)")
         add_col_if_missing("drivers", "license_photo_back_url", "VARCHAR(500)")
+        add_col_if_missing("drivers", "id_doc_front_url", "VARCHAR(500)")
+        add_col_if_missing("drivers", "id_doc_back_url", "VARCHAR(500)")
         add_col_if_missing("drivers", "blood_group", "VARCHAR(10)")
         add_col_if_missing("drivers", "emergency_contact_name", "VARCHAR(255)")
         add_col_if_missing("drivers", "emergency_contact_phone", "VARCHAR(50)")
         add_col_if_missing("drivers", "has_clean_traffic_record", "BOOLEAN DEFAULT 1" if is_sqlite else "BOOLEAN DEFAULT TRUE")
+        add_col_if_missing("drivers", "is_standby", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
         add_col_if_missing("drivers", "login_pin", "VARCHAR(255) DEFAULT '1234'")
+
+        if not is_sqlite and "drivers" in existing_tables:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE drivers ALTER COLUMN license_category TYPE VARCHAR(255);"))
+            except Exception:
+                pass
 
         add_col_if_missing("users", "fleet_operator_type", "VARCHAR(50)")
 

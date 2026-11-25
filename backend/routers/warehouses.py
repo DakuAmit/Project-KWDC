@@ -17,7 +17,7 @@ from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from backend.database import get_db
 from backend.models import (
-    Warehouse, WarehouseRequest, WarehousePhoto, User, UserRole,
+    Warehouse, WarehouseRequest, WarehousePhoto, User, UserRole, KycStatus,
     BookingStatus, SpaceType, AreaUnit, TaxInvoice, PaymentStatus,
     StockItem, InventoryUnit, InventoryUnitType, ClientSavedAddress, LienNotificationLog,
     WarehouseChangeRequest, WarehouseActivityLog, IncidentReport
@@ -79,6 +79,12 @@ def list_warehouse_space(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Property Owners can list physical spaces."
+        )
+
+    if current_user.role == UserRole.PROPERTY_OWNER and current_user.kyc_status != KycStatus.VERIFIED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your KYC & Bank details first before registering a storage space."
         )
 
     # Convert entered unit to standard sqft

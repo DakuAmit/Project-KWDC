@@ -584,7 +584,7 @@
       </button>
     </div>
 
-    <form onsubmit="handleListSpace(event)" class="p-6 space-y-5 text-sm max-h-[80vh] overflow-y-auto">
+    <form id="listSpaceForm" novalidate onsubmit="handleListSpace(event)" class="p-6 space-y-5 text-sm max-h-[80vh] overflow-y-auto">
       <div>
         <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_facility_title">Facility Title / Identifier *</label>
         <input type="text" id="propTitle" required placeholder="e.g. Balaju Industrial Godown #3" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20">
@@ -1098,6 +1098,8 @@
       if (tabId === 'kyc') loadOwnerKyc();
     }
 
+    window.ownerKycStatus = 'PENDING_SUBMISSION';
+
     async function loadOwnerKyc() {
       try {
         const res = await fetch('/api/auth/kyc-profile', { headers: getAuthHeaders() });
@@ -1107,6 +1109,7 @@
         const badgeEl = document.getElementById('badgeKycStatus');
         const stateBadgeEl = document.getElementById('kycStateBadge');
         const kycStatus = data.kyc_status || 'PENDING_SUBMISSION';
+        window.ownerKycStatus = kycStatus;
 
         let badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
         let badgeText = 'PENDING SUBMISSION';
@@ -1213,11 +1216,24 @@
     let ownerPinMapInst = null;
     let ownerPinMarker = null;
 
-    function openListingModal() {
+    async function openListingModal() {
       const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
       if (!token) {
         showToast("Please sign in as a Property Owner to register storage spaces.", true);
         openOwnerAuthModal();
+        return;
+      }
+      // Refresh live KYC status before allowing space registration
+      await loadOwnerKyc();
+      if (window.ownerKycStatus !== 'VERIFIED') {
+        if (window.ownerKycStatus === 'UNDER_REVIEW') {
+          showToast("Your KYC & Bank Verification is currently under compliance review. Please wait for SuperAdmin approval before registering a storage space.", true);
+        } else if (window.ownerKycStatus === 'REJECTED') {
+          showToast("Your KYC & Bank Verification was rejected. Please update and verify your Citizenship & Bank details before registering a space.", true);
+        } else {
+          showToast("Please verify your KYC & Bank details first before registering a storage space.", true);
+        }
+        switchTab('kyc');
         return;
       }
       document.getElementById('listSpaceModal').showModal();
@@ -1566,6 +1582,44 @@
 
     async function handleListSpace(e) {
       e.preventDefault();
+
+      const titleEl = document.getElementById('propTitle');
+      const addrEl = document.getElementById('propAddress');
+      const rateEl = document.getElementById('propBaseRate');
+      const areaEl = document.getElementById('propAreaValue');
+      const roadEl = document.getElementById('propRoadAccess');
+
+      if (!titleEl.value.trim()) {
+        showToast("Please enter a Facility Title / Identifier before submitting.", true);
+        titleEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        titleEl.focus();
+        return;
+      }
+      if (!(parseFloat(rateEl.value) >= 5)) {
+        showToast("Please enter a valid Expected Monthly Rate (Rs. 5 or more per sq ft).", true);
+        rateEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        rateEl.focus();
+        return;
+      }
+      if (!(parseFloat(areaEl.value) > 0)) {
+        showToast("Please enter a valid storage floor area.", true);
+        areaEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        areaEl.focus();
+        return;
+      }
+      if (!addrEl.value.trim()) {
+        showToast("Please enter your Warehouse Neighborhood / Landmark address.", true);
+        addrEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        addrEl.focus();
+        return;
+      }
+      if (!(parseFloat(roadEl.value) >= 10)) {
+        showToast("Vehicle road access width must be at least 10 ft.", true);
+        roadEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        roadEl.focus();
+        return;
+      }
+
       const btn = document.getElementById('btnSubmitListing');
       btn.disabled = true;
       btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Submitting...`;

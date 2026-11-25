@@ -109,6 +109,10 @@ def get_operator_profile(
     op_type = raw_op_type if (raw_op_type in ("INDEPENDENT_OWNER", "COMMERCIAL_3PL")) else "COMMERCIAL_3PL"
     vehicles_count = db.query(Vehicle).filter(Vehicle.fleet_partner_id == current_user.id).count()
     drivers_count = db.query(Driver).filter(Driver.fleet_partner_id == current_user.id).count()
+    self_driver = db.query(Driver).filter(
+        Driver.fleet_partner_id == current_user.id,
+        Driver.phone_number == current_user.phone_number
+    ).first()
     return {
         "user_id": current_user.id,
         "full_name": current_user.full_name,
@@ -118,6 +122,8 @@ def get_operator_profile(
         "role": current_user.role.value,
         "operator_type": op_type,
         "needs_onboarding": bool(needs_onboarding),
+        "needs_driver_kyc": (op_type == "INDEPENDENT_OWNER" and self_driver is None),
+        "driver_pin": self_driver.login_pin if self_driver else None,
         "is_configured": not bool(needs_onboarding),
         "vehicles_count": vehicles_count,
         "drivers_count": drivers_count
@@ -134,50 +140,28 @@ def update_operator_type(
     if payload.operator_type not in valid_types:
         raise HTTPException(status_code=400, detail="Operator type must be 'INDEPENDENT_OWNER' or 'COMMERCIAL_3PL'.")
 
-    # If user is updating fleet classification, ensure fleet partner privileges
     if current_user.role not in (UserRole.FLEET_PARTNER, UserRole.SUPERADMIN):
         current_user.role = UserRole.FLEET_PARTNER
 
     current_user.fleet_operator_type = payload.operator_type
+    db.commit()
 
-    # If switching to Independent Owner-Driver, ensure a self-driver profile exists
-    self_driver_pin = "1234"
+    existing_driver = None
     if payload.operator_type == "INDEPENDENT_OWNER":
         existing_driver = db.query(Driver).filter(
             Driver.fleet_partner_id == current_user.id,
             Driver.phone_number == current_user.phone_number
         ).first()
-        if not existing_driver:
-            # Auto-assign first vehicle if available
-            first_veh = db.query(Vehicle).filter(Vehicle.fleet_partner_id == current_user.id).first()
-            self_driver = Driver(
-                fleet_partner_id=current_user.id,
-                assigned_vehicle_id=first_veh.id if first_veh else None,
-                full_name=current_user.full_name,
-                phone_number=current_user.phone_number,
-                license_number=f"LIC-{current_user.phone_number[-6:]}",
-                license_category="Category B (Delivery Van / Pickup)",
-                citizenship_no="CTZ-OWNER-OPERATOR",
-                blood_group="O+",
-                emergency_contact_name=current_user.full_name,
-                emergency_contact_phone=current_user.phone_number,
-                login_pin="1234",
-                kyc_status=KycStatus.VERIFIED,
-                is_active=True
-            )
-            db.add(self_driver)
-            db.commit()
-            db.refresh(self_driver)
-            self_driver_pin = self_driver.login_pin or "1234"
-        else:
-            self_driver_pin = existing_driver.login_pin or "1234"
 
-    db.commit()
+    needs_driver_kyc = (payload.operator_type == "INDEPENDENT_OWNER" and existing_driver is None)
     return {
-        "message": f"Operator mode updated to {payload.operator_type}.",
+        "message": f"Operator mode updated to {payload.operator_type}." + (
+            " Please complete your Driver KYC & PIN setup to activate your cab account." if needs_driver_kyc else ""
+        ),
         "operator_type": payload.operator_type,
         "needs_onboarding": False,
-        "driver_pin": self_driver_pin
+        "needs_driver_kyc": needs_driver_kyc,
+        "driver_pin": existing_driver.login_pin if existing_driver else None
     }
 
 @router.get("/my-fleet")
@@ -211,10 +195,17 @@ def get_my_fleet(
                 "phone_number": d.phone_number,
                 "license_number": d.license_number,
                 "license_category": getattr(d, 'license_category', 'Category B'),
+                "license_categories": [c.strip() for c in str(getattr(d, 'license_category', '') or '').split(',') if c.strip()],
+                "id_document_type": getattr(d, 'id_document_type', 'CITIZENSHIP') or 'CITIZENSHIP',
                 "citizenship_no": d.citizenship_no,
+                "license_photo_front_url": getattr(d, 'license_photo_front_url', None) or getattr(d, 'license_photo_url', None),
+                "license_photo_back_url": getattr(d, 'license_photo_back_url', None),
+                "id_doc_front_url": getattr(d, 'id_doc_front_url', None) or getattr(d, 'citizenship_photo_url', None),
+                "id_doc_back_url": getattr(d, 'id_doc_back_url', None),
                 "blood_group": getattr(d, 'blood_group', 'O+'),
                 "emergency_contact_name": getattr(d, 'emergency_contact_name', None),
                 "emergency_contact_phone": getattr(d, 'emergency_contact_phone', None),
+                "is_standby": bool(getattr(d, 'is_standby', False)),
                 "login_pin": getattr(d, 'login_pin', '1234') or '1234',
                 "kyc_status": d.kyc_status.value if hasattr(d.kyc_status, 'value') else str(d.kyc_status),
                 "assigned_vehicle_id": d.assigned_vehicle_id
@@ -229,37 +220,109 @@ def register_driver(
     current_user: User = Depends(require_fleet_partner),
     db: Session = Depends(get_db)
 ):
+    lic_num = (payload.license_number or "").strip()
+    if not lic_num:
+        raise HTTPException(status_code=400, detail="Driving License number is mandatory for driver KYC.")
+
     pin_val = payload.login_pin.strip() if payload.login_pin else "1234"
-    driver = Driver(
-        fleet_partner_id=current_user.id,
-        assigned_vehicle_id=payload.assigned_vehicle_id,
-        full_name=payload.full_name,
-        phone_number=payload.phone_number,
-        license_number=payload.license_number,
-        license_category=payload.license_category or "Category B (Delivery Van / Pickup)",
-        citizenship_no=payload.citizenship_no or "CTZ-VERIFIED",
-        license_photo_url=payload.license_photo_url or payload.license_photo_front_url,
-        license_photo_front_url=payload.license_photo_front_url or payload.license_photo_url,
-        license_photo_back_url=payload.license_photo_back_url,
-        citizenship_photo_url=payload.citizenship_photo_url,
-        blood_group=payload.blood_group or "O+",
-        emergency_contact_name=payload.emergency_contact_name,
-        emergency_contact_phone=payload.emergency_contact_phone,
-        has_clean_traffic_record=payload.has_clean_traffic_record if payload.has_clean_traffic_record is not None else True,
-        login_pin=pin_val,
-        kyc_status=KycStatus.VERIFIED,
-        is_active=True
-    )
-    db.add(driver)
-    db.commit()
-    db.refresh(driver)
+    if not pin_val.isdigit() or not (4 <= len(pin_val) <= 6):
+        raise HTTPException(status_code=400, detail="Driver access PIN must be 4 to 6 digits.")
+
+    doc_type = (payload.id_document_type or "CITIZENSHIP").strip().upper()
+    if doc_type not in ("CITIZENSHIP", "NID"):
+        doc_type = "CITIZENSHIP"
+
+    cat_str = (payload.license_category or "").strip()
+    if not cat_str:
+        cat_str = "Category B (Van / Pickup / Light 4-Wheeler)"
+
+    id_num = (payload.citizenship_no or "").strip() or "CTZ-VERIFIED"
+    lic_front = (payload.license_photo_front_url or payload.license_photo_url or "").strip() or None
+    lic_back = (payload.license_photo_back_url or "").strip() or None
+    id_front = (payload.id_doc_front_url or payload.citizenship_photo_url or "").strip() or None
+    id_back = (payload.id_doc_back_url or "").strip() or None
+    standby_flag = bool(payload.is_standby)
+
+    existing_self = None
+    if payload.is_self_driver:
+        existing_self = db.query(Driver).filter(
+            Driver.fleet_partner_id == current_user.id,
+            Driver.phone_number == payload.phone_number.strip()
+        ).first()
+
+    # Check collisions on phone or license for distinct records
+    phone_conflict = db.query(Driver).filter(Driver.phone_number == payload.phone_number.strip()).first()
+    if phone_conflict and (not existing_self or phone_conflict.id != existing_self.id):
+        raise HTTPException(status_code=400, detail="A driver with this mobile number is already registered.")
+
+    lic_conflict = db.query(Driver).filter(Driver.license_number == lic_num).first()
+    if lic_conflict and (not existing_self or lic_conflict.id != existing_self.id):
+        raise HTTPException(status_code=400, detail="A driver with this driving license number is already registered.")
+
+    if existing_self:
+        driver = existing_self
+        driver.assigned_vehicle_id = payload.assigned_vehicle_id
+        driver.full_name = payload.full_name.strip()
+        driver.license_number = lic_num
+        driver.license_category = cat_str
+        driver.id_document_type = doc_type
+        driver.citizenship_no = id_num
+        driver.license_photo_url = lic_front
+        driver.license_photo_front_url = lic_front
+        driver.license_photo_back_url = lic_back
+        driver.citizenship_photo_url = id_front
+        driver.id_doc_front_url = id_front
+        driver.id_doc_back_url = id_back
+        driver.blood_group = payload.blood_group or "O+"
+        driver.emergency_contact_name = payload.emergency_contact_name
+        driver.emergency_contact_phone = payload.emergency_contact_phone
+        driver.has_clean_traffic_record = payload.has_clean_traffic_record if payload.has_clean_traffic_record is not None else True
+        driver.is_standby = standby_flag
+        driver.login_pin = pin_val
+        driver.kyc_status = KycStatus.VERIFIED
+        driver.is_active = True
+        db.commit()
+        db.refresh(driver)
+    else:
+        driver = Driver(
+            fleet_partner_id=current_user.id,
+            assigned_vehicle_id=payload.assigned_vehicle_id,
+            full_name=payload.full_name.strip(),
+            phone_number=payload.phone_number.strip(),
+            license_number=lic_num,
+            license_category=cat_str,
+            id_document_type=doc_type,
+            citizenship_no=id_num,
+            license_photo_url=lic_front,
+            license_photo_front_url=lic_front,
+            license_photo_back_url=lic_back,
+            citizenship_photo_url=id_front,
+            id_doc_front_url=id_front,
+            id_doc_back_url=id_back,
+            blood_group=payload.blood_group or "O+",
+            emergency_contact_name=payload.emergency_contact_name,
+            emergency_contact_phone=payload.emergency_contact_phone,
+            has_clean_traffic_record=payload.has_clean_traffic_record if payload.has_clean_traffic_record is not None else True,
+            is_standby=standby_flag,
+            login_pin=pin_val,
+            kyc_status=KycStatus.VERIFIED,
+            is_active=True
+        )
+        db.add(driver)
+        db.commit()
+        db.refresh(driver)
+
     return {
-        "message": f"Commercial driver '{driver.full_name}' registered with verified license and access PIN.",
+        "message": f"Driver '{driver.full_name}' KYC saved and PIN {driver.login_pin} activated.",
         "driver_id": driver.id,
         "full_name": driver.full_name,
         "phone_number": driver.phone_number,
         "login_pin": driver.login_pin,
+        "driver_pin": driver.login_pin,
+        "driver_app_url": "/driver",
         "license_category": driver.license_category,
+        "id_document_type": driver.id_document_type,
+        "is_standby": bool(driver.is_standby),
         "kyc_status": driver.kyc_status.value
     }
 
@@ -335,64 +398,7 @@ def get_dispatch_orders(
     orders = db.query(DispatchOrder).filter(
         (DispatchOrder.fleet_partner_id == current_user.id) |
         (DispatchOrder.status == FreightStatus.REQUESTED)
-    ).order_id_desc() if hasattr(DispatchOrder, 'order_id_desc') else db.query(DispatchOrder).filter(
-        (DispatchOrder.fleet_partner_id == current_user.id) |
-        (DispatchOrder.status == FreightStatus.REQUESTED)
     ).order_by(DispatchOrder.id.desc()).all()
-
-    # If DB has no orders yet, provide seed/demo dispatch jobs for immediate startup operation
-    if not orders and current_user.role == UserRole.FLEET_PARTNER:
-        demo_jobs = [
-            {
-                "id": 101,
-                "order_number": "FRT-2083-0012",
-                "cargo_description": "Electronics & FMCG Master Cartons (24 Pallets)",
-                "required_vehicle_category": "heavy_truck",
-                "pickup_address": "KTM-WDC Balaju Industrial Godown #3, Ring Road, Kathmandu",
-                "delivery_address": "Kalanki Commercial Logistics Depot, Kathmandu",
-                "total_distance_km": 8.4,
-                "gross_fare_npr": 12500.0,
-                "kwdc_margin_npr": 1250.0,
-                "net_fleet_earnings_npr": 11250.0,
-                "status": "requested",
-                "created_at": "Today, 08:30 AM",
-                "tare_weight_kg": 4200,
-                "net_cargo_kg": 6500
-            },
-            {
-                "id": 102,
-                "order_number": "FRT-2083-0014",
-                "cargo_description": "Pharmaceutical Cold Storage Containers (Vaccines / Insulin)",
-                "required_vehicle_category": "mini_truck",
-                "pickup_address": "Chobhar Dry Port Bonded Terminal A-2, Kirtipur",
-                "delivery_address": "Teku Central Medical Supplies Distribution, Kathmandu",
-                "total_distance_km": 6.8,
-                "gross_fare_npr": 8400.0,
-                "kwdc_margin_npr": 840.0,
-                "net_fleet_earnings_npr": 7560.0,
-                "status": "in_transit",
-                "created_at": "Today, 10:15 AM",
-                "tare_weight_kg": 2100,
-                "net_cargo_kg": 1800
-            },
-            {
-                "id": 103,
-                "order_number": "FRT-2083-0015",
-                "cargo_description": "Construction Hardware & Fitting Assemblies",
-                "required_vehicle_category": "heavy_truck",
-                "pickup_address": "Sallaghari Storage Hub B-4, Bhaktapur",
-                "delivery_address": "Koteshwor Wholesale Commercial Hub, Kathmandu",
-                "total_distance_km": 7.2,
-                "gross_fare_npr": 9500.0,
-                "kwdc_margin_npr": 950.0,
-                "net_fleet_earnings_npr": 8550.0,
-                "status": "delivered",
-                "created_at": "Yesterday, 04:00 PM",
-                "tare_weight_kg": 3800,
-                "net_cargo_kg": 5200
-            }
-        ]
-        return demo_jobs
 
     results = []
     for o in orders:
@@ -1078,37 +1084,32 @@ def get_fleet_earnings(
         DispatchOrder.fleet_partner_id == current_user.id
     ).all()
 
-    total_gross = sum(o.total_fare_npr for o in orders)
-    total_margin = sum(o.kwdc_margin_amount for o in orders)
-    net_earnings = total_gross - total_margin
+    total_gross = round(sum(float(o.total_fare_npr or 0.0) for o in orders), 2)
+    total_margin = round(sum(float(o.kwdc_margin_amount or 0.0) for o in orders), 2)
+    net_earnings = round(total_gross - total_margin, 2)
     completed_trips = sum(1 for o in orders if o.status == FreightStatus.DELIVERED)
 
-    # Base baseline for demo/active fleet partners
-    if not orders:
-        total_gross = 45800.0
-        total_margin = 4580.0
-        net_earnings = 41220.0
-        completed_trips = 4
+    settlements = []
+    if orders:
+        settlements.append({
+            "id": 1,
+            "period": f"Active Ledger ({len(orders)} Dispatch{'es' if len(orders) != 1 else ''})",
+            "trips": len(orders),
+            "gross_fare": total_gross,
+            "platform_fee": total_margin,
+            "net_payout": net_earnings,
+            "status": "SETTLED" if completed_trips == len(orders) else "PROCESSING",
+            "payout_method": "ConnectIPS / Bank Wire"
+        })
 
     return {
         "total_gross_npr": total_gross,
         "kwdc_platform_fee_npr": total_margin,
         "net_fleet_earnings_npr": net_earnings,
         "completed_trips_count": completed_trips,
-        "pending_settlement_npr": round(net_earnings * 0.4, 2),
-        "disbursed_payout_npr": round(net_earnings * 0.6, 2),
-        "settlements": [
-            {
-                "id": 1,
-                "period": "Baisakh 2083 (Current Cycle)",
-                "trips": 4,
-                "gross_fare": 45800.0,
-                "platform_fee": 4580.0,
-                "net_payout": 41220.0,
-                "status": "PROCESSING",
-                "payout_method": "ConnectIPS to Nabil Bank Ltd"
-            }
-        ]
+        "pending_settlement_npr": round(net_earnings * 0.4, 2) if orders else 0.0,
+        "disbursed_payout_npr": round(net_earnings * 0.6, 2) if orders else 0.0,
+        "settlements": settlements
     }
 
 

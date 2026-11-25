@@ -36,6 +36,7 @@ def get_auth_headers(email: str, full_name: str, phone: str, role: str):
         if u:
             u.is_verified = True
             u.is_active = True
+            u.kyc_status = models.KycStatus.VERIFIED
             u.hashed_password = get_password_hash("Password@123")
             db.commit()
     finally:
