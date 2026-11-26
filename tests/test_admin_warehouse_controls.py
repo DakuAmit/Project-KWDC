@@ -194,6 +194,22 @@ def test_admin_warehouse_controls():
         verified_filtered = client.get("/api/admin/warehouses", params={"status_filter": "verified"}, headers=admin_hdrs)
         assert any(w["id"] == wh_id for w in verified_filtered.json())
 
+        # Verify provisioning Warehouse Incharge WITHOUT assigning a warehouse initially works!
+        unassigned_inc_email = f"inc_unassigned_{rand_id}@kwdc.com.np"
+        prov_res = client.post(
+            "/api/admin/incharges",
+            headers=admin_hdrs,
+            json={
+                "full_name": "Unassigned Inspector",
+                "email": unassigned_inc_email,
+                "phone_number": f"98490{rand_id}",
+                "warehouse_id": None,
+                "password": "Test@2026"
+            }
+        )
+        assert prov_res.status_code == 200, prov_res.text
+        assert prov_res.json()["assigned_facility_id"] is None
+
         # 6. Verify frontend templates expose all requested UI controls
         owner_html = client.get("/owner").text
         assert "pinOwnerCurrentLocation()" in owner_html
@@ -208,7 +224,7 @@ def test_admin_warehouse_controls():
 
         print("[PASS] Admin warehouse controls, incharge assignment, independent tariffs & owner pin map verified.")
     finally:
-        cleanup_test_entities([owner_email, inc_email, client_email], created_wh_ids)
+        cleanup_test_entities([owner_email, inc_email, client_email, f"inc_unassigned_{rand_id}@kwdc.com.np"], created_wh_ids)
 
 
 if __name__ == "__main__":

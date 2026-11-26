@@ -42,7 +42,7 @@ class InchargeProvisionRequest(BaseModel):
     full_name: str
     email: str
     phone_number: str
-    warehouse_id: int
+    warehouse_id: Optional[int] = None
     password: Optional[str] = None
 
 class InchargeReassignRequest(BaseModel):
@@ -519,9 +519,11 @@ def provision_incharge_staff(
     if db.query(User).filter(User.phone_number == phone_clean).first():
         raise HTTPException(status_code=400, detail="A staff user with this mobile number already exists.")
 
-    warehouse = db.query(Warehouse).filter(Warehouse.id == payload.warehouse_id).first()
-    if not warehouse:
-        raise HTTPException(status_code=404, detail="Selected warehouse facility does not exist.")
+    warehouse = None
+    if payload.warehouse_id:
+        warehouse = db.query(Warehouse).filter(Warehouse.id == payload.warehouse_id).first()
+        if not warehouse:
+            raise HTTPException(status_code=404, detail="Selected warehouse facility does not exist.")
 
     # Determine password
     raw_password = payload.password.strip() if payload.password and payload.password.strip() else f"KTMwdc@{random.randint(1000, 9999)}"
@@ -531,7 +533,7 @@ def provision_incharge_staff(
         phone_number=phone_clean,
         full_name=payload.full_name.strip(),
         company_name="KTM-WDC Facility Operations",
-        operating_location=warehouse.district or "Kathmandu",
+        operating_location=(warehouse.district or "Kathmandu") if warehouse else "Kathmandu Valley",
         hashed_password=get_password_hash(raw_password),
         role=UserRole.WAREHOUSE_INCHARGE,
         is_active=True,
@@ -542,14 +544,14 @@ def provision_incharge_staff(
     db.commit()
     db.refresh(incharge_user)
 
-    # Create assignment
-    assignment = WarehouseInchargeAssignment(
-        incharge_id=incharge_user.id,
-        warehouse_id=warehouse.id,
-        is_active=True
-    )
-    db.add(assignment)
-    db.commit()
+    if warehouse:
+        assignment = WarehouseInchargeAssignment(
+            incharge_id=incharge_user.id,
+            warehouse_id=warehouse.id,
+            is_active=True
+        )
+        db.add(assignment)
+        db.commit()
 
     return {
         "message": f"Warehouse Incharge '{incharge_user.full_name}' provisioned successfully!",
@@ -558,8 +560,8 @@ def provision_incharge_staff(
         "email": incharge_user.email,
         "phone_number": incharge_user.phone_number,
         "temporary_password": raw_password,
-        "assigned_facility_id": warehouse.id,
-        "assigned_facility_name": warehouse.title,
+        "assigned_facility_id": warehouse.id if warehouse else None,
+        "assigned_facility_name": warehouse.title if warehouse else "Unassigned (Assign via Property Audits)",
         "login_portal_url": "https://ktmwdc.vercel.app/login"
     }
 
