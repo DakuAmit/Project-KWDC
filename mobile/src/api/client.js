@@ -1,18 +1,34 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const DEFAULT_API_URL = 'https://your-vercel-project.vercel.app';
+const DEFAULT_API_URL = '';
 const API_KEY = 'kwdc_mobile_api_url';
 const TOKEN_KEY = 'kwdc_mobile_token';
 const USER_KEY = 'kwdc_mobile_user';
 const MODE_KEY = 'kwdc_mobile_mode'; // 'user' | 'driver'
 
+export function normalizeBaseUrl(raw) {
+  let u = (raw || '').trim();
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) {
+    u = 'https://' + u;
+  }
+  try {
+    const parsed = new URL(u);
+    return parsed.origin;
+  } catch {
+    return u.replace(/\/+$/, '');
+  }
+}
+
 export async function getApiBaseUrl() {
   const saved = await AsyncStorage.getItem(API_KEY);
-  return (saved || DEFAULT_API_URL).replace(/\/+$/, '');
+  return normalizeBaseUrl(saved || DEFAULT_API_URL);
 }
 
 export async function setApiBaseUrl(url) {
-  await AsyncStorage.setItem(API_KEY, url.trim().replace(/\/+$/, ''));
+  const clean = normalizeBaseUrl(url);
+  await AsyncStorage.setItem(API_KEY, clean);
+  return clean;
 }
 
 export async function saveSession({ token, user, mode = 'user' }) {
@@ -37,11 +53,15 @@ export async function clearSession() {
 
 export async function apiRequest(path, { method = 'GET', body = null, token = null } = {}) {
   const base = await getApiBaseUrl();
+  if (!base || base.includes('your-vercel-project.vercel.app')) {
+    throw new Error('Please paste your real Vercel app URL (or http://<laptop-ip>:8000) in Backend Server URL and tap Save & Test.');
+  }
   const authToken = token || (await AsyncStorage.getItem(TOKEN_KEY));
   const headers = { 'Content-Type': 'application/json' };
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
-  const res = await fetch(`${base}${path}`, {
+  const fullUrl = `${base}${path}`;
+  const res = await fetch(fullUrl, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -55,6 +75,9 @@ export async function apiRequest(path, { method = 'GET', body = null, token = nu
     data = { detail: text || `HTTP ${res.status}` };
   }
   if (!res.ok) {
+    if (res.status === 404 && String(text).includes('NOT_FOUND')) {
+      throw new Error(`Endpoint 404 at ${fullUrl}. Check that Backend Server URL is the root Vercel domain (without /admin or /client).`);
+    }
     throw new Error(typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail || data));
   }
   return data;

@@ -14,16 +14,24 @@ export default function LoginScreen({ onAuthenticated }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getApiBaseUrl().then(setApiUrl);
+    getApiBaseUrl().then((u) => {
+      if (u && !u.includes('your-vercel-project.vercel.app')) setApiUrl(u);
+    });
   }, []);
 
   async function saveServerUrl() {
-    if (!apiUrl.startsWith('http')) {
-      Alert.alert('Invalid URL', 'Enter your full backend URL starting with https:// or http://');
+    if (!apiUrl.trim()) {
+      Alert.alert('Enter URL', 'Paste your live Vercel URL (e.g. https://project-kwdc.vercel.app) or http://192.168.x.x:8000');
       return;
     }
-    await setApiBaseUrl(apiUrl);
-    Alert.alert('Saved', `API Server set to:\n${apiUrl}`);
+    const clean = await setApiBaseUrl(apiUrl);
+    setApiUrl(clean);
+    try {
+      const health = await apiRequest('/health');
+      Alert.alert('Connected!', `Server: ${clean}\nDB: ${health.database || 'OK'}`);
+    } catch (err) {
+      Alert.alert('Saved (Check Server)', `Saved URL: ${clean}\n\n${err.message}`);
+    }
   }
 
   async function handleAccountLogin() {
@@ -85,11 +93,11 @@ export default function LoginScreen({ onAuthenticated }) {
             value={apiUrl}
             onChangeText={setApiUrl}
             autoCapitalize="none"
-            placeholder="https://your-project.vercel.app"
+            placeholder="https://your-live-app.vercel.app"
             style={[styles.input, { flex: 1, marginBottom: 0 }]}
           />
           <TouchableOpacity onPress={saveServerUrl} style={styles.smallBtn}>
-            <Text style={styles.smallBtnText}>Save</Text>
+            <Text style={styles.smallBtnText}>Save &amp; Test</Text>
           </TouchableOpacity>
         </View>
       </View>
