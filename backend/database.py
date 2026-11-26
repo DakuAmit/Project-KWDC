@@ -125,6 +125,10 @@ def ensure_db_schema_extensions():
 
         add_col_if_missing("gate_passes", "stock_item_id", "INTEGER")
         add_col_if_missing("gate_passes", "booking_id", "INTEGER")
+
+        add_col_if_missing("users", "equipment_operator_type", "VARCHAR(50)")
+        add_col_if_missing("equipment_jobs", "operator_id", "INTEGER")
+        add_col_if_missing("equipment_jobs", "commission_settled", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
     except Exception as e:
         print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
 

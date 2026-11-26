@@ -57,21 +57,31 @@ export default function LoginScreen({ onAuthenticated }) {
 
   async function handleDriverPinLogin() {
     if (!driverPhone.trim() || !driverPin.trim()) {
-      Alert.alert('Required', 'Enter mobile number and 4-6 digit Driver PIN.');
+      Alert.alert('Required', 'Enter mobile number and 4-6 digit PIN.');
       return;
     }
     setLoading(true);
     try {
       await setApiBaseUrl(apiUrl);
-      const data = await apiRequest('/api/fleet/driver/login', {
-        method: 'POST',
-        body: { phone_number: driverPhone.trim(), pin: driverPin.trim() },
-      });
-      const driverProfile = data.driver || data;
-      await saveSession({ token: data.access_token, user: driverProfile, mode: 'driver' });
-      onAuthenticated({ token: data.access_token, user: driverProfile, mode: 'driver' });
+      if (loginTab === 'eq_operator') {
+        const data = await apiRequest('/api/equipment/operator/login', {
+          method: 'POST',
+          body: { phone_number: driverPhone.trim(), pin: driverPin.trim() },
+        });
+        const opProfile = data.operator || data;
+        await saveSession({ token: data.access_token, user: opProfile, mode: 'equipment_operator' });
+        onAuthenticated({ token: data.access_token, user: opProfile, mode: 'equipment_operator' });
+      } else {
+        const data = await apiRequest('/api/fleet/driver/login', {
+          method: 'POST',
+          body: { phone_number: driverPhone.trim(), pin: driverPin.trim() },
+        });
+        const driverProfile = data.driver || data;
+        await saveSession({ token: data.access_token, user: driverProfile, mode: 'driver' });
+        onAuthenticated({ token: data.access_token, user: driverProfile, mode: 'driver' });
+      }
     } catch (err) {
-      Alert.alert('Driver Login Failed', err.message);
+      Alert.alert('PIN Login Failed', err.message);
     } finally {
       setLoading(false);
     }
@@ -108,17 +118,19 @@ export default function LoginScreen({ onAuthenticated }) {
           onPress={() => setLoginTab('account')}
           style={[styles.tabBtn, loginTab === 'account' && styles.tabActive]}
         >
-          <Text style={[styles.tabText, loginTab === 'account' && styles.tabTextActive]}>
-            Partner / Client Login
-          </Text>
+          <Text style={[styles.tabText, loginTab === 'account' && styles.tabTextActive]}>Partner / Client</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setLoginTab('driver')}
           style={[styles.tabBtn, loginTab === 'driver' && styles.tabActive]}
         >
-          <Text style={[styles.tabText, loginTab === 'driver' && styles.tabTextActive]}>
-            Driver PIN Terminal
-          </Text>
+          <Text style={[styles.tabText, loginTab === 'driver' && styles.tabTextActive]}>Driver PIN</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setLoginTab('eq_operator')}
+          style={[styles.tabBtn, loginTab === 'eq_operator' && styles.tabActive]}
+        >
+          <Text style={[styles.tabText, loginTab === 'eq_operator' && styles.tabTextActive]}>Equipment Op PIN</Text>
         </TouchableOpacity>
       </View>
 

@@ -204,7 +204,7 @@
               </div>
             </div>
 
-            <!-- Destination Drop -->
+            <!-- Destination Drop(s) -->
             <div class="flex items-start gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/60">
               <span class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 grid place-items-center shrink-0 mt-0.5">
                 <i data-lucide="map-pin" class="w-4 h-4"></i>
@@ -220,6 +220,9 @@
                 <p class="text-[11px] text-slate-400 mt-0.5" id="tripDeliveryAddress">Balaju Industrial Area, Sector 4B</p>
               </div>
             </div>
+
+            <!-- Multi-Drop Route Stops Checklist (Rendered when > 1 stop) -->
+            <div id="tripMultiStopsBox" class="hidden space-y-2 pt-1"></div>
           </div>
 
           <!-- Quick Navigation & Gate Pass Buttons -->
@@ -614,7 +617,29 @@
         document.getElementById('tripPickupName').textContent = trip.origin_warehouse || 'Pickup Hub';
         document.getElementById('tripPickupAddress').textContent = trip.pickup_address;
         document.getElementById('tripConsigneeName').textContent = trip.consignee_name || 'Consignee Receiver';
-        document.getElementById('tripDeliveryAddress').textContent = trip.delivery_address;
+        document.getElementById('tripDeliveryAddress').textContent = trip.delivery_address || trip.destination_address;
+
+        // Multi-drop route list when > 1 stop
+        const stopsBox = document.getElementById('tripMultiStopsBox');
+        const stops = trip.stops || [];
+        if (stopsBox) {
+          if (stops.length > 1) {
+            stopsBox.classList.remove('hidden');
+            stopsBox.innerHTML = '<p class="text-[10px] font-bold text-amber-300 uppercase tracking-wider">Multi-Drop Route (' + stops.length + ' Stops)</p>' +
+              stops.map(s => `
+                <div class="p-2.5 rounded-xl bg-slate-900/70 border border-slate-700 flex items-center justify-between gap-2 text-[11px]">
+                  <div>
+                    <p class="font-bold text-white">#${s.stop_sequence}: ${s.destination_address}</p>
+                    <p class="text-slate-400">${s.consignee_name} (${s.consignee_phone})</p>
+                  </div>
+                  ${s.is_completed ? '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Done ✓</span>' :
+                    `<button onclick="completeStopItem(${trip.id}, ${s.id})" class="px-2.5 py-1 rounded bg-sky-600 text-white font-bold">Complete Drop</button>`}
+                </div>
+              `).join('');
+          } else {
+            stopsBox.classList.add('hidden');
+          }
+        }
 
         // 1-Tap Call links
         document.getElementById('btnCallPickup').href = `tel:${trip.pickup_phone || '9801000001'}`;
@@ -637,6 +662,13 @@
     }
 
     function loadDriverCockpit() { return loadActiveTrip(); }
+
+    async function completeStopItem(orderId, stopId) {
+      const res = await fetch(`/api/fleet/driver/trips/${orderId}/stops/${stopId}/complete`, { method: 'POST', headers: getDriverHeaders() });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); loadActiveTrip(); }
+      else showToast(data.detail || 'Could not complete stop', true);
+    }
 
     async function loadDriverAvailableJobs() {
       const box = document.getElementById('independentLoadBoardCard');

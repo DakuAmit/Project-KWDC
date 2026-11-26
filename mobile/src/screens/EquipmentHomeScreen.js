@@ -3,9 +3,13 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert 
 import * as ImagePicker from 'expo-image-picker';
 import { apiRequest, uploadBase64Image } from '../api/client';
 
-export default function EquipmentHomeScreen() {
+export default function EquipmentHomeScreen({ session }) {
+  const isOperatorPin = session?.mode === 'equipment_operator';
   const [fleet, setFleet] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [openOpJobs, setOpenOpJobs] = useState([]);
+  const [opMode, setOpMode] = useState('COMMERCIAL_FLEET');
+  const [operators, setOperators] = useState([]);
   const [summary, setSummary] = useState({});
   const [eqType, setEqType] = useState('Forklift');
   const [modelName, setModelName] = useState('');
@@ -15,10 +19,19 @@ export default function EquipmentHomeScreen() {
 
   async function refresh() {
     try {
-      const res = await apiRequest('/api/equipment/my-fleet');
-      setFleet(res.equipment || []);
-      setJobs(res.jobs || []);
-      setSummary(res.summary || {});
+      if (isOperatorPin) {
+        const res = await apiRequest('/api/equipment/operator/active-job');
+        setOpMode(res.operator_mode || 'COMMERCIAL_FLEET');
+        setJobs(res.assigned_jobs || []);
+        setOpenOpJobs(res.open_jobs || []);
+      } else {
+        const res = await apiRequest('/api/equipment/my-fleet');
+        setOpMode(res.operator_type || 'COMMERCIAL_FLEET');
+        setFleet(res.equipment || []);
+        setJobs(res.jobs || []);
+        setOperators(res.operators || []);
+        setSummary(res.summary || {});
+      }
     } catch (err) {
       Alert.alert('Load Error', err.message);
     }
@@ -67,18 +80,50 @@ export default function EquipmentHomeScreen() {
 
   async function markJob(jobId, nextStatus) {
     try {
-      await apiRequest(`/api/equipment/jobs/${jobId}/status?status_str=${nextStatus}`, { method: 'POST' });
+      const url = isOperatorPin
+        ? `/api/equipment/operator/jobs/${jobId}/status?status_str=${nextStatus}`
+        : `/api/equipment/jobs/${jobId}/status?status_str=${nextStatus}`;
+      await apiRequest(url, { method: 'POST' });
       refresh();
     } catch (err) {
       Alert.alert('Error', err.message);
     }
   }
 
+  if (isOperatorPin) {
+    const combined = [...jobs, ...openOpJobs];
+    return (
+      <ScrollView contentContainerStyle={styles.wrap}>
+        <View style={styles.kpiCard}>
+          <Text style={styles.kpiTitle}>{opMode === 'INDEPENDENT_OPERATOR' ? 'Independent Equipment Operator' : 'Commercial Fleet Equipment Operator'}</Text>
+          <Text style={styles.kpiVal}>Assigned Deployments: {combined.length}</Text>
+        </View>
+        {combined.length === 0 ? (
+          <View style={styles.card}><Text style={styles.meta}>No assigned site jobs right now.</Text></View>
+        ) : combined.map((j) => (
+          <View key={j.id} style={styles.card}>
+            <Text style={styles.cardTitle}>{j.job_ref} — {j.equipment_model}</Text>
+            <Text style={styles.meta}>{j.site_address} • {j.duration_units} {j.duration_type} • {j.status}</Text>
+            <View style={styles.row}>
+              {j.status === 'CONFIRMED' && (
+                <TouchableOpacity onPress={() => markJob(j.id, 'IN_PROGRESS')} style={styles.btnDark}><Text style={styles.btnLight}>Start Deploy</Text></TouchableOpacity>
+              )}
+              {j.status === 'IN_PROGRESS' && (
+                <TouchableOpacity onPress={() => markJob(j.id, 'COMPLETED')} style={styles.btnAmber}><Text style={styles.btnDarkText}>Mark Completed</Text></TouchableOpacity>
+              )}
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.wrap}>
       <View style={styles.kpiCard}>
-        <Text style={styles.kpiTitle}>Machinery Fleet: {summary.total_units || 0} Units</Text>
+        <Text style={styles.kpiTitle}>Machinery: {summary.total_units || 0} • Operators: {operators.length}</Text>
         <Text style={styles.kpiVal}>Net Payout (90%): Rs. {summary.net_payout_npr || 0}</Text>
+        <Text style={[styles.meta, { color: '#fbbf24' }]}>Due to KTM-WDC: Rs. {summary.commission_due_to_kwdc_npr ?? summary.platform_fee_npr ?? 0}</Text>
       </View>
 
       <View style={styles.card}>

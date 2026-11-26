@@ -951,6 +951,19 @@ def _serialize_driver_trip(order: DispatchOrder, driver: Driver) -> dict:
     agreed_fare = round(float(order.base_freight_tariff or order.client_offered_fare_npr or order.total_fare_npr or 0.0), 2)
     commission = round(float(order.kwdc_margin_amount or 0.0), 2)
     net_retained = round(max(0.0, agreed_fare - commission), 2)
+    stops_list = [
+        {
+            "id": s.id,
+            "stop_sequence": s.stop_sequence,
+            "consignee_name": s.consignee_name,
+            "consignee_phone": s.consignee_phone,
+            "destination_address": s.destination_address,
+            "dest_lat": s.dest_lat,
+            "dest_lng": s.dest_lng,
+            "is_completed": bool(s.is_completed),
+        }
+        for s in sorted(order.stops or [], key=lambda x: x.stop_sequence)
+    ]
     return {
         "id": order.id,
         "order_id": order.id,
@@ -966,6 +979,7 @@ def _serialize_driver_trip(order: DispatchOrder, driver: Driver) -> dict:
         "dest_lng": stop.dest_lng if stop else 85.3000,
         "consignee_name": stop.consignee_name if stop else "Consignee",
         "consignee_phone": stop.consignee_phone if stop else "-",
+        "stops": stops_list,
         "total_distance_km": order.total_distance_km,
         "cargo_weight_kg": getattr(order, "cargo_weight_kg", 1000.0) or 1000.0,
         "agreed_fare_npr": agreed_fare,
@@ -1303,6 +1317,26 @@ def complete_driver_trip(
         "status": "delivered",
         "order_id": order.id
     }
+
+
+@router.post("/driver/trips/{order_id}/stops/{stop_id}/complete")
+def complete_delivery_stop(
+    order_id: int,
+    stop_id: int,
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    """Marks an individual drop stop complete on multi-drop freight routes."""
+    stop = db.query(DeliveryStop).filter(
+        DeliveryStop.id == stop_id,
+        DeliveryStop.dispatch_order_id == order_id
+    ).first()
+    if not stop:
+        raise HTTPException(status_code=404, detail="Delivery stop not found.")
+    stop.is_completed = True
+    stop.completed_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"message": f"Stop #{stop.stop_sequence} ({stop.destination_address}) marked completed.", "stop_id": stop.id}
 
 
 @router.get("/earnings")

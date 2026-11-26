@@ -117,6 +117,15 @@ export default function FleetDriverScreen({ session }) {
     }
   }
 
+  async function completeStop(orderId, stopId) {
+    try {
+      await apiRequest(`/api/fleet/driver/trips/${orderId}/stops/${stopId}/complete`, { method: 'POST' });
+      refresh();
+    } catch (err) {
+      Alert.alert('Stop Error', err.message);
+    }
+  }
+
   async function driverAcceptOpenJob(orderId) {
     try {
       const res = await apiRequest(`/api/fleet/driver/jobs/${orderId}/accept`, { method: 'POST' });
@@ -213,6 +222,23 @@ export default function FleetDriverScreen({ session }) {
             <Text style={styles.meta}>Drop: {activeTrip.destination_address} ({activeTrip.consignee_name})</Text>
             <Text style={styles.price}>Agreed Trip Fare (COD): Rs. {activeTrip.agreed_fare_npr || 0}</Text>
             <Text style={styles.meta}>Delivery OTP: {activeTrip.delivery_otp || 'Generated on Start'}</Text>
+            {Array.isArray(activeTrip.stops) && activeTrip.stops.length > 1 && (
+              <View style={{ marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderColor: '#e2e8f0' }}>
+                <Text style={styles.sec}>Multi-Drop Stops ({activeTrip.stops.length})</Text>
+                {activeTrip.stops.map((st) => (
+                  <View key={st.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                    <Text style={styles.meta}>#{st.stop_sequence}: {st.destination_address}</Text>
+                    {st.is_completed ? (
+                      <Text style={{ fontSize: 10, color: '#047857', fontWeight: '800' }}>Done ✓</Text>
+                    ) : (
+                      <TouchableOpacity onPress={() => completeStop(activeTrip.order_id, st.id)} style={{ backgroundColor: '#0f172a', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>Complete</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
 
             {tripStatusUpper !== 'IN_TRANSIT' ? (
               <TouchableOpacity onPress={startTrip} style={[styles.btnAmber, { marginTop: 12 }]}>

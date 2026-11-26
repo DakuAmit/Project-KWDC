@@ -771,6 +771,32 @@
     </form>
   </dialog>
 
+  <!-- Modal: 3PL Vehicle & Driver Picker when Claiming Open Job -->
+  <dialog id="claimAssignModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div>
+        <h3 class="font-bold text-base text-white">Assign Truck &amp; Driver for Job</h3>
+        <p class="text-xs text-slate-300">Commercial 3PL Crew Dispatch</p>
+      </div>
+      <button type="button" onclick="document.getElementById('claimAssignModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <form onsubmit="submitClaimWithCrew(event)" class="p-6 space-y-3.5 text-xs">
+      <input type="hidden" id="claimOrderId">
+      <div>
+        <label class="block font-bold text-navy mb-1">Select Vehicle / Truck</label>
+        <select id="claimVehicleSelect" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"></select>
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Select Assigned Driver</label>
+        <select id="claimDriverSelect" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"></select>
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('claimAssignModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold">Accept &amp; Dispatch Crew</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Modal: Fleet Operator Type Switcher & Onboarding -->
   <dialog id="operatorTypeModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
@@ -1542,8 +1568,41 @@
     }
 
     async function acceptFreightJob(id) {
+      if (currentOperatorType === 'COMMERCIAL_3PL' && (cachedVehicles.length > 0 || cachedDrivers.length > 0)) {
+        document.getElementById('claimOrderId').value = id;
+        const vSel = document.getElementById('claimVehicleSelect');
+        const dSel = document.getElementById('claimDriverSelect');
+        if (vSel) {
+          vSel.innerHTML = '<option value="">Auto-assign available vehicle</option>' +
+            cachedVehicles.map(v => `<option value="${v.id}">${escapeHtml(v.license_plate)} (${escapeHtml(v.model_name)})</option>`).join('');
+        }
+        if (dSel) {
+          dSel.innerHTML = '<option value="">Auto-assign driver</option>' +
+            cachedDrivers.map(d => `<option value="${d.id}">${escapeHtml(d.full_name)} (${escapeHtml(d.phone_number)})</option>`).join('');
+        }
+        document.getElementById('claimAssignModal').showModal();
+        lucide.createIcons();
+        return;
+      }
+      await executeClaimFreightJob(id, null, null);
+    }
+
+    async function submitClaimWithCrew(e) {
+      e.preventDefault();
+      const id = document.getElementById('claimOrderId').value;
+      const vid = document.getElementById('claimVehicleSelect').value || null;
+      const did = document.getElementById('claimDriverSelect').value || null;
+      document.getElementById('claimAssignModal').close();
+      await executeClaimFreightJob(id, vid, did);
+    }
+
+    async function executeClaimFreightJob(id, vid, did) {
       try {
-        const res = await fetch(`/api/fleet/dispatch-orders/${id}/accept`, {
+        const params = new URLSearchParams();
+        if (vid) params.append('vehicle_id', vid);
+        if (did) params.append('driver_id', did);
+        const qs = params.toString() ? `?${params.toString()}` : '';
+        const res = await fetch(`/api/fleet/dispatch-orders/${id}/accept${qs}`, {
           method: 'POST',
           headers: getAuthHeaders()
         });

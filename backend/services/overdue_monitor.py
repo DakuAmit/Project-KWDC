@@ -310,4 +310,26 @@ def run_overdue_sweep(db: Session) -> List[Dict[str, Any]]:
             res = push_lien_notification(db, b, target_stage)
             actions_taken.append(res)
 
+    # Check expired leases that still hold remaining stored inventory (Holdover Clearance Alerts)
+    now_naive = datetime.utcnow()
+    active_leases = db.query(WarehouseRequest).filter(
+        WarehouseRequest.is_forfeited == False,
+        WarehouseRequest.lease_end_date != None,
+        WarehouseRequest.lease_end_date < now_naive
+    ).all()
+    for lease in active_leases:
+        remaining = db.query(StockItem).filter(
+            StockItem.client_id == lease.client_id,
+            StockItem.warehouse_id == lease.warehouse_id,
+            StockItem.total_quantity > 0
+        ).all()
+        total_rem = sum(int(s.total_quantity or 0) + int(getattr(s, "reserved_quantity", 0) or 0) for s in remaining)
+        if total_rem > 0:
+            actions_taken.append({
+                "booking_id": lease.id,
+                "stage": "HOLDOVER_STOCK_ALERT",
+                "remaining_units": total_rem,
+                "message": f"Lease #{lease.id} ended on {lease.lease_end_date.strftime('%Y-%m-%d')} with {total_rem} unit(s) still in storage. Clear stock or renew lease."
+            })
+
     return actions_taken

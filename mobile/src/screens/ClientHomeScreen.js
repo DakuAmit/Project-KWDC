@@ -3,9 +3,12 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert 
 import { apiRequest } from '../api/client';
 
 export default function ClientHomeScreen({ session }) {
-  const [tab, setTab] = useState('catalog'); // catalog | bookings | freight | equipment
+  const [tab, setTab] = useState('catalog'); // catalog | bookings | stock | freight | equipment
   const [warehouses, setWarehouses] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [stockData, setStockData] = useState({ items: [], active_bookings: [], summary: {} });
+  const [stockName, setStockName] = useState('');
+  const [stockQty, setStockQty] = useState('50');
   const [orders, setOrders] = useState([]);
   const [equipment, setEquipment] = useState([]);
   const [pickup, setPickup] = useState('Balaju Industrial Estate, Kathmandu');
@@ -14,18 +17,71 @@ export default function ClientHomeScreen({ session }) {
 
   async function refreshAll() {
     try {
-      const [cat, bks, ords, eq] = await Promise.all([
+      const [cat, bks, stk, ords, eq] = await Promise.all([
         apiRequest('/api/warehouses/catalog'),
         apiRequest('/api/warehouses/my-bookings'),
+        apiRequest('/api/warehouses/my-inventory'),
         apiRequest('/api/fleet/client-orders'),
         apiRequest('/api/equipment/catalog'),
       ]);
       setWarehouses(Array.isArray(cat) ? cat : []);
       setBookings(Array.isArray(bks) ? bks : []);
+      setStockData(stk && stk.items ? stk : { items: [], active_bookings: [], summary: {} });
       setOrders(Array.isArray(ords) ? ords : []);
       setEquipment(Array.isArray(eq) ? eq : []);
     } catch (err) {
       Alert.alert('Sync Notice', err.message);
+    }
+  }
+
+  async function addStockBatch() {
+    const active = stockData.active_bookings?.[0] || bookings?.[0];
+    if (!active) return Alert.alert('Active Lease Required', 'Book and pay for a warehouse first.');
+    if (!stockName.trim()) return Alert.alert('Required', 'Enter item name.');
+    try {
+      const res = await apiRequest('/api/warehouses/my-inventory', {
+        method: 'POST',
+        body: {
+          warehouse_id: active.warehouse_id || warehouses[0]?.id,
+          booking_id: active.booking_id,
+          item_name: stockName.trim(),
+          unit_type: 'CARTOON',
+          quantity: parseInt(stockQty, 10) || 10,
+        },
+      });
+      Alert.alert('Stock Logged', res.message);
+      setStockName('');
+      refreshAll();
+    } catch (err) {
+      Alert.alert('Stock Error', err.message);
+    }
+  }
+
+  async function dispatchStockItem(item, clearAll = false) {
+    try {
+      const res = await apiRequest('/api/warehouses/my-inventory/dispatch', {
+        method: 'POST',
+        body: {
+          stock_item_id: item.id,
+          dispatch_all: clearAll,
+          quantity: clearAll ? null : Math.max(1, Math.floor((item.available_quantity || item.total_quantity || 1) / 2)),
+          dispatch_mode: 'SELF_PICKUP',
+        },
+      });
+      Alert.alert('Dispatched', res.message);
+      refreshAll();
+    } catch (err) {
+      Alert.alert('Clearance Error', err.message);
+    }
+  }
+
+  async function acceptCounterOffer(offerId) {
+    try {
+      const res = await apiRequest(`/api/fleet/counter-offers/${offerId}/accept`, { method: 'POST' });
+      Alert.alert('Deal Accepted!', res.message || 'Driver locked at agreed fare.');
+      refreshAll();
+    } catch (err) {
+      Alert.alert('Error', err.message);
     }
   }
 
@@ -101,7 +157,7 @@ export default function ClientHomeScreen({ session }) {
   return (
     <ScrollView contentContainerStyle={styles.wrap}>
       <View style={styles.tabs}>
-        {['catalog', 'bookings', 'freight', 'equipment'].map((t) => (
+        {['catalog', 'bookings', 'stock', 'freight', 'equipment'].map((t) => (
           <TouchableOpacity key={t} onPress={() => setTab(t)} style={[styles.pill, tab === t && styles.pillActive]}>
             <Text style={[styles.pillText, tab === t && styles.pillTextActive]}>{t.toUpperCase()}</Text>
           </TouchableOpacity>
@@ -137,6 +193,31 @@ export default function ClientHomeScreen({ session }) {
         </View>
       ))}
 
+      {tab === 'stock' && (
+        <View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Log Inward Stock Batch ({stockData.summary?.total_stored_units || 0} stored)</Text>
+            <TextInput value={stockName} onChangeText={setStockName} placeholder="Commodity / Item Name" style={styles.input} />
+            <View style={styles.row}>
+              <TextInput value={stockQty} onChangeText={setStockQty} keyboardType="numeric" placeholder="Qty" style={[styles.input, { flex: 1 }]} />
+              <TouchableOpacity onPress={addStockBatch} style={styles.btnDark}><Text style={styles.btnLightText}>Add Batch</Text></TouchableOpacity>
+            </View>
+          </View>
+          {(stockData.items || []).map((it) => (
+            <View key={it.id} style={styles.card}>
+              <Text style={styles.cardTitle}>{it.sku_code} — {it.item_name}</Text>
+              <Text style={styles.meta}>{it.warehouse_title} • Avail: {it.available_quantity ?? it.total_quantity} • Rsv: {it.reserved_quantity || 0}</Text>
+              {(it.available_quantity ?? it.total_quantity) > 0 && (
+                <View style={styles.row}>
+                  <TouchableOpacity onPress={() => dispatchStockItem(it, false)} style={styles.btnDark}><Text style={styles.btnLightText}>Partial Clear</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => dispatchStockItem(it, true)} style={styles.btnAmber}><Text style={styles.btnDarkText}>Clear All</Text></TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
+
       {tab === 'freight' && (
         <View>
           <View style={styles.card}>
@@ -155,6 +236,14 @@ export default function ClientHomeScreen({ session }) {
               <Text style={styles.meta}>{o.pickup_address} → {o.destination_address}</Text>
               <Text style={styles.price}>Agreed Trip Fare (Zero VAT): Rs. {o.agreed_fare_npr || o.total_fare_npr}</Text>
               <Text style={styles.meta}>Driver Live GPS: {o.live_lat ? `${o.live_lat.toFixed(4)}, ${o.live_lng.toFixed(4)}` : 'Pending Pickup'}</Text>
+              {Array.isArray(o.counter_offers) && o.counter_offers.filter((c) => c.status === 'PENDING').map((off) => (
+                <View key={off.id} style={{ marginTop: 8, padding: 8, backgroundColor: '#fffbeb', borderRadius: 8 }}>
+                  <Text style={styles.meta}>{off.fleet_partner_name} offered Rs. {off.offered_fare_npr}</Text>
+                  <TouchableOpacity onPress={() => acceptCounterOffer(off.id)} style={[styles.btnAmber, { marginTop: 4 }]}>
+                    <Text style={styles.btnDarkText}>Accept Rs. {off.offered_fare_npr}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
           ))}
         </View>

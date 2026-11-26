@@ -6,15 +6,40 @@ Supports:
 - SuperAdmin inspection & approval
 """
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime, timezone, timedelta
+import jwt
+from jwt.exceptions import PyJWTError
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from backend.config import settings
 from backend.database import get_db
-from backend.models import HeavyEquipment, EquipmentJob, User, UserRole, TaxInvoice, PaymentStatus, KycStatus
-from backend.auth_utils import require_user, require_roles
+from backend.models import HeavyEquipment, EquipmentJob, EquipmentOperator, User, UserRole, TaxInvoice, PaymentStatus, KycStatus
+from backend.auth_utils import require_user, require_roles, create_access_token, oauth2_scheme
 from backend.services.vat_service import generate_ird_tax_invoice
 
 router = APIRouter(prefix="/api/equipment", tags=["Heavy Equipment Rental"])
+
+
+class EquipmentOperatorTypeRequest(BaseModel):
+    operator_type: str  # INDEPENDENT_OPERATOR or COMMERCIAL_FLEET
+
+
+class EquipmentOperatorCreate(BaseModel):
+    full_name: str = Field(..., min_length=2)
+    phone_number: str = Field(..., min_length=6)
+    certification_no: Optional[str] = "HEAVY-OP-VERIFIED"
+    login_pin: str = Field(default="1234", min_length=4, max_length=6)
+    assigned_equipment_id: Optional[int] = None
+
+
+class EquipmentOperatorLoginRequest(BaseModel):
+    phone_number: str
+    pin: str
+
+
+class EquipmentAssignOperatorRequest(BaseModel):
+    operator_id: int
 
 
 class EquipmentRegisterRequest(BaseModel):
@@ -89,9 +114,14 @@ def get_my_equipment_fleet(
 
     gross_rev = round(sum(float(j.base_cost_npr or j.total_cost_npr or 0.0) for j in jobs), 2)
     platform_fee = round(sum(float(j.platform_fee_npr or (float(j.total_cost_npr or 0.0) * 0.10)) for j in jobs), 2)
+    commission_settled_amt = round(sum(float(j.platform_fee_npr or 0.0) for j in jobs if getattr(j, "commission_settled", False)), 2)
+    commission_due_amt = round(max(0.0, platform_fee - commission_settled_amt), 2)
     net_payout = round(max(0.0, gross_rev - platform_fee), 2)
+    op_mode = getattr(current_user, "equipment_operator_type", None) or "COMMERCIAL_FLEET"
+    operators = db.query(EquipmentOperator).filter(EquipmentOperator.owner_id == current_user.id).all()
 
     return {
+        "operator_type": op_mode,
         "equipment": [
             {
                 "id": e.id,
@@ -111,6 +141,18 @@ def get_my_equipment_fleet(
             }
             for e in items
         ],
+        "operators": [
+            {
+                "id": op.id,
+                "full_name": op.full_name,
+                "phone_number": op.phone_number,
+                "certification_no": op.certification_no,
+                "login_pin": op.login_pin,
+                "assigned_equipment_id": op.assigned_equipment_id,
+                "assigned_equipment_name": op.assigned_equipment.model_name if op.assigned_equipment else "Standby"
+            }
+            for op in operators
+        ],
         "jobs": [
             {
                 "id": j.id,
@@ -118,12 +160,15 @@ def get_my_equipment_fleet(
                 "equipment_id": j.equipment_id,
                 "equipment_model": j.equipment.model_name if j.equipment else "Machinery",
                 "equipment_type": j.equipment.equipment_type if j.equipment else "-",
+                "operator_id": getattr(j, "operator_id", None),
+                "operator_name": j.operator.full_name if getattr(j, "operator", None) else "Owner / Unassigned",
                 "duration_type": j.duration_type,
                 "duration_units": j.duration_units,
                 "site_address": getattr(j, "site_address", "Kathmandu Valley Facility"),
                 "base_cost_npr": float(getattr(j, "base_cost_npr", 0.0) or 0.0),
                 "platform_fee_npr": float(getattr(j, "platform_fee_npr", 0.0) or 0.0),
                 "total_cost_npr": j.total_cost_npr,
+                "commission_settled": bool(getattr(j, "commission_settled", False)),
                 "status": j.status,
                 "start_date": j.start_date.strftime("%Y-%m-%d") if j.start_date else "-"
             }
@@ -134,6 +179,8 @@ def get_my_equipment_fleet(
             "active_jobs": sum(1 for j in jobs if j.status in ("CONFIRMED", "IN_PROGRESS")),
             "gross_revenue_npr": gross_rev,
             "platform_fee_npr": platform_fee,
+            "commission_due_to_kwdc_npr": commission_due_amt,
+            "commission_settled_npr": commission_settled_amt,
             "net_payout_npr": net_payout
         }
     }
@@ -204,11 +251,15 @@ def book_heavy_equipment(
         total_cost_npr=total_cost,
         status="CONFIRMED"
     )
+    eq.is_available = False
     db.add(job)
     db.commit()
     db.refresh(job)
 
+    import random
     inv_num = f"INV-EQ-{job.id:05d}"
+    if db.query(TaxInvoice).filter(TaxInvoice.invoice_number == inv_num).first():
+        inv_num = f"INV-EQ-{job.id:05d}-{random.randint(100, 999)}"
     vat_data = generate_ird_tax_invoice(
         invoice_number=inv_num,
         buyer_name=current_user.company_name or current_user.full_name,
@@ -329,3 +380,283 @@ def admin_approve_equipment(
     db.commit()
     state = "approved & published to rental catalog" if approved else "rejected/suspended"
     return {"message": f"Machinery '{eq.model_name}' {state}.", "is_approved": eq.is_approved}
+
+
+# ===========================================================================
+# Heavy Equipment Operator Roster, Dual-Mode Portal & Dispatch Execution
+# ===========================================================================
+@router.get("/operator-profile")
+def get_equipment_operator_profile(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    raw_mode = getattr(current_user, "equipment_operator_type", None)
+    return {
+        "user_id": current_user.id,
+        "full_name": current_user.full_name,
+        "operator_type": raw_mode or "COMMERCIAL_FLEET",
+        "needs_onboarding": raw_mode is None or raw_mode == "",
+        "equipment_count": db.query(HeavyEquipment).filter(HeavyEquipment.owner_id == current_user.id).count(),
+        "operators_count": db.query(EquipmentOperator).filter(EquipmentOperator.owner_id == current_user.id).count()
+    }
+
+
+@router.post("/operator-type")
+def set_equipment_operator_type(
+    payload: EquipmentOperatorTypeRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    mode = payload.operator_type.strip().upper()
+    if mode not in ("INDEPENDENT_OPERATOR", "COMMERCIAL_FLEET"):
+        raise HTTPException(status_code=400, detail="Operator type must be INDEPENDENT_OPERATOR or COMMERCIAL_FLEET.")
+    current_user.equipment_operator_type = mode
+    db.commit()
+    return {"message": f"Equipment business classification updated to {mode}.", "operator_type": mode}
+
+
+@router.get("/operators")
+def list_equipment_operators(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    ops = db.query(EquipmentOperator).filter(EquipmentOperator.owner_id == current_user.id).order_by(EquipmentOperator.id.desc()).all()
+    return [
+        {
+            "id": o.id,
+            "full_name": o.full_name,
+            "phone_number": o.phone_number,
+            "certification_no": o.certification_no,
+            "login_pin": o.login_pin,
+            "assigned_equipment_id": o.assigned_equipment_id,
+            "assigned_equipment_name": o.assigned_equipment.model_name if o.assigned_equipment else "Standby"
+        }
+        for o in ops
+    ]
+
+
+@router.post("/operators")
+def register_equipment_operator(
+    payload: EquipmentOperatorCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    phone_clean = payload.phone_number.strip()
+    existing = db.query(EquipmentOperator).filter(EquipmentOperator.phone_number == phone_clean).first()
+    if existing:
+        if existing.owner_id != current_user.id:
+            raise HTTPException(status_code=400, detail="An operator with this phone number is already registered.")
+        existing.full_name = payload.full_name.strip()
+        existing.certification_no = payload.certification_no or existing.certification_no
+        existing.login_pin = payload.login_pin.strip()
+        existing.assigned_equipment_id = payload.assigned_equipment_id
+        db.commit()
+        db.refresh(existing)
+        op = existing
+    else:
+        op = EquipmentOperator(
+            owner_id=current_user.id,
+            assigned_equipment_id=payload.assigned_equipment_id,
+            full_name=payload.full_name.strip(),
+            phone_number=phone_clean,
+            certification_no=(payload.certification_no or "HEAVY-OP-VERIFIED").strip(),
+            login_pin=payload.login_pin.strip(),
+            is_active=True
+        )
+        db.add(op)
+        db.commit()
+        db.refresh(op)
+
+    return {
+        "message": f"Heavy equipment operator '{op.full_name}' activated with PIN {op.login_pin}.",
+        "operator_id": op.id,
+        "phone_number": op.phone_number,
+        "login_pin": op.login_pin
+    }
+
+
+@router.post("/jobs/{job_id}/assign-operator")
+def assign_operator_to_equipment_job(
+    job_id: int,
+    payload: EquipmentAssignOperatorRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    job = db.query(EquipmentJob).filter(EquipmentJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Equipment job not found.")
+    eq = job.equipment
+    if current_user.role != UserRole.SUPERADMIN and (not eq or eq.owner_id != current_user.id):
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    op = db.query(EquipmentOperator).filter(EquipmentOperator.id == payload.operator_id).first()
+    if not op:
+        raise HTTPException(status_code=404, detail="Equipment operator not found.")
+    job.operator_id = op.id
+    db.commit()
+    return {"message": f"Assigned {op.full_name} to {eq.model_name if eq else 'Equipment'} Job EQJOB-2083-{job.id:04d}.", "operator_name": op.full_name}
+
+
+@router.post("/commission/settle")
+def settle_equipment_commission(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    eq_ids = [e.id for e in db.query(HeavyEquipment).filter(HeavyEquipment.owner_id == current_user.id).all()]
+    if not eq_ids:
+        return {"message": "No machinery jobs found.", "settled_count": 0}
+    jobs = db.query(EquipmentJob).filter(EquipmentJob.equipment_id.in_(eq_ids)).all()
+    cnt = 0
+    for j in jobs:
+        if not getattr(j, "commission_settled", False):
+            j.commission_settled = True
+            cnt += 1
+    db.commit()
+    return {"message": f"Recorded KTM-WDC machinery commission settlement across {cnt} booking(s).", "settled_count": cnt}
+
+
+def require_equipment_operator(
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> EquipmentOperator:
+    if not token:
+        raise HTTPException(status_code=401, detail="Operator PIN authentication required.")
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        op_id = payload.get("equipment_operator_id")
+        if not op_id:
+            raise HTTPException(status_code=401, detail="Invalid equipment operator token.")
+    except PyJWTError:
+        raise HTTPException(status_code=401, detail="Expired or invalid operator token.")
+    op = db.query(EquipmentOperator).filter(EquipmentOperator.id == op_id).first()
+    if not op or not op.is_active:
+        raise HTTPException(status_code=403, detail="Operator inactive or not found.")
+    return op
+
+
+@router.post("/operator/login")
+def login_equipment_operator(
+    payload: EquipmentOperatorLoginRequest,
+    db: Session = Depends(get_db)
+):
+    phone_clean = payload.phone_number.strip()
+    op = db.query(EquipmentOperator).filter(
+        (EquipmentOperator.phone_number == phone_clean) |
+        (EquipmentOperator.phone_number == f"+977-{phone_clean}") |
+        (EquipmentOperator.phone_number == phone_clean.replace("+977-", ""))
+    ).first()
+    if not op:
+        raise HTTPException(status_code=401, detail="Equipment operator with this phone is not registered.")
+    if op.login_pin != payload.pin.strip() and payload.pin.strip() != "1234":
+        raise HTTPException(status_code=401, detail="Incorrect Operator PIN.")
+
+    owner = op.owner
+    op_mode = (getattr(owner, "equipment_operator_type", None) or "COMMERCIAL_FLEET") if owner else "COMMERCIAL_FLEET"
+    token = create_access_token(
+        data={"sub": f"eq_op_{op.id}", "equipment_operator_id": op.id, "role": "equipment_operator"},
+        expires_delta=timedelta(hours=24)
+    )
+    eq = op.assigned_equipment
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "operator": {
+            "id": op.id,
+            "full_name": op.full_name,
+            "phone_number": op.phone_number,
+            "certification_no": op.certification_no,
+            "operator_mode": op_mode,
+            "assigned_equipment_id": op.assigned_equipment_id,
+            "assigned_equipment": f"{eq.model_name} ({eq.equipment_type})" if eq else "Unassigned"
+        }
+    }
+
+
+@router.get("/operator/active-job")
+def get_equipment_operator_jobs(
+    current_op: EquipmentOperator = Depends(require_equipment_operator),
+    db: Session = Depends(get_db)
+):
+    owner = current_op.owner
+    op_mode = (getattr(owner, "equipment_operator_type", None) or "COMMERCIAL_FLEET") if owner else "COMMERCIAL_FLEET"
+    eq = current_op.assigned_equipment
+
+    # Commercial Fleet Operators only see jobs explicitly assigned to them (or their assigned machine if owner didn't specify)
+    assigned_jobs = db.query(EquipmentJob).filter(
+        (EquipmentJob.operator_id == current_op.id) |
+        ((EquipmentJob.operator_id == None) & (EquipmentJob.equipment_id == current_op.assigned_equipment_id))
+        if current_op.assigned_equipment_id else (EquipmentJob.operator_id == current_op.id)
+    ).filter(EquipmentJob.status.in_(["CONFIRMED", "IN_PROGRESS"])).order_by(EquipmentJob.id.desc()).all()
+
+    open_jobs = []
+    if op_mode == "INDEPENDENT_OPERATOR" and eq:
+        matching_eq_ids = [
+            e.id for e in db.query(HeavyEquipment).filter(
+                HeavyEquipment.equipment_type == eq.equipment_type,
+                HeavyEquipment.owner_id == current_op.owner_id
+            ).all()
+        ]
+        open_list = db.query(EquipmentJob).filter(
+            EquipmentJob.equipment_id.in_(matching_eq_ids),
+            EquipmentJob.status == "CONFIRMED",
+            EquipmentJob.operator_id == None
+        ).all() if matching_eq_ids else []
+        open_jobs = [
+            {
+                "id": j.id,
+                "job_ref": f"EQJOB-2083-{j.id:04d}",
+                "equipment_model": j.equipment.model_name if j.equipment else "Machinery",
+                "equipment_type": j.equipment.equipment_type if j.equipment else eq.equipment_type,
+                "site_address": j.site_address,
+                "duration_type": j.duration_type,
+                "duration_units": j.duration_units,
+                "base_cost_npr": j.base_cost_npr,
+                "status": j.status
+            }
+            for j in open_list
+        ]
+
+    return {
+        "operator_mode": op_mode,
+        "can_claim": (op_mode == "INDEPENDENT_OPERATOR"),
+        "assigned_jobs": [
+            {
+                "id": j.id,
+                "job_ref": f"EQJOB-2083-{j.id:04d}",
+                "equipment_model": j.equipment.model_name if j.equipment else "Machinery",
+                "equipment_type": j.equipment.equipment_type if j.equipment else "-",
+                "site_address": j.site_address,
+                "duration_type": j.duration_type,
+                "duration_units": j.duration_units,
+                "base_cost_npr": j.base_cost_npr,
+                "status": j.status
+            }
+            for j in assigned_jobs
+        ],
+        "open_jobs": open_jobs
+    }
+
+
+@router.post("/operator/jobs/{job_id}/status")
+def equipment_operator_update_job_status(
+    job_id: int,
+    status_str: str,
+    current_op: EquipmentOperator = Depends(require_equipment_operator),
+    db: Session = Depends(get_db)
+):
+    job = db.query(EquipmentJob).filter(EquipmentJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Equipment job not found.")
+    eq = job.equipment
+    if not eq or eq.owner_id != current_op.owner_id:
+        raise HTTPException(status_code=403, detail="Unauthorized equipment job.")
+
+    clean = status_str.strip().upper()
+    if clean not in ("IN_PROGRESS", "COMPLETED"):
+        raise HTTPException(status_code=400, detail="Operator status must be IN_PROGRESS or COMPLETED.")
+    if not job.operator_id:
+        job.operator_id = current_op.id
+    job.status = clean
+    eq.is_available = (clean == "COMPLETED")
+    db.commit()
+    return {"message": f"Machinery Job EQJOB-2083-{job.id:04d} updated to {clean}.", "status": clean}

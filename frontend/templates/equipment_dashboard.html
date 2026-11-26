@@ -31,7 +31,9 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2.5">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="switchEqPortalView('owner')" id="btnEqOwnerView" class="px-3 py-1.5 rounded-full bg-amber text-navy text-xs font-extrabold transition">Owner Fleet</button>
+        <button onclick="switchEqPortalView('operator')" id="btnEqOperatorView" class="px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-bold text-white transition">Operator PIN Terminal</button>
         <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-bold text-white transition">
           <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
         </button>
@@ -44,7 +46,19 @@
       </div>
     </header>
 
-    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 flex-1">
+    <main id="eqOwnerMain" class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 flex-1">
+      <!-- Operator Business Classification Bar -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Equipment Business Classification</span>
+          <p class="text-sm font-bold text-navy" id="eqOperatorModeLabel">Commercial Rental Fleet (Owner assigns operators)</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="setEqOperatorMode('INDEPENDENT_OPERATOR')" id="btnModeIndOp" class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100">Independent Owner-Operator</button>
+          <button onclick="setEqOperatorMode('COMMERCIAL_FLEET')" id="btnModeCommOp" class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100">Commercial Rental Fleet</button>
+        </div>
+      </div>
+
       <!-- KPI Cards -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -55,9 +69,13 @@
           <span class="text-[11px] font-mono uppercase text-slate-500">Active Deployments</span>
           <p id="kpiActiveJobs" class="text-2xl font-black text-sky-600 mt-1">0</p>
         </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <span class="text-[11px] font-mono uppercase text-slate-500">Gross Rental Billed</span>
-          <p id="kpiGrossRev" class="text-2xl font-black text-navy mt-1">Rs. 0</p>
+        <div class="bg-white p-5 rounded-2xl border border-amber-200 bg-amber-50/40 shadow-sm">
+          <span class="text-[11px] font-mono uppercase text-amber-700">Commission Payable (Due to KTM-WDC)</span>
+          <div class="flex items-center justify-between gap-2 mt-1">
+            <p id="kpiGrossRev" class="text-xl font-black text-amber-700">Rs. 0</p>
+            <button onclick="settleEqCommission()" class="px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold">Mark Paid</button>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-0.5">Gross Billed: <strong id="kpiGrossTotalLabel">Rs. 0</strong></p>
         </div>
         <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-200 shadow-sm">
           <span class="text-[11px] font-mono uppercase text-emerald-700 font-bold">Net Owner Payout (90%)</span>
@@ -93,7 +111,7 @@
               <tr>
                 <th class="px-5 py-3">Job Ref</th>
                 <th class="px-5 py-3">Machinery</th>
-                <th class="px-5 py-3">Site Location</th>
+                <th class="px-5 py-3">Site &amp; Operator</th>
                 <th class="px-5 py-3">Duration</th>
                 <th class="px-5 py-3">Total Bill</th>
                 <th class="px-5 py-3">Status</th>
@@ -106,6 +124,45 @@
           </table>
         </div>
       </section>
+
+      <!-- Heavy Equipment Operators Roster (Commercial Rental Fleet & Self-Operators) -->
+      <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-navy text-base">Heavy Equipment Operators &amp; Driver PINs</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Add certified crane/forklift operators so they can sign in via PIN to execute site deployments.</p>
+          </div>
+          <button onclick="openOperatorRegModal()" class="px-3.5 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5">
+            <i data-lucide="user-plus" class="w-4 h-4 text-amber-400"></i> Add Operator
+          </button>
+        </div>
+        <div id="eqOperatorsGrid" class="p-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <p class="text-xs text-slate-400 col-span-full text-center py-6">No machinery operators added yet.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Operator PIN Terminal View (/equipment Operator Mode) -->
+    <main id="eqOperatorMain" class="hidden max-w-2xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6 flex-1">
+      <div id="eqOpLoginCard" class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <h2 class="font-bold text-navy text-base">Equipment Operator PIN Login</h2>
+        <p class="text-xs text-slate-500">Forklift, Crane &amp; Reach-Stacker operators: log in with Phone + 4-digit PIN assigned by your owner.</p>
+        <div class="grid sm:grid-cols-2 gap-3 text-xs">
+          <input type="tel" id="eqOpLoginPhone" placeholder="+977-98XXXXXXXX" class="px-3 py-2.5 rounded-xl border border-slate-300 font-mono">
+          <input type="password" id="eqOpLoginPin" placeholder="4-Digit PIN" maxlength="6" class="px-3 py-2.5 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <button onclick="handleEqOperatorLogin()" class="w-full py-2.5 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs">Launch Operator Terminal</button>
+      </div>
+      <div id="eqOpJobsBox" class="hidden space-y-4">
+        <div class="bg-navy text-white rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-bold text-amber-400" id="eqOpModeTag">Operator Terminal</p>
+            <p class="text-sm font-extrabold" id="eqOpNameTag">Operator</p>
+          </div>
+          <button onclick="loadEqOperatorJobs()" class="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-bold">Refresh</button>
+        </div>
+        <div id="eqOpJobsList" class="space-y-3"></div>
+      </div>
     </main>
   </div>
 
@@ -183,6 +240,29 @@
       <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
         <button type="button" onclick="document.getElementById('registerEqModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold">Cancel</button>
         <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold">Submit for Safety Audit</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Add Equipment Operator -->
+  <dialog id="eqOperatorModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 bg-navy text-white rounded-t-2xl flex items-center justify-between">
+      <h3 class="font-bold text-base">Register Heavy Equipment Operator</h3>
+      <button onclick="document.getElementById('eqOperatorModal').close()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <form onsubmit="handleAddEqOperator(event)" class="p-6 space-y-3.5 text-xs">
+      <input type="text" id="eqOpName" required placeholder="Operator Full Name *" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+      <input type="tel" id="eqOpPhone" required placeholder="Mobile Phone (98XXXXXXXX) *" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+      <div class="grid grid-cols-2 gap-3">
+        <input type="text" id="eqOpCert" placeholder="Heavy License / Cert #" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        <input type="text" id="eqOpPin" required value="1234" maxlength="6" placeholder="4-Digit PIN" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+      </div>
+      <select id="eqOpAssignMachine" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+        <option value="">Assigned Machine (Optional Standby)</option>
+      </select>
+      <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('eqOperatorModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold">Activate Operator PIN</button>
       </div>
     </form>
   </dialog>
@@ -285,10 +365,33 @@
       if (!res.ok) return;
       const data = await res.json();
       const s = data.summary || {};
+      const opType = data.operator_type || 'COMMERCIAL_FLEET';
+      const lbl = document.getElementById('eqOperatorModeLabel');
+      if (lbl) lbl.textContent = opType === 'INDEPENDENT_OPERATOR' ? 'Independent Owner-Operator (Self-Execute & Claim)' : 'Commercial Rental Fleet (Owner assigns Operators)';
       document.getElementById('kpiTotalUnits').textContent = s.total_units || 0;
       document.getElementById('kpiActiveJobs').textContent = s.active_jobs || 0;
-      document.getElementById('kpiGrossRev').textContent = 'Rs. ' + Number(s.gross_revenue_npr || 0).toLocaleString('en-IN');
+      document.getElementById('kpiGrossRev').textContent = 'Rs. ' + Number(s.commission_due_to_kwdc_npr ?? s.platform_fee_npr ?? 0).toLocaleString('en-IN');
+      const grossLbl = document.getElementById('kpiGrossTotalLabel');
+      if (grossLbl) grossLbl.textContent = 'Rs. ' + Number(s.gross_revenue_npr || 0).toLocaleString('en-IN');
       document.getElementById('kpiNetPayout').textContent = 'Rs. ' + Number(s.net_payout_npr || 0).toLocaleString('en-IN');
+
+      window.cachedEqMachines = data.equipment || [];
+      window.cachedEqOperators = data.operators || [];
+
+      const opGrid = document.getElementById('eqOperatorsGrid');
+      if (opGrid) {
+        if (!window.cachedEqOperators.length) {
+          opGrid.innerHTML = '<p class="text-xs text-slate-400 col-span-full text-center py-6">No machinery operators added yet.</p>';
+        } else {
+          opGrid.innerHTML = window.cachedEqOperators.map(o => `
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 text-xs space-y-1">
+              <p class="font-bold text-navy">${o.full_name}</p>
+              <p class="font-mono text-slate-600">${o.phone_number} &bull; PIN: <span class="bg-white px-1.5 py-0.5 rounded border font-bold">${o.login_pin}</span></p>
+              <p class="text-[11px] text-slate-500">Machine: ${o.assigned_equipment_name} &bull; Cert: ${o.certification_no || 'Verified'}</p>
+            </div>
+          `).join('');
+        }
+      }
 
       const grid = document.getElementById('equipmentGrid');
       if (!data.equipment || data.equipment.length === 0) {
@@ -321,11 +424,15 @@
           <tr>
             <td class="px-5 py-3 font-mono font-bold text-navy">${j.job_ref}</td>
             <td class="px-5 py-3 font-semibold">${j.equipment_model} (${j.equipment_type})</td>
-            <td class="px-5 py-3">${j.site_address}</td>
+            <td class="px-5 py-3">
+              <p>${j.site_address}</p>
+              <p class="text-[10px] text-slate-500 font-mono">Op: ${j.operator_name || 'Unassigned'}</p>
+            </td>
             <td class="px-5 py-3 font-mono">${j.duration_units} ${j.duration_type}</td>
             <td class="px-5 py-3 font-mono font-bold text-emerald-700">Rs. ${Number(j.total_cost_npr).toLocaleString('en-IN')}</td>
             <td class="px-5 py-3 font-bold">${j.status}</td>
             <td class="px-5 py-3 text-right space-x-1">
+              ${window.cachedEqOperators && window.cachedEqOperators.length && j.status !== 'COMPLETED' ? `<button onclick="assignEqOperatorPrompt(${j.id})" class="px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[10px]">Assign Op</button>` : ''}
               ${j.status === 'CONFIRMED' ? `<button onclick="updateJobStatus(${j.id}, 'IN_PROGRESS')" class="px-2.5 py-1 rounded bg-sky-600 text-white font-bold text-[11px]">Deploy</button>` : ''}
               ${j.status === 'IN_PROGRESS' ? `<button onclick="updateJobStatus(${j.id}, 'COMPLETED')" class="px-2.5 py-1 rounded bg-emerald-600 text-white font-bold text-[11px]">Complete</button>` : ''}
             </td>
@@ -333,6 +440,121 @@
         `).join('');
       }
       lucide.createIcons();
+    }
+
+    function switchEqPortalView(view) {
+      document.getElementById('eqOwnerMain').classList.toggle('hidden', view !== 'owner');
+      document.getElementById('eqOperatorMain').classList.toggle('hidden', view !== 'operator');
+      if (view === 'operator' && localStorage.getItem('kwdc_eq_op_token')) loadEqOperatorJobs();
+    }
+
+    async function setEqOperatorMode(mode) {
+      const res = await fetch('/api/equipment/operator-type', {
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ operator_type: mode })
+      });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); loadEquipmentDashboard(); }
+    }
+
+    async function settleEqCommission() {
+      if (!confirm('Mark pending machinery commission dues as settled to KTM-WDC?')) return;
+      const res = await fetch('/api/equipment/commission/settle', { method: 'POST', headers: getAuthHeaders() });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); loadEquipmentDashboard(); }
+    }
+
+    function openOperatorRegModal() {
+      const sel = document.getElementById('eqOpAssignMachine');
+      if (sel) {
+        sel.innerHTML = '<option value="">Standby / Unassigned</option>' + (window.cachedEqMachines || []).map(m =>
+          `<option value="${m.id}">${m.model_name} (${m.equipment_type})</option>`
+        ).join('');
+      }
+      document.getElementById('eqOperatorModal').showModal();
+    }
+
+    async function handleAddEqOperator(e) {
+      e.preventDefault();
+      const mid = document.getElementById('eqOpAssignMachine').value;
+      const res = await fetch('/api/equipment/operators', {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({
+          full_name: document.getElementById('eqOpName').value.trim(),
+          phone_number: document.getElementById('eqOpPhone').value.trim(),
+          certification_no: document.getElementById('eqOpCert').value.trim() || 'HEAVY-OP-VERIFIED',
+          login_pin: document.getElementById('eqOpPin').value.trim() || '1234',
+          assigned_equipment_id: mid ? parseInt(mid, 10) : null
+        })
+      });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); document.getElementById('eqOperatorModal').close(); loadEquipmentDashboard(); }
+      else showToast(data.detail || 'Failed to register operator.', true);
+    }
+
+    async function assignEqOperatorPrompt(jobId) {
+      const ops = window.cachedEqOperators || [];
+      if (!ops.length) return;
+      const choices = ops.map(o => `${o.id}: ${o.full_name} (${o.phone_number})`).join('\n');
+      const pick = prompt(`Enter Operator ID to assign to Job #${jobId}:\n${choices}`, ops[0].id);
+      if (!pick) return;
+      const res = await fetch(`/api/equipment/jobs/${jobId}/assign-operator`, {
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ operator_id: parseInt(pick, 10) })
+      });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); loadEquipmentDashboard(); }
+      else showToast(data.detail || 'Assignment failed', true);
+    }
+
+    async function handleEqOperatorLogin() {
+      const res = await fetch('/api/equipment/operator/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone_number: document.getElementById('eqOpLoginPhone').value.trim(),
+          pin: document.getElementById('eqOpLoginPin').value.trim()
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('kwdc_eq_op_token', data.access_token);
+        localStorage.setItem('kwdc_eq_op_profile', JSON.stringify(data.operator || {}));
+        document.getElementById('eqOpLoginCard').classList.add('hidden');
+        document.getElementById('eqOpJobsBox').classList.remove('hidden');
+        document.getElementById('eqOpNameTag').textContent = data.operator?.full_name || 'Operator';
+        loadEqOperatorJobs();
+      } else showToast(data.detail || 'Invalid PIN', true);
+    }
+
+    async function loadEqOperatorJobs() {
+      const tok = localStorage.getItem('kwdc_eq_op_token');
+      if (!tok) return;
+      document.getElementById('eqOpLoginCard').classList.add('hidden');
+      document.getElementById('eqOpJobsBox').classList.remove('hidden');
+      const res = await fetch('/api/equipment/operator/active-job', { headers: { 'Authorization': `Bearer ${tok}` } });
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById('eqOpModeTag').textContent = data.operator_mode === 'INDEPENDENT_OPERATOR' ? 'Independent Owner-Operator' : 'Commercial Fleet Operator (Assigned Runs)';
+      const jobs = [...(data.assigned_jobs || []), ...(data.open_jobs || [])];
+      const list = document.getElementById('eqOpJobsList');
+      list.innerHTML = jobs.length ? jobs.map(j => `
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-2 text-xs">
+          <div class="flex justify-between font-bold text-navy"><span>${j.job_ref} (${j.status})</span><span class="text-emerald-700 font-mono">Base: Rs. ${Number(j.base_cost_npr || 0).toLocaleString('en-IN')}</span></div>
+          <p class="font-semibold">${j.equipment_model} &bull; ${j.site_address} (${j.duration_units} ${j.duration_type})</p>
+          <div class="flex gap-2">
+            ${j.status === 'CONFIRMED' ? `<button onclick="opUpdateEqJob(${j.id}, 'IN_PROGRESS')" class="px-3 py-1.5 rounded-lg bg-navy text-white font-bold">Start Site Deployment</button>` : ''}
+            ${j.status === 'IN_PROGRESS' ? `<button onclick="opUpdateEqJob(${j.id}, 'COMPLETED')" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold">Complete Site Job</button>` : ''}
+          </div>
+        </div>
+      `).join('') : '<div class="bg-white rounded-2xl border p-6 text-center text-xs text-slate-400">No active site deployments right now.</div>';
+    }
+
+    async function opUpdateEqJob(jobId, nextStatus) {
+      const tok = localStorage.getItem('kwdc_eq_op_token');
+      const res = await fetch(`/api/equipment/operator/jobs/${jobId}/status?status_str=${nextStatus}`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${tok}` }
+      });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); loadEqOperatorJobs(); }
+      else showToast(data.detail || 'Update failed', true);
     }
 
     function handleLogout() {

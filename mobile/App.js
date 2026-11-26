@@ -42,7 +42,9 @@ export default function App() {
     );
   }
 
-  const role = session.mode === 'driver' ? 'driver_cab' : (session.user?.user_role || session.user?.role || 'commercial_client');
+  const role = session.mode === 'driver'
+    ? 'driver_cab'
+    : (session.mode === 'equipment_operator' ? 'equipment_owner' : (session.user?.user_role || session.user?.role || 'commercial_client'));
 
   let ScreenComp = ClientHomeScreen;
   if (role === 'property_owner') ScreenComp = OwnerHomeScreen;

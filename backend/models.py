@@ -118,6 +118,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), default=UserRole.COMMERCIAL_CLIENT, nullable=False)
     fleet_operator_type = Column(String(50), nullable=True, default=None) # "INDEPENDENT_OWNER", "COMMERCIAL_3PL", or None (unconfigured)
+    equipment_operator_type = Column(String(50), nullable=True, default=None) # "INDEPENDENT_OPERATOR", "COMMERCIAL_FLEET", or None
     
     # Verification & Security
     is_active = Column(Boolean, default=True)
@@ -718,12 +719,31 @@ class HeavyEquipment(Base):
     jobs = relationship("EquipmentJob", back_populates="equipment")
 
 
+class EquipmentOperator(Base):
+    """Operator/driver for Forklifts, Cranes, Reach-Stackers & Excavators (Independent vs Commercial Rental Fleet)."""
+    __tablename__ = "equipment_operators"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assigned_equipment_id = Column(Integer, ForeignKey("heavy_equipments.id"), nullable=True)
+    full_name = Column(String(255), nullable=False)
+    phone_number = Column(String(50), unique=True, nullable=False)
+    certification_no = Column(String(100), nullable=True)
+    login_pin = Column(String(20), default="1234")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    owner = relationship("User", foreign_keys=[owner_id])
+    assigned_equipment = relationship("HeavyEquipment", foreign_keys=[assigned_equipment_id])
+
+
 class EquipmentJob(Base):
     __tablename__ = "equipment_jobs"
 
     id = Column(Integer, primary_key=True, index=True)
     equipment_id = Column(Integer, ForeignKey("heavy_equipments.id"), nullable=False)
     client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    operator_id = Column(Integer, ForeignKey("equipment_operators.id"), nullable=True)
     duration_type = Column(String(50), default="DAILY")
     duration_units = Column(Integer, default=1)
     site_address = Column(String(255), default="Kathmandu Valley Facility")
@@ -732,10 +752,12 @@ class EquipmentJob(Base):
     platform_fee_npr = Column(Float, default=0.0)
     vat_13_percent = Column(Float, default=0.0)
     total_cost_npr = Column(Float, nullable=False)
+    commission_settled = Column(Boolean, default=False)
     status = Column(String(50), default="CONFIRMED")
     start_date = Column(DateTime, default=datetime.utcnow)
 
     equipment = relationship("HeavyEquipment", back_populates="jobs")
+    operator = relationship("EquipmentOperator", foreign_keys=[operator_id])
 
 
 # ---------------------------------------------------------------------------
