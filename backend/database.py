@@ -16,7 +16,11 @@ elif db_url.startswith("postgresql://") and "+psycopg" not in db_url:
     db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
 def get_engine():
-    connect_args = {"check_same_thread": False} if "sqlite" in db_url else {}
+    connect_args = (
+        {"check_same_thread": False}
+        if "sqlite" in db_url
+        else {"prepare_threshold": None, "connect_timeout": 8}
+    )
     try:
         eng = create_engine(db_url, connect_args=connect_args, echo=False, pool_pre_ping=True)
         # Validate connection
