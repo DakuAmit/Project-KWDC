@@ -9,14 +9,14 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "~2.1.0",
-    "expo": "~53.0.0",
-    "expo-camera": "~16.1.5",
-    "expo-image-picker": "~16.1.4",
-    "expo-location": "~18.1.4",
-    "expo-status-bar": "~2.2.3",
-    "react": "19.0.0",
-    "react-native": "0.79.2"
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "^58.0.26",
+    "expo-camera": "~58.0.14",
+    "expo-image-picker": "~58.0.10",
+    "expo-location": "~58.0.22",
+    "expo-status-bar": "~58.0.5",
+    "react": "19.3.0",
+    "react-native": "0.88.1"
   },
   "private": true
 }

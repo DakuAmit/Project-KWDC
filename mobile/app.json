@@ -23,7 +23,8 @@
         {
           "photosPermission": "Allow KTM-WDC to upload property, license, machinery, and e-POD photos."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "android": {
       "package": "np.com.kwdc.logistics",
