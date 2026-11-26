@@ -4,13 +4,16 @@ FastAPI Main Application Entry Point
 """
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, Depends, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from sqlalchemy.orm import Session
 from backend.config import settings
-from backend.database import init_db_if_needed, get_db_info
-from backend.routers import auth, warehouses, admin, incharge, fleet, insurance, maps, uploads, equipment
+from backend.database import init_db_if_needed, get_db_info, get_db
+from backend.routers import auth, warehouses, admin, incharge, fleet, insurance, maps, uploads, equipment, security
+from backend.services.overdue_monitor import run_overdue_sweep
+from backend.services.sms_service import get_sms_provider_mode
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +38,7 @@ app.include_router(insurance.router)
 app.include_router(maps.router)
 app.include_router(uploads.router)
 app.include_router(equipment.router)
+app.include_router(security.router)
 
 # Ensure DB schema extensions & seed accounts run on serverless / TestClient imports too
 init_db_if_needed()
@@ -142,6 +146,28 @@ def invoice_page(request: Request):
 def admin_page(request: Request):
     return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"app_name": settings.APP_NAME})
 
+@app.get("/security", response_class=HTMLResponse)
+def security_page(request: Request):
+    return templates.TemplateResponse(request=request, name="security_dashboard.html", context={"app_name": settings.APP_NAME})
+
+@app.get("/api/cron/overdue-sweep")
+def cron_overdue_sweep(
+    authorization: str = Header(default=""),
+    x_cron_secret: str = Header(default=""),
+    db: Session = Depends(get_db)
+):
+    """Scheduled automation endpoint (Vercel Cron / external scheduler) for daily lien & holdover stock checks."""
+    if settings.CRON_SECRET:
+        provided = x_cron_secret.strip() or authorization.replace("Bearer ", "").strip()
+        if provided != settings.CRON_SECRET:
+            raise HTTPException(status_code=401, detail="Invalid cron authorization secret.")
+    actions = run_overdue_sweep(db)
+    return {
+        "status": "completed",
+        "actions_triggered": len(actions),
+        "actions": actions,
+    }
+
 @app.get("/health")
 def health_check():
     db_info = get_db_info()
@@ -151,6 +177,8 @@ def health_check():
         "database": db_info["label"],
         "database_engine": db_info["engine"],
         "is_sqlite_fallback": db_info["is_sqlite"],
+        "allow_demo_shortcuts": settings.ALLOW_DEMO_SHORTCUTS,
+        "sms_provider": get_sms_provider_mode(),
         "holding_liability": "Rs. 0 (Enforced)",
         "nepal_vat_rate": "13% Statutory IRD Schedule 13"
     }

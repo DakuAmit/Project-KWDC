@@ -25,9 +25,11 @@ from backend.models import (
     Warehouse, WarehouseRequest, User, UserRole,
     BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog,
     WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport, UserKycProfile,
-    PlatformConfig, StockAuctionItem, LienNotificationLog, WarehouseChangeRequest, PhysicalAuditStatus
+    PlatformConfig, StockAuctionItem, LienNotificationLog, WarehouseChangeRequest, PhysicalAuditStatus,
+    SmsOutboxLog, SecurityAgency, StockItem
 )
 from backend.auth_utils import require_user, require_roles, get_password_hash
+from backend.services.sms_service import get_sms_provider_mode
 from backend.services.contract_service import generate_master_lease_contract
 from backend.services.email_service import send_contract_approval_email, send_otp_email
 from backend.services.fare_service import get_platform_config, calculate_freight_benchmark
@@ -1389,4 +1391,106 @@ def process_owner_change_request(
     return {
         "message": f"Owner change request #{req.id} ({req.request_type}) marked {decision}.",
         "status": decision
+    }
+
+
+@router.get("/sms-outbox")
+def get_admin_sms_outbox(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Returns recent OTP & system SMS dispatches (ideal for zero-cost Sandbox/QA OTP inspection)."""
+    logs = db.query(SmsOutboxLog).order_by(SmsOutboxLog.created_at.desc()).limit(50).all()
+    return {
+        "provider_mode": get_sms_provider_mode(),
+        "logs": [
+            {
+                "id": l.id,
+                "phone_number": l.phone_number,
+                "message": l.message,
+                "purpose": l.purpose,
+                "provider": l.provider,
+                "status": l.status,
+                "external_ref": l.external_ref,
+                "created_at": l.created_at.strftime("%Y-%m-%d %H:%M:%S") if l.created_at else "",
+            }
+            for l in logs
+        ],
+    }
+
+
+@router.get("/holdover-leases")
+def get_holdover_leases(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Lists expired leases whose clients still hold un-cleared inventory in storage."""
+    now_naive = datetime.utcnow()
+    expired = db.query(WarehouseRequest).filter(
+        WarehouseRequest.is_forfeited == False,
+        WarehouseRequest.lease_end_date != None,
+        WarehouseRequest.lease_end_date < now_naive,
+    ).all()
+    alerts = []
+    for lease in expired:
+        items = db.query(StockItem).filter(
+            StockItem.client_id == lease.client_id,
+            StockItem.warehouse_id == lease.warehouse_id,
+        ).all()
+        rem_units = sum(int(i.total_quantity or 0) + int(getattr(i, "reserved_quantity", 0) or 0) for i in items)
+        if rem_units > 0:
+            alerts.append({
+                "booking_id": lease.id,
+                "warehouse_title": lease.warehouse.title if lease.warehouse else f"Warehouse #{lease.warehouse_id}",
+                "client_name": lease.client.full_name if lease.client else "Client",
+                "client_phone": lease.client.phone_number if lease.client else "-",
+                "lease_end_date": lease.lease_end_date.strftime("%Y-%m-%d"),
+                "remaining_units": rem_units,
+            })
+    return alerts
+
+
+@router.get("/security-agencies")
+def get_admin_security_agencies(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Lists registered security agencies awaiting or holding Home Ministry license verification."""
+    agencies = db.query(SecurityAgency).order_by(SecurityAgency.created_at.desc()).all()
+    return [
+        {
+            "id": a.id,
+            "user_id": a.user_id,
+            "owner_name": a.user.full_name if a.user else "Agency Admin",
+            "agency_name": a.agency_name,
+            "home_ministry_license_no": a.home_ministry_license_no,
+            "emergency_contact_phone": a.emergency_contact_phone,
+            "is_verified": bool(a.is_verified),
+            "guard_count": len(a.guards or []),
+            "created_at": a.created_at.strftime("%Y-%m-%d") if a.created_at else "",
+        }
+        for a in agencies
+    ]
+
+
+@router.post("/security-agencies/{agency_id}/verify")
+def verify_security_agency(
+    agency_id: int,
+    payload: dict,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    agency = db.query(SecurityAgency).filter(SecurityAgency.id == agency_id).first()
+    if not agency:
+        raise HTTPException(status_code=404, detail="Security agency not found.")
+
+    approve = bool(payload.get("approve", True))
+    agency.is_verified = approve
+    if agency.user:
+        agency.user.is_verified = approve
+        agency.user.kyc_status = KycStatus.VERIFIED if approve else KycStatus.REJECTED
+    db.commit()
+    return {
+        "message": f"Security agency '{agency.agency_name}' is now {'VERIFIED' if approve else 'UNVERIFIED'}.",
+        "is_verified": agency.is_verified,
     }

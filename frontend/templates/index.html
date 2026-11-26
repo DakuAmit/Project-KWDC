@@ -170,9 +170,10 @@
 
         // Nepal Centered Coordinates
         const map = L.map('nepalMap').setView([27.700769, 85.300140], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '© OpenStreetMap contributors'
+        L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '© Google Maps'
         }).addTo(map);
 
         // Fetch catalog warehouses from API

@@ -11,6 +11,11 @@ export default function LoginScreen({ onAuthenticated }) {
   const [password, setPassword] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
   const [driverPin, setDriverPin] = useState('');
+  const [authSubMode, setAuthSubMode] = useState('signin'); // 'signin' | 'register' | 'verify' | 'forgot' | 'reset'
+  const [regName, setRegName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regRole, setRegRole] = useState('commercial_client');
+  const [otpInput, setOtpInput] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -50,6 +55,88 @@ export default function LoginScreen({ onAuthenticated }) {
       onAuthenticated({ token: data.access_token, user: data, mode: 'user' });
     } catch (err) {
       Alert.alert('Login Failed', err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegisterMobile() {
+    if (!regName.trim() || !email.trim() || !regPhone.trim() || password.length < 6) {
+      return Alert.alert('Required', 'Fill Full Name, Email, Nepal Phone, and 6+ char Password.');
+    }
+    setLoading(true);
+    try {
+      await setApiBaseUrl(apiUrl);
+      const res = await apiRequest('/api/auth/register', {
+        method: 'POST',
+        body: {
+          full_name: regName.trim(),
+          email: email.trim().toLowerCase(),
+          phone_number: regPhone.trim(),
+          operating_location: 'Kathmandu Valley',
+          role: regRole,
+          password,
+          confirm_password: password,
+        },
+      });
+      Alert.alert('OTP Dispatched', res.message || 'Check Email / SMS for 6-digit OTP.');
+      setAuthSubMode('verify');
+    } catch (err) {
+      Alert.alert('Register Failed', err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifyOtpMobile() {
+    if (otpInput.trim().length !== 6) return Alert.alert('OTP Required', 'Enter the 6-digit verification code.');
+    setLoading(true);
+    try {
+      const data = await apiRequest('/api/auth/verify-otp', {
+        method: 'POST',
+        body: { email: email.trim().toLowerCase(), otp_code: otpInput.trim() },
+      });
+      await saveSession({ token: data.access_token, user: data, mode: 'user' });
+      onAuthenticated({ token: data.access_token, user: data, mode: 'user' });
+    } catch (err) {
+      Alert.alert('Verification Failed', err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPasswordMobile() {
+    if (!email.trim()) return Alert.alert('Email Required', 'Enter your registered email address.');
+    setLoading(true);
+    try {
+      await setApiBaseUrl(apiUrl);
+      const res = await apiRequest('/api/auth/forgot-password', {
+        method: 'POST',
+        body: { email: email.trim().toLowerCase() },
+      });
+      Alert.alert('Reset Code Sent', res.message);
+      setAuthSubMode('reset');
+    } catch (err) {
+      Alert.alert('Reset Failed', err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetPasswordMobile() {
+    if (otpInput.trim().length !== 6 || password.length < 6) {
+      return Alert.alert('Invalid Input', 'Enter the 6-digit OTP and new 6+ char password.');
+    }
+    setLoading(true);
+    try {
+      const res = await apiRequest('/api/auth/reset-password', {
+        method: 'POST',
+        body: { email: email.trim().toLowerCase(), otp_code: otpInput.trim(), new_password: password, confirm_password: password },
+      });
+      Alert.alert('Success', res.message || 'Password updated!');
+      setAuthSubMode('signin');
+    } catch (err) {
+      Alert.alert('Reset Error', err.message);
     } finally {
       setLoading(false);
     }
@@ -136,29 +223,76 @@ export default function LoginScreen({ onAuthenticated }) {
 
       {loginTab === 'account' ? (
         <View style={styles.card}>
-          <Text style={styles.hint}>
-            Routes automatically to Client, Property Owner, Equipment Owner, Fleet Manager, or Warehouse Incharge.
-          </Text>
-          <Text style={styles.label}>Email Address</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="you@company.com"
-            style={styles.input}
-          />
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="••••••••"
-            style={styles.input}
-          />
-          <TouchableOpacity onPress={handleAccountLogin} disabled={loading} style={styles.primaryBtn}>
-            {loading ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.primaryBtnText}>Sign In to Cockpit</Text>}
-          </TouchableOpacity>
+          <View style={styles.tabRow}>
+            {[['signin', 'Sign In'], ['register', 'Register'], ['forgot', 'Reset PW']].map(([m, t]) => (
+              <TouchableOpacity key={m} onPress={() => setAuthSubMode(m)} style={[styles.tabBtn, authSubMode === m && styles.tabActive]}>
+                <Text style={[styles.tabText, authSubMode === m && styles.tabTextActive]}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {authSubMode === 'signin' && (
+            <View>
+              <Text style={styles.hint}>Routes automatically to Client, Property Owner, Equipment Owner, Fleet Manager, or Incharge.</Text>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="you@company.com" style={styles.input} />
+              <Text style={styles.label}>Password</Text>
+              <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="••••••••" style={styles.input} />
+              <TouchableOpacity onPress={handleAccountLogin} disabled={loading} style={styles.primaryBtn}>
+                {loading ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.primaryBtnText}>Sign In to Cockpit</Text>}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {authSubMode === 'register' && (
+            <View>
+              <Text style={styles.label}>Account Role</Text>
+              <View style={[styles.row, { flexWrap: 'wrap', marginBottom: 8 }]}>
+                {[['commercial_client', 'Client'], ['property_owner', 'Owner'], ['fleet_partner', 'Fleet'], ['equipment_owner', 'Equipment']].map(([rv, rl]) => (
+                  <TouchableOpacity key={rv} onPress={() => setRegRole(rv)} style={[styles.smallBtn, regRole === rv ? { backgroundColor: '#f59e0b' } : { backgroundColor: '#64748b' }]}>
+                    <Text style={{ color: regRole === rv ? '#0f172a' : '#fff', fontSize: 11, fontWeight: '800' }}>{rl}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput value={regName} onChangeText={setRegName} placeholder="Full Name / Organization" style={styles.input} />
+              <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="Email Address" style={styles.input} />
+              <TextInput value={regPhone} onChangeText={setRegPhone} keyboardType="phone-pad" placeholder="98XXXXXXXX" style={styles.input} />
+              <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="Password (6+ chars)" style={styles.input} />
+              <TouchableOpacity onPress={handleRegisterMobile} disabled={loading} style={styles.primaryBtn}>
+                <Text style={styles.primaryBtnText}>Register &amp; Send OTP</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {authSubMode === 'verify' && (
+            <View>
+              <Text style={styles.hint}>Enter the 6-digit OTP dispatched to {email}.</Text>
+              <TextInput value={otpInput} onChangeText={setOtpInput} keyboardType="number-pad" maxLength={6} placeholder="6-digit OTP" style={styles.input} />
+              <TouchableOpacity onPress={handleVerifyOtpMobile} disabled={loading} style={styles.primaryBtn}>
+                <Text style={styles.primaryBtnText}>Verify OTP &amp; Enter App</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {authSubMode === 'forgot' && (
+            <View>
+              <Text style={styles.hint}>Send a 6-digit reset code to your Email + SMS.</Text>
+              <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="Registered Email" style={styles.input} />
+              <TouchableOpacity onPress={handleForgotPasswordMobile} disabled={loading} style={styles.primaryBtn}>
+                <Text style={styles.primaryBtnText}>Send Password Reset OTP</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {authSubMode === 'reset' && (
+            <View>
+              <TextInput value={otpInput} onChangeText={setOtpInput} keyboardType="number-pad" maxLength={6} placeholder="6-digit Reset OTP" style={styles.input} />
+              <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="New Password (6+ chars)" style={styles.input} />
+              <TouchableOpacity onPress={handleResetPasswordMobile} disabled={loading} style={styles.primaryBtn}>
+                <Text style={styles.primaryBtnText}>Save New Password</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ) : (
         <View style={styles.card}>

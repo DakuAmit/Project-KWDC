@@ -129,6 +129,8 @@ def ensure_db_schema_extensions():
         add_col_if_missing("users", "equipment_operator_type", "VARCHAR(50)")
         add_col_if_missing("equipment_jobs", "operator_id", "INTEGER")
         add_col_if_missing("equipment_jobs", "commission_settled", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
+        add_col_if_missing("stock_insurance_policies", "payment_status", "VARCHAR(50) DEFAULT 'UNPAID'")
+        add_col_if_missing("stock_insurance_policies", "payment_ref", "VARCHAR(120)")
     except Exception as e:
         print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
 

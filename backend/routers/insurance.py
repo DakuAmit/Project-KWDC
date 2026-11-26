@@ -21,9 +21,12 @@ import random
 
 from backend.database import get_db
 from backend.models import (
-    StockInsurancePolicy, Warehouse, WarehouseRequest, User, UserRole
+    StockInsurancePolicy, Warehouse, WarehouseRequest, User, UserRole, InsuranceClaim
 )
-from backend.schemas import InsuranceRequestCreate, InsuranceProcessRequest
+from backend.schemas import (
+    InsuranceRequestCreate, InsuranceProcessRequest,
+    InsurancePayPremiumRequest, InsuranceClaimCreate, InsuranceClaimProcessRequest
+)
 from backend.auth_utils import require_user, require_roles
 
 router = APIRouter(prefix="/api/insurance", tags=["Cargo & Stock Insurance"])
@@ -105,6 +108,8 @@ def get_my_insurance_policies(
             "vat_13_percent": p.vat_13_percent,
             "total_payable_npr": p.total_payable_npr,
             "status": p.status,
+            "payment_status": getattr(p, "payment_status", None) or "UNPAID",
+            "payment_ref": getattr(p, "payment_ref", None),
             "coverage_start_date": p.coverage_start_date.strftime("%Y-%m-%d") if p.coverage_start_date else None,
             "coverage_end_date": p.coverage_end_date.strftime("%Y-%m-%d") if p.coverage_end_date else None,
             "certificate_qr_payload": p.certificate_qr_payload,
@@ -138,6 +143,8 @@ def get_admin_insurance_requests(
             "vat_13_percent": p.vat_13_percent,
             "total_payable_npr": p.total_payable_npr,
             "status": p.status,
+            "payment_status": getattr(p, "payment_status", None) or "UNPAID",
+            "payment_ref": getattr(p, "payment_ref", None),
             "coverage_start_date": p.coverage_start_date.strftime("%Y-%m-%d") if p.coverage_start_date else None,
             "coverage_end_date": p.coverage_end_date.strftime("%Y-%m-%d") if p.coverage_end_date else None,
             "admin_notes": p.admin_notes,
@@ -205,4 +212,155 @@ def process_insurance_policy(
         "total_payable_npr": policy.total_payable_npr,
         "status": policy.status,
         "valid_until": policy.coverage_end_date.strftime("%Y-%m-%d")
+    }
+
+
+@router.post("/{policy_id}/pay-premium")
+def pay_insurance_premium(
+    policy_id: int,
+    payload: InsurancePayPremiumRequest,
+    current_user: User = Depends(require_roles([UserRole.COMMERCIAL_CLIENT, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Records client insurance premium payment proof / transaction reference."""
+    policy = db.query(StockInsurancePolicy).filter(StockInsurancePolicy.id == policy_id).first()
+    if not policy:
+        raise HTTPException(status_code=404, detail="Insurance policy not found.")
+    if current_user.role == UserRole.COMMERCIAL_CLIENT and policy.client_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Unauthorized to update another client's policy.")
+
+    policy.payment_status = "PAID"
+    policy.payment_ref = f"{payload.payment_method.upper()}:{payload.payment_ref.strip()}"
+    db.commit()
+    return {
+        "message": f"Premium payment recorded ({policy.payment_ref}).",
+        "policy_id": policy.id,
+        "payment_status": policy.payment_status,
+        "payment_ref": policy.payment_ref,
+    }
+
+
+@router.post("/{policy_id}/claim")
+def submit_insurance_claim(
+    policy_id: int,
+    payload: InsuranceClaimCreate,
+    current_user: User = Depends(require_roles([UserRole.COMMERCIAL_CLIENT, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Files a damage or loss insurance claim against an active bound policy."""
+    policy = db.query(StockInsurancePolicy).filter(StockInsurancePolicy.id == policy_id).first()
+    if not policy:
+        raise HTTPException(status_code=404, detail="Insurance policy not found.")
+    if current_user.role == UserRole.COMMERCIAL_CLIENT and policy.client_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Unauthorized to claim under another client's policy.")
+    if policy.status not in ("ACTIVE_INSURED", "APPROVED_ACTIVE"):
+        raise HTTPException(status_code=400, detail="Claims can only be filed against ACTIVE_INSURED policies.")
+    if payload.claim_amount_npr > float(policy.declared_valuation_npr or 0):
+        raise HTTPException(status_code=400, detail="Claim amount exceeds declared policy valuation.")
+
+    claim_no = f"CLM-{datetime.now(timezone.utc).year}-{random.randint(10000, 99999)}"
+    claim = InsuranceClaim(
+        policy_id=policy.id,
+        client_id=policy.client_id,
+        warehouse_id=policy.warehouse_id,
+        claim_number=claim_no,
+        incident_type=payload.incident_type.upper(),
+        incident_date=payload.incident_date.strip(),
+        claim_amount_npr=float(payload.claim_amount_npr),
+        description=payload.description.strip(),
+        evidence_photo_url=payload.evidence_photo_url,
+        status="SUBMITTED",
+    )
+    db.add(claim)
+    db.commit()
+    db.refresh(claim)
+    return {
+        "message": f"Insurance claim {claim.claim_number} submitted for surveyor inspection.",
+        "claim_id": claim.id,
+        "claim_number": claim.claim_number,
+        "status": claim.status,
+    }
+
+
+@router.get("/my-claims")
+def get_my_insurance_claims(
+    current_user: User = Depends(require_roles([UserRole.COMMERCIAL_CLIENT, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    claims = db.query(InsuranceClaim).filter(
+        InsuranceClaim.client_id == current_user.id
+    ).order_by(InsuranceClaim.created_at.desc()).all()
+    return [
+        {
+            "id": c.id,
+            "claim_number": c.claim_number,
+            "policy_id": c.policy_id,
+            "policy_number": c.policy.policy_number if c.policy else f"POL-{c.policy_id}",
+            "warehouse_title": c.warehouse.title if c.warehouse else f"Warehouse #{c.warehouse_id}",
+            "incident_type": c.incident_type,
+            "incident_date": c.incident_date,
+            "claim_amount_npr": c.claim_amount_npr,
+            "approved_payout_npr": c.approved_payout_npr,
+            "status": c.status,
+            "description": c.description,
+            "admin_notes": c.admin_notes,
+            "created_at": c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "",
+        }
+        for c in claims
+    ]
+
+
+@router.get("/admin/claims")
+def get_admin_insurance_claims(
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    claims = db.query(InsuranceClaim).order_by(InsuranceClaim.created_at.desc()).all()
+    return [
+        {
+            "id": c.id,
+            "claim_number": c.claim_number,
+            "policy_id": c.policy_id,
+            "policy_number": c.policy.policy_number if c.policy else f"POL-{c.policy_id}",
+            "client_name": c.client.full_name if c.client else "Client",
+            "warehouse_title": c.warehouse.title if c.warehouse else f"Warehouse #{c.warehouse_id}",
+            "incident_type": c.incident_type,
+            "incident_date": c.incident_date,
+            "claim_amount_npr": c.claim_amount_npr,
+            "approved_payout_npr": c.approved_payout_npr,
+            "status": c.status,
+            "description": c.description,
+            "evidence_photo_url": c.evidence_photo_url,
+            "admin_notes": c.admin_notes,
+            "created_at": c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "",
+        }
+        for c in claims
+    ]
+
+
+@router.post("/admin/claims/{claim_id}/process")
+def process_insurance_claim(
+    claim_id: int,
+    payload: InsuranceClaimProcessRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    claim = db.query(InsuranceClaim).filter(InsuranceClaim.id == claim_id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Insurance claim not found.")
+
+    decision = payload.status.upper()
+    if decision not in ("SURVEYING", "APPROVED", "REJECTED", "SETTLED"):
+        raise HTTPException(status_code=400, detail="Invalid claim status.")
+
+    claim.status = decision
+    if payload.approved_payout_npr > 0 or decision == "REJECTED":
+        claim.approved_payout_npr = 0.0 if decision == "REJECTED" else float(payload.approved_payout_npr)
+    claim.admin_notes = payload.admin_notes
+    claim.processed_at = datetime.now(timezone.utc)
+    db.commit()
+    return {
+        "message": f"Claim {claim.claim_number} updated to {decision}.",
+        "status": claim.status,
+        "approved_payout_npr": claim.approved_payout_npr,
     }

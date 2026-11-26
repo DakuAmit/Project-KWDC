@@ -16,6 +16,8 @@ export default function FleetDriverScreen({ session }) {
   const [otpInput, setOtpInput] = useState('');
   const [bidFare, setBidFare] = useState('');
   const [epodPhotoUrl, setEpodPhotoUrl] = useState('');
+  const [fleetRoster, setFleetRoster] = useState({ vehicles: [], drivers: [] });
+  const [fleetBidFare, setFleetBidFare] = useState('');
   const watchSubRef = useRef(null);
 
   async function refresh() {
@@ -33,12 +35,14 @@ export default function FleetDriverScreen({ session }) {
           setOpenDriverJobs([]);
         }
       } else {
-        const [list, earn] = await Promise.all([
+        const [list, earn, roster] = await Promise.all([
           apiRequest('/api/fleet/dispatch-orders'),
           apiRequest('/api/fleet/earnings'),
+          apiRequest('/api/fleet/my-fleet'),
         ]);
         setJobs(Array.isArray(list) ? list : []);
         setEarnings(earn || null);
+        setFleetRoster(roster || { vehicles: [], drivers: [] });
       }
     } catch (err) {
       Alert.alert('Sync Notice', err.message);
@@ -168,6 +172,43 @@ export default function FleetDriverScreen({ session }) {
     }
   }
 
+  async function counterOfferFleetJob(id, currentFare) {
+    const fare = parseFloat(fleetBidFare) || currentFare;
+    try {
+      const res = await apiRequest(`/api/fleet/dispatch-orders/${id}/counter-offer`, {
+        method: 'POST',
+        body: { offered_fare_npr: fare, counter_note: 'Mobile Fleet Manager Counter-Offer' },
+      });
+      Alert.alert('Counter-Offer Sent', res.message || 'Bid submitted to Client!');
+      setFleetBidFare('');
+      refresh();
+    } catch (err) {
+      Alert.alert('Counter-Offer Error', err.message);
+    }
+  }
+
+  async function breakdownReassignOrder(orderId) {
+    const standbyV = (fleetRoster.vehicles || [])[0];
+    const standbyD = (fleetRoster.drivers || [])[0];
+    if (!standbyV || !standbyD) {
+      return Alert.alert('Standby Needed', 'Register a standby vehicle and driver on your Fleet roster first.');
+    }
+    try {
+      const res = await apiRequest(`/api/fleet/orders/${orderId}/reassign`, {
+        method: 'POST',
+        body: {
+          new_vehicle_id: standbyV.id,
+          new_driver_id: standbyD.id,
+          breakdown_reason: 'Mobile Rescue Standby Handover',
+        },
+      });
+      Alert.alert('Rescue Dispatched', res.message || 'Order reassigned safely.');
+      refresh();
+    } catch (err) {
+      Alert.alert('Reassign Error', err.message);
+    }
+  }
+
   if (isDriverPinMode) {
     const isIndependent = driverMode === 'INDEPENDENT_OWNER';
     const tripStatusUpper = String(activeTrip?.status || '').toUpperCase();
@@ -284,8 +325,21 @@ export default function FleetDriverScreen({ session }) {
             <Text style={styles.meta}>{j.pickup_address} → {j.destination_address}</Text>
             <Text style={styles.price}>Trip Fare: Rs. {fare} (Due to KTM-WDC: Rs. {j.kwdc_margin_npr || 0} • Net: Rs. {j.net_fleet_earnings_npr || 0})</Text>
             {stUpper === 'REQUESTED' && (
-              <TouchableOpacity onPress={() => acceptFleetJob(j.id)} style={[styles.btnAmber, { marginTop: 8 }]}>
-                <Text style={styles.btnDarkText}>Accept at Rs. {fare}</Text>
+              <View style={{ marginTop: 8 }}>
+                <TextInput value={fleetBidFare} onChangeText={setFleetBidFare} placeholder={`Counter Fare NPR (e.g. ${fare})`} keyboardType="numeric" style={styles.input} />
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity onPress={() => acceptFleetJob(j.id)} style={[styles.btnAmber, { flex: 1 }]}>
+                    <Text style={styles.btnDarkText}>Accept Rs. {fare}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => counterOfferFleetJob(j.id, fare)} style={[styles.btnDark, { flex: 1 }]}>
+                    <Text style={styles.btnLight}>Counter Bid</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            {(stUpper === 'ACCEPTED' || stUpper === 'IN_TRANSIT') && (
+              <TouchableOpacity onPress={() => breakdownReassignOrder(j.id)} style={[styles.btnDark, { marginTop: 8, backgroundColor: '#b91c1c' }]}>
+                <Text style={styles.btnLight}>Rescue / Reassign Standby Unit</Text>
               </TouchableOpacity>
             )}
           </View>

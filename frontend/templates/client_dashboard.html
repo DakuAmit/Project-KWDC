@@ -573,6 +573,14 @@
             <div id="insuranceCardsList" class="mt-4 space-y-3">
               <div class="p-8 text-center text-slate-400 text-xs">Loading insurance policies...</div>
             </div>
+
+            <!-- Filed Insurance Claims -->
+            <div class="mt-6 pt-5 border-t border-slate-200">
+              <h4 class="font-bold text-navy text-sm mb-3">Submitted Insurance Claims</h4>
+              <div id="insuranceClaimsList" class="space-y-2 text-xs">
+                <div class="text-slate-400">No insurance claims filed yet.</div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -3099,7 +3107,7 @@
         const dLat = o.dest_lat || 27.6937;
         const dLng = o.dest_lng || 85.2816;
         clientTrackMapInst = L.map('clientTrackMap').setView([lat, lng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(clientTrackMapInst);
+        L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '© Google Maps' }).addTo(clientTrackMapInst);
         L.marker([lat, lng]).addTo(clientTrackMapInst).bindPopup(`<strong>Truck: ${escapeHtml(o.vehicle_plate)}</strong><br/>Driver: ${escapeHtml(o.driver_name)}`).openPopup();
         L.marker([dLat, dLng]).addTo(clientTrackMapInst).bindPopup(`Destination: ${escapeHtml(o.destination_address)}`);
         L.polyline([[lat, lng], [dLat, dLng]], { color: '#0f172a', weight: 3, dashArray: '6 6' }).addTo(clientTrackMapInst);
@@ -3363,9 +3371,12 @@
         }
 
         container.innerHTML = policies.map(p => {
-          const isApproved = p.status === 'APPROVED_ACTIVE';
+          const isApproved = p.status === 'ACTIVE_INSURED' || p.status === 'APPROVED_ACTIVE';
           const badgeClass = isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
           const underwriter = p.underwriter_name || 'Pending Underwriter Assignment';
+          const payBadge = (p.payment_status === 'PAID')
+            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800">PAID (${escapeHtml(p.payment_ref || 'VERIFIED')})</span>`
+            : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">UNPAID</span>`;
 
           return `
             <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
@@ -3375,9 +3386,10 @@
                     <i data-lucide="shield-check" class="w-5 h-5"></i>
                   </span>
                   <div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                       <h4 class="font-bold text-navy text-sm">${escapeHtml(p.policy_number)}</h4>
                       <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${escapeHtml(p.status)}</span>
+                      ${payBadge}
                     </div>
                     <p class="text-xs text-slate-500 font-mono mt-0.5">Underwriter: <strong class="text-navy">${escapeHtml(underwriter)}</strong></p>
                   </div>
@@ -3407,19 +3419,87 @@
                 </div>
               </div>
 
-              <div class="text-[11px] text-slate-600 bg-slate-50/50 p-3 rounded-xl border border-dashed border-slate-200 flex flex-col sm:flex-row justify-between gap-2">
+              <div class="text-[11px] text-slate-600 bg-slate-50/50 p-3 rounded-xl border border-dashed border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <span><strong>Perils Covered:</strong> ${escapeHtml(p.coverage_scope || 'Fire, Flood, Earthquake, Burglary')}</span>
-                <span class="text-slate-400 shrink-0 font-mono">Created: ${new Date(p.created_at).toLocaleDateString()}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                  ${p.payment_status !== 'PAID' ? `<button onclick="payClientPolicyPremium(${p.id})" class="px-2.5 py-1 rounded-lg bg-navy hover:bg-slate-800 text-white font-bold text-[11px]">Pay Premium Proof</button>` : ''}
+                  ${isApproved ? `<button onclick="fileClientInsuranceClaim(${p.id})" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px]">File Damage Claim</button>` : ''}
+                </div>
               </div>
             </div>
           `;
         }).join('');
 
+        await loadClientInsuranceClaims();
         lucide.createIcons();
       } catch (err) {
         console.error(err);
         container.innerHTML = `<div class="p-8 text-center text-red-600 text-xs">Error loading insurance records.</div>`;
       }
+    }
+
+    async function payClientPolicyPremium(policyId) {
+      const ref = prompt('Enter Bank / ConnectIPS / Wallet Reference Number (e.g. IPS-998123):');
+      if (!ref || !ref.trim()) return;
+      const res = await fetch(`/api/insurance/${policyId}/pay-premium`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ payment_method: 'BANK_TRANSFER', payment_ref: ref.trim() })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); loadClientInsurance(); }
+      else showToast(d.detail || 'Payment submission failed.', true);
+    }
+
+    async function fileClientInsuranceClaim(policyId) {
+      const incidentType = prompt('Incident Type (FIRE, MONSOON_FLOOD, THEFT, WATER_DAMAGE, OTHER):', 'WATER_DAMAGE');
+      if (!incidentType) return;
+      const amtStr = prompt('Claim Valuation Amount (Rs.):', '50000');
+      const amt = parseFloat(amtStr || '0');
+      if (!amt || amt <= 0) return;
+      const desc = prompt('Damage Description & Manifest Summary:');
+      if (!desc || desc.trim().length < 5) return;
+      const res = await fetch(`/api/insurance/${policyId}/claim`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          incident_type: incidentType.trim().toUpperCase(),
+          incident_date: new Date().toISOString().slice(0, 10),
+          claim_amount_npr: amt,
+          description: desc.trim()
+        })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); loadClientInsurance(); }
+      else showToast(d.detail || 'Claim filing failed.', true);
+    }
+
+    async function loadClientInsuranceClaims() {
+      const el = document.getElementById('insuranceClaimsList');
+      if (!el) return;
+      try {
+        const res = await fetch('/api/insurance/my-claims', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const claims = await res.json();
+        if (!claims.length) {
+          el.innerHTML = '<div class="text-slate-400">No insurance claims filed yet.</div>';
+          return;
+        }
+        el.innerHTML = claims.map(c => `
+          <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span class="font-mono font-bold text-navy">${escapeHtml(c.claim_number)}</span>
+              <span class="mx-1.5 text-slate-400">&bull;</span>
+              <span class="font-semibold text-slate-700">${escapeHtml(c.incident_type)}</span>
+              <p class="text-[11px] text-slate-500">${escapeHtml(c.warehouse_title)} &bull; ${escapeHtml(c.description)}</p>
+            </div>
+            <div class="text-right font-mono">
+              <span class="block font-bold text-navy">Claimed: Rs. ${Number(c.claim_amount_npr).toLocaleString('en-IN')}</span>
+              <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'APPROVED' || c.status === 'SETTLED' ? 'bg-emerald-100 text-emerald-800' : (c.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800')}">${escapeHtml(c.status)} ${c.approved_payout_npr > 0 ? '(Payout: Rs. ' + Number(c.approved_payout_npr).toLocaleString('en-IN') + ')' : ''}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {}
     }
 
     function handleLogout() {

@@ -943,6 +943,32 @@
             </div>
           </div>
 
+          <div class="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-amber-100 bg-amber-50/40">
+              <h3 class="font-bold text-amber-900 text-base flex items-center gap-2">
+                <i data-lucide="clock-alert" class="w-5 h-5 text-amber-600"></i>
+                <span>Expired Lease Holdover Stock Alerts</span>
+              </h3>
+              <p class="text-xs text-amber-800 mt-0.5">Leases past expiry date with un-cleared stock remaining inside partner warehouses.</p>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-4 py-3">Booking #</th>
+                    <th class="px-4 py-3">Warehouse</th>
+                    <th class="px-4 py-3">Client / Phone</th>
+                    <th class="px-4 py-3">Lease Expired</th>
+                    <th class="px-4 py-3 text-right">Remaining Stock</th>
+                  </tr>
+                </thead>
+                <tbody id="holdoverLeasesBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">Checking holdover inventory...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="p-5 border-b border-slate-200">
               <h3 class="font-bold text-navy text-base flex items-center gap-2">
@@ -1006,6 +1032,30 @@
               </table>
             </div>
           </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200">
+              <h3 class="font-bold text-navy text-base">Filed Insurance Damage / Loss Claims</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Surveyor verification, claim settlement approvals, and rejected claims.</p>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Claim # / Policy #</th>
+                    <th class="px-5 py-3">Client &amp; Facility</th>
+                    <th class="px-5 py-3">Incident &amp; Date</th>
+                    <th class="px-5 py-3">Claimed Rs.</th>
+                    <th class="px-5 py-3">Status / Payout</th>
+                    <th class="px-5 py-3 text-right">Process Claim</th>
+                  </tr>
+                </thead>
+                <tbody id="insuranceClaimsTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="px-5 py-6 text-center text-slate-400">No insurance claims submitted yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <!-- View 10: Platform User Directory & RBAC -->
@@ -1035,6 +1085,59 @@
                 </thead>
                 <tbody id="usersTableBody" class="divide-y divide-slate-100">
                   <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading user directory...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-navy text-base">Licensed Security Agencies Verification</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Verify Nepal Home Ministry licenses for warehouse security agencies.</p>
+              </div>
+              <button onclick="loadSecurityAgencies()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200">Refresh</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Agency Name</th>
+                    <th class="px-5 py-3">Home Ministry License</th>
+                    <th class="px-5 py-3">Control Room Phone</th>
+                    <th class="px-5 py-3">Guards</th>
+                    <th class="px-5 py-3">Status</th>
+                    <th class="px-5 py-3 text-right">Verify</th>
+                  </tr>
+                </thead>
+                <tbody id="securityAgenciesTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="px-5 py-6 text-center text-slate-400">No security agencies registered yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-navy text-base">SMS Gateway &amp; Sandbox OTP Outbox Log</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Active Mode: <strong id="smsProviderBadge" class="font-mono text-emerald-700">SANDBOX_OUTBOX</strong> • View live OTPs during testing without paid SMS credits.</p>
+              </div>
+              <button onclick="loadSmsOutbox()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200">Refresh SMS Log</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-4 py-2.5">Timestamp</th>
+                    <th class="px-4 py-2.5">Phone</th>
+                    <th class="px-4 py-2.5">Purpose</th>
+                    <th class="px-4 py-2.5">Provider / State</th>
+                    <th class="px-4 py-2.5">SMS Body / OTP</th>
+                  </tr>
+                </thead>
+                <tbody id="smsOutboxTableBody" class="divide-y divide-slate-100 font-mono">
+                  <tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 font-sans">No SMS logs yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1538,6 +1641,8 @@
         loadInsuranceRequests();
       } else if (tabId === 'users') {
         loadUsers();
+        loadSecurityAgencies();
+        loadSmsOutbox();
       }
 
       lucide.createIcons();
@@ -2121,8 +2226,10 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
     function initFleetRadarMap() {
       if (!fleetMap && document.getElementById('fleetRadarMap')) {
         fleetMap = L.map('fleetRadarMap', { zoomControl: true }).setView([27.7000, 85.3200], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors'
+        L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+          maxZoom: 20,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: '&copy; Google Maps'
         }).addTo(fleetMap);
       }
       loadFleetRadar();
@@ -2882,6 +2989,103 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-8 text-center text-rose-500 font-semibold">${err.message}</td></tr>`;
       }
+      loadInsuranceClaims();
+    }
+
+    async function loadInsuranceClaims() {
+      const cBody = document.getElementById('insuranceClaimsTableBody');
+      if (!cBody) return;
+      try {
+        const res = await fetch('/api/insurance/admin/claims', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const claims = await res.json();
+        cBody.innerHTML = claims.length ? claims.map(c => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-5 py-3 font-mono font-bold text-navy">${escapeHtml(c.claim_number)}<span class="block text-[10px] text-slate-400">${escapeHtml(c.policy_number)}</span></td>
+            <td class="px-5 py-3"><strong class="text-slate-800">${escapeHtml(c.client_name)}</strong><span class="block text-[11px] text-slate-500">${escapeHtml(c.warehouse_title)}</span></td>
+            <td class="px-5 py-3 font-mono">${escapeHtml(c.incident_type)}<span class="block text-[10px] text-slate-400">${escapeHtml(c.incident_date)}</span></td>
+            <td class="px-5 py-3 font-mono font-bold text-rose-700">Rs. ${Number(c.claim_amount_npr).toLocaleString('en-IN')}</td>
+            <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">${escapeHtml(c.status)}</span> ${c.approved_payout_npr > 0 ? `<span class="block font-mono text-[10px] text-emerald-700 font-bold">Approved: Rs. ${Number(c.approved_payout_npr).toLocaleString('en-IN')}</span>` : ''}</td>
+            <td class="px-5 py-3 text-right space-x-1">
+              <button onclick="processAdminClaim(${c.id}, 'APPROVED', ${c.claim_amount_npr})" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold">Approve</button>
+              <button onclick="processAdminClaim(${c.id}, 'REJECTED', 0)" class="px-2.5 py-1 rounded bg-rose-100 hover:bg-rose-200 text-rose-700 text-[11px] font-bold">Reject</button>
+            </td>
+          </tr>
+        `).join('') : '<tr><td colspan="6" class="px-5 py-6 text-center text-slate-400">No insurance claims submitted yet.</td></tr>';
+      } catch (e) {}
+    }
+
+    async function processAdminClaim(claimId, decision, defaultAmt) {
+      let payout = 0;
+      if (decision === 'APPROVED') {
+        const val = prompt('Enter approved claim payout amount (Rs.):', String(defaultAmt));
+        if (val === null) return;
+        payout = parseFloat(val) || 0;
+      }
+      const notes = prompt('Underwriter / Surveyor notes:', decision === 'APPROVED' ? 'Verified loss valuation and approved payout.' : 'Claim rejected per policy exclusion.') || '';
+      const res = await fetch(`/api/insurance/admin/claims/${claimId}/process`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status: decision, approved_payout_npr: payout, admin_notes: notes })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); loadInsuranceClaims(); } else showToast(d.detail || 'Claim update failed', true);
+    }
+
+    async function loadSecurityAgencies() {
+      const sBody = document.getElementById('securityAgenciesTableBody');
+      if (!sBody) return;
+      try {
+        const res = await fetch('/api/admin/security-agencies', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const rows = await res.json();
+        sBody.innerHTML = rows.length ? rows.map(a => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-5 py-3 font-bold text-navy">${escapeHtml(a.agency_name)}<span class="block text-[10px] text-slate-500">${escapeHtml(a.owner_name)}</span></td>
+            <td class="px-5 py-3 font-mono">${escapeHtml(a.home_ministry_license_no)}</td>
+            <td class="px-5 py-3 font-mono">${escapeHtml(a.emergency_contact_phone)}</td>
+            <td class="px-5 py-3 font-mono">${a.guard_count}</td>
+            <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${a.is_verified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${a.is_verified ? 'VERIFIED' : 'PENDING'}</span></td>
+            <td class="px-5 py-3 text-right">
+              <button onclick="verifyAdminSecurityAgency(${a.id}, ${!a.is_verified})" class="px-2.5 py-1 rounded ${a.is_verified ? 'bg-rose-100 text-rose-700' : 'bg-emerald-600 text-white'} text-[11px] font-bold">
+                ${a.is_verified ? 'Revoke' : 'Verify License'}
+              </button>
+            </td>
+          </tr>
+        `).join('') : '<tr><td colspan="6" class="px-5 py-6 text-center text-slate-400">No security agencies registered yet.</td></tr>';
+      } catch (e) {}
+    }
+
+    async function verifyAdminSecurityAgency(agencyId, approve) {
+      const res = await fetch(`/api/admin/security-agencies/${agencyId}/verify`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ approve })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); loadSecurityAgencies(); } else showToast(d.detail || 'Action failed', true);
+    }
+
+    async function loadSmsOutbox() {
+      const oBody = document.getElementById('smsOutboxTableBody');
+      if (!oBody) return;
+      try {
+        const res = await fetch('/api/admin/sms-outbox', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        const badge = document.getElementById('smsProviderBadge');
+        if (badge && data.provider_mode) badge.textContent = data.provider_mode;
+        const logs = data.logs || [];
+        oBody.innerHTML = logs.length ? logs.map(l => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-2 text-slate-500">${escapeHtml(l.created_at)}</td>
+            <td class="px-4 py-2 font-bold text-navy">${escapeHtml(l.phone_number)}</td>
+            <td class="px-4 py-2">${escapeHtml(l.purpose)}</td>
+            <td class="px-4 py-2"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]">${escapeHtml(l.provider)} • ${escapeHtml(l.status)}</span></td>
+            <td class="px-4 py-2 text-slate-700">${escapeHtml(l.message)}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 font-sans">No SMS dispatches logged yet.</td></tr>';
+      } catch (e) {}
     }
 
     function openProcessInsuranceModal(policyId, clientName, valuation, commodity) {
@@ -3108,10 +3312,24 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
       const lBody = document.getElementById('lienLeasesTableBody');
       const aBody = document.getElementById('auctionLotsTableBody');
       try {
-        const [lRes, aRes] = await Promise.all([
+        const [lRes, aRes, hRes] = await Promise.all([
           fetch('/api/admin/lien-overdue-leases', { headers: getAuthHeaders() }),
-          fetch('/api/admin/auctions', { headers: getAuthHeaders() })
+          fetch('/api/admin/auctions', { headers: getAuthHeaders() }),
+          fetch('/api/admin/holdover-leases', { headers: getAuthHeaders() })
         ]);
+        const hBody = document.getElementById('holdoverLeasesBody');
+        if (hRes && hRes.ok && hBody) {
+          const holdovers = await hRes.json();
+          hBody.innerHTML = holdovers.length ? holdovers.map(h => `
+            <tr class="hover:bg-amber-50/40">
+              <td class="px-4 py-3 font-mono font-bold text-navy">#${h.booking_id}</td>
+              <td class="px-4 py-3 font-semibold">${escapeHtml(h.warehouse_title)}</td>
+              <td class="px-4 py-3">${escapeHtml(h.client_name)} (${escapeHtml(h.client_phone)})</td>
+              <td class="px-4 py-3 font-mono text-rose-600 font-bold">${escapeHtml(h.lease_end_date)}</td>
+              <td class="px-4 py-3 text-right font-mono font-bold text-amber-800">${h.remaining_units} units</td>
+            </tr>
+          `).join('') : '<tr><td colspan="5" class="px-4 py-5 text-center text-slate-400">Zero expired leases with remaining holdover stock.</td></tr>';
+        }
         if (lRes.ok) {
           const leases = await lRes.json();
           lBody.innerHTML = leases.length ? leases.map(l => `
@@ -3324,8 +3542,17 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
+      let allowDemo = true;
+      try {
+        const hRes = await fetch('/health');
+        if (hRes.ok) {
+          const hData = await hRes.json();
+          allowDemo = hData.allow_demo_shortcuts !== false;
+        }
+      } catch (e) {}
+
       let adminToken = localStorage.getItem('kwdc_admin_token');
-      if (!adminToken) {
+      if (!adminToken && allowDemo) {
         try {
           const res = await fetch('/api/auth/login', {
             method: 'POST',

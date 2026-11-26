@@ -335,3 +335,55 @@ class InsuranceProcessRequest(BaseModel):
     status: str = "ACTIVE_INSURED"
     admin_notes: Optional[str] = None
     duration_months: int = 12
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(..., min_length=6, max_length=6)
+    new_password: str = Field(..., min_length=6)
+    confirm_password: Optional[str] = None
+
+
+class InsurancePayPremiumRequest(BaseModel):
+    payment_method: str = "BANK_TRANSFER" # ESEWA, KHALTI, BANK_TRANSFER, IPS_CONNECT
+    payment_ref: str = Field(..., min_length=3)
+
+
+class InsuranceClaimCreate(BaseModel):
+    incident_type: str = "WATER_DAMAGE"
+    incident_date: str
+    claim_amount_npr: float = Field(..., gt=0)
+    description: str = Field(..., min_length=5)
+    evidence_photo_url: Optional[str] = None
+
+
+class InsuranceClaimProcessRequest(BaseModel):
+    status: str = "APPROVED" # SURVEYING, APPROVED, REJECTED, SETTLED
+    approved_payout_npr: float = Field(default=0.0, ge=0.0)
+    admin_notes: Optional[str] = None
+
+
+class SecurityAgencyProfileCreate(BaseModel):
+    agency_name: str = Field(..., min_length=2)
+    home_ministry_license_no: str = Field(..., min_length=3)
+    emergency_contact_phone: str = Field(..., min_length=7)
+
+
+class SecurityGuardCreate(BaseModel):
+    guard_name: str = Field(..., min_length=2)
+    phone_number: str = Field(..., min_length=7)
+    assigned_warehouse_id: Optional[int] = None
+    shift_type: str = "DAY"
+
+
+class SecurityPatrolLogCreate(BaseModel):
+    warehouse_id: int
+    guard_id: Optional[int] = None
+    shift_type: str = "NIGHT"
+    perimeter_status: str = "ALL_CLEAR"
+    notes: str = Field(..., min_length=3)
+    photo_url: Optional[str] = None

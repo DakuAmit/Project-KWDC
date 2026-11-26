@@ -5,14 +5,26 @@ import * as ImagePicker from 'expo-image-picker';
 import { apiRequest, uploadBase64Image } from '../api/client';
 
 export default function OwnerHomeScreen() {
+  const [tab, setTab] = useState('list'); // 'list' | 'manage' | 'kyc'
+  const [title, setTitle] = useState('');
+  const [city, setCity] = useState('Kathmandu');
+  const [landmark, setLandmark] = useState('');
+  const [totalSqft, setTotalSqft] = useState('3000');
+  const [rateSqft, setRateSqft] = useState('28');
+  const [lat, setLat] = useState(27.7172);
+  const [lng, setLng] = useState(85.3240);
+  const [photoUrl, setPhotoUrl] = useState('');
   const [listings, setListings] = useState([]);
   const [payouts, setPayouts] = useState([]);
-  const [kycStatus, setKycStatus] = useState('PENDING_SUBMISSION');
-  const [title, setTitle] = useState('');
-  const [sqft, setSqft] = useState('3000');
-  const [rate, setRate] = useState('45');
-  const [coords, setCoords] = useState({ lat: 27.7172, lng: 85.3240 });
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [kycStatus, setKycStatus] = useState('PENDING');
+
+  // KYC form
+  const [citNo, setCitNo] = useState('');
+  const [bankName, setBankName] = useState('Nabil Bank');
+  const [bankAcc, setBankAcc] = useState('');
+  const [citFrontUrl, setCitFrontUrl] = useState('');
+  const [holdReason, setHoldReason] = useState('');
+  const [revRate, setRevRate] = useState('');
 
   async function refresh() {
     try {
@@ -23,123 +35,208 @@ export default function OwnerHomeScreen() {
       ]);
       setListings(Array.isArray(l) ? l : []);
       setPayouts(Array.isArray(p) ? p : []);
-      setKycStatus(k.kyc_status || 'PENDING_SUBMISSION');
-    } catch (err) {
-      Alert.alert('Load Error', err.message);
-    }
+      setKycStatus(k?.kyc_status || 'PENDING');
+    } catch {}
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+  }, []);
 
-  async function pinMyPhoneGps() {
+  async function pinMyLocation() {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return Alert.alert('Permission Needed', 'Enable location access.');
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-    Alert.alert('GPS Pinned', `Lat: ${loc.coords.latitude.toFixed(5)}, Lng: ${loc.coords.longitude.toFixed(5)}`);
+    if (status !== 'granted') return Alert.alert('Permission Needed', 'Grant GPS location permission.');
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    setLat(Number(loc.coords.latitude.toFixed(6)));
+    setLng(Number(loc.coords.longitude.toFixed(6)));
+    Alert.alert('GPS Pinned', `Coords: ${loc.coords.latitude.toFixed(5)}, ${loc.coords.longitude.toFixed(5)}`);
   }
 
-  async function snapSpacePhoto() {
+  async function snapFacilityPhoto(onDone) {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) return Alert.alert('Camera Needed', 'Enable camera permission.');
+    if (!perm.granted) return Alert.alert('Camera Permission Needed', 'Allow camera access.');
     const shot = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
     if (!shot.canceled && shot.assets?.[0]?.base64) {
-      try {
-        const url = await uploadBase64Image({ filename: 'warehouse.jpg', base64: shot.assets[0].base64 });
-        setPhotoUrl(url);
-        Alert.alert('Uploaded!', `Photo stored cleanly at ${url}`);
-      } catch (err) {
-        Alert.alert('Upload Failed', err.message);
-      }
+      const url = await uploadBase64Image({ filename: 'doc.jpg', base64: shot.assets[0].base64 });
+      onDone(url);
+      Alert.alert('Uploaded!', 'Image stored safely on server.');
     }
   }
 
-  async function submitSpace() {
-    if (kycStatus !== 'VERIFIED') {
-      Alert.alert('KYC Verification Pending', 'Please verify your KYC & Bank details first before registering a storage space.');
-      return;
-    }
-    if (!title.trim()) return Alert.alert('Required', 'Enter Facility Title.');
+  async function submitProperty() {
+    if (!title.trim() || !landmark.trim()) return Alert.alert('Required', 'Title and Landmark are required.');
     try {
       const res = await apiRequest('/api/warehouses/list-space', {
         method: 'POST',
         body: {
           title: title.trim(),
-          space_type: 'dry_storage',
-          input_value: parseFloat(sqft) || 2000,
-          input_unit: 'sqft',
-          base_rate_per_sqft: parseFloat(rate) || 45,
-          district: 'Kathmandu',
-          latitude: coords.lat,
-          longitude: coords.lng,
-          photo_urls: photoUrl ? [photoUrl] : undefined,
+          city: city.trim(),
+          neighborhood_landmark: landmark.trim(),
+          total_sqft: parseFloat(totalSqft) || 1000,
+          monthly_rate_per_sqft: parseFloat(rateSqft) || 25,
+          latitude: lat,
+          longitude: lng,
+          image_urls: photoUrl ? [photoUrl] : [],
+          space_type: 'COMMERCIAL_GODOWN',
+          road_access_ft: 20,
+          floor_level: 'GROUND',
         },
       });
-      Alert.alert('Submitted', res.message || 'Space sent for audit!');
+      Alert.alert('Listed for Inspection', res.message || 'Submitted.');
       setTitle('');
+      setLandmark('');
       refresh();
     } catch (err) {
-      Alert.alert('Blocked', err.message);
+      Alert.alert('Submit Error', err.message);
+    }
+  }
+
+  async function toggleMaintenanceHold(warehouseId, currentHold) {
+    try {
+      const res = await apiRequest(`/api/warehouses/${warehouseId}/request-maintenance-hold`, {
+        method: 'POST',
+        body: {
+          is_on_hold: !currentHold,
+          hold_reason_note: holdReason.trim() || (currentHold ? 'Maintenance completed' : 'Owner scheduled maintenance'),
+        },
+      });
+      Alert.alert('Hold Status Updated', res.message || 'Updated');
+      refresh();
+    } catch (err) {
+      Alert.alert('Hold Error', err.message);
+    }
+  }
+
+  async function submitChangeRequest(warehouseId, reqType) {
+    try {
+      const res = await apiRequest(`/api/warehouses/${warehouseId}/change-request`, {
+        method: 'POST',
+        body: {
+          request_type: reqType,
+          requested_rate_per_sqft: reqType === 'RATE_REVISION' ? (parseFloat(revRate) || null) : null,
+          reason_note: holdReason.trim() || `Mobile Owner ${reqType}`,
+        },
+      });
+      Alert.alert('Request Sent', res.message || 'Submitted to SuperAdmin.');
+      refresh();
+    } catch (err) {
+      Alert.alert('Request Error', err.message);
+    }
+  }
+
+  async function submitOwnerKyc() {
+    if (!citNo.trim() || !bankAcc.trim()) return Alert.alert('Required', 'Enter Citizenship No & Bank Account Number.');
+    try {
+      const res = await apiRequest('/api/auth/submit-kyc', {
+        method: 'POST',
+        body: {
+          citizenship_number: citNo.trim(),
+          citizenship_front_url: citFrontUrl || undefined,
+          bank_name: bankName.trim(),
+          bank_account_number: bankAcc.trim(),
+        },
+      });
+      Alert.alert('KYC Submitted', res.message || 'Sent for SuperAdmin review.');
+      refresh();
+    } catch (err) {
+      Alert.alert('KYC Error', err.message);
     }
   }
 
   return (
     <ScrollView contentContainerStyle={styles.wrap}>
-      <View style={styles.kycBox}>
-        <Text style={styles.kycTitle}>KYC &amp; Bank Status: {kycStatus}</Text>
-        <Text style={styles.meta}>Property owners must be KYC verified before registering new godowns.</Text>
+      <View style={styles.tabRow}>
+        {[['list', 'List Space'], ['manage', `Spaces (${listings.length})`], ['kyc', `KYC (${kycStatus})`]].map(([k, lbl]) => (
+          <TouchableOpacity key={k} onPress={() => setTab(k)} style={[styles.tabBtn, tab === k && styles.tabActive]}>
+            <Text style={[styles.tabTxt, tab === k && styles.tabTxtActive]}>{lbl}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Register Space via Mobile GPS &amp; Camera</Text>
-        <TextInput value={title} onChangeText={setTitle} placeholder="Facility Title (e.g. Kalanki Shed #2)" style={styles.input} />
-        <View style={styles.row}>
-          <TextInput value={sqft} onChangeText={setSqft} keyboardType="numeric" placeholder="Sq Ft" style={[styles.input, { flex: 1 }]} />
-          <TextInput value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="Rs/sqft" style={[styles.input, { flex: 1 }]} />
+      {tab === 'list' && (
+        <View style={styles.card}>
+          <Text style={styles.sec}>Register Warehouse Space (KYC: {kycStatus})</Text>
+          <TextInput value={title} onChangeText={setTitle} placeholder="Facility Title (e.g. Balaju Godown)" style={styles.input} />
+          <TextInput value={city} onChangeText={setCity} placeholder="City" style={styles.input} />
+          <TextInput value={landmark} onChangeText={setLandmark} placeholder="Landmark / Chowk" style={styles.input} />
+          <View style={styles.row}>
+            <TextInput value={totalSqft} onChangeText={setTotalSqft} placeholder="Sq Ft" keyboardType="numeric" style={[styles.input, { flex: 1 }]} />
+            <TextInput value={rateSqft} onChangeText={setRateSqft} placeholder="Rs/SqFt" keyboardType="numeric" style={[styles.input, { flex: 1 }]} />
+          </View>
+          <View style={styles.row}>
+            <TouchableOpacity onPress={pinMyLocation} style={[styles.btnDark, { flex: 1 }]}><Text style={styles.btnLight}>Pin GPS ({lat.toFixed(3)}, {lng.toFixed(3)})</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => snapFacilityPhoto(setPhotoUrl)} style={[styles.btnDark, { flex: 1 }]}><Text style={styles.btnLight}>{photoUrl ? 'Photo ✓' : 'Camera Photo'}</Text></TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={submitProperty} style={styles.btnAmber}><Text style={styles.btnDarkText}>Submit for Incharge Audit</Text></TouchableOpacity>
         </View>
-        <View style={styles.row}>
-          <TouchableOpacity onPress={pinMyPhoneGps} style={styles.btnDark}><Text style={styles.btnLight}>Pin GPS ({coords.lat.toFixed(3)}, {coords.lng.toFixed(3)})</Text></TouchableOpacity>
-          <TouchableOpacity onPress={snapSpacePhoto} style={styles.btnDark}><Text style={styles.btnLight}>{photoUrl ? 'Photo Ready ✓' : 'Snap Photo'}</Text></TouchableOpacity>
-        </View>
-        <TouchableOpacity onPress={submitSpace} style={[styles.btnAmber, { marginTop: 10 }]}>
-          <Text style={styles.btnDarkText}>Submit for Physical Audit</Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
-      <Text style={styles.secHdr}>My Spaces &amp; Occupancy Yield</Text>
-      {listings.map((w) => (
-        <View key={w.id} style={styles.card}>
-          <Text style={styles.cardTitle}>{w.title}</Text>
-          <Text style={styles.meta}>Occupied: {w.occupied_sqft}/{w.total_sqft} sq ft ({w.occupancy_percent}%)</Text>
-          <Text style={styles.price}>Realized Yield: Rs. {w.realized_monthly_yield_npr} / Potential: Rs. {w.potential_monthly_yield_npr}</Text>
+      {tab === 'manage' && (
+        <View>
+          <View style={styles.card}>
+            <TextInput value={holdReason} onChangeText={setHoldReason} placeholder="Maintenance / Delisting Reason Note" style={styles.input} />
+            <TextInput value={revRate} onChangeText={setRevRate} placeholder="New Proposed Rate (Rs./sq ft for revision)" keyboardType="numeric" style={styles.input} />
+          </View>
+          {listings.map((w) => (
+            <View key={w.id} style={styles.card}>
+              <Text style={styles.cardTitle}>{w.title} ({w.is_approved ? 'LIVE' : 'PENDING'})</Text>
+              <Text style={styles.meta}>{w.available_sqft}/{w.total_sqft} sq ft • Rs. {w.monthly_rate_per_sqft}/sq ft • Hold: {w.is_on_hold ? 'ON HOLD' : 'ACTIVE'}</Text>
+              <View style={[styles.row, { marginTop: 8 }]}>
+                <TouchableOpacity onPress={() => toggleMaintenanceHold(w.id, w.is_on_hold)} style={[styles.btnDark, { flex: 1 }]}>
+                  <Text style={styles.btnLight}>{w.is_on_hold ? 'Release Hold' : 'Maintenance Hold'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => submitChangeRequest(w.id, 'DELISTING_15_DAYS')} style={[styles.btnDark, { flex: 1, backgroundColor: '#b91c1c' }]}>
+                  <Text style={styles.btnLight}>15d Delist</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => submitChangeRequest(w.id, 'RATE_REVISION')} style={[styles.btnAmber, { flex: 1, marginTop: 0 }]}>
+                  <Text style={styles.btnDarkText}>Rate Rev</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+          <Text style={styles.sec}>90% Owner Payout Ledger ({payouts.length})</Text>
+          {payouts.map((p) => (
+            <View key={p.booking_id || p.id} style={styles.card}>
+              <Text style={styles.cardTitle}>{p.warehouse_title} • Rs. {p.owner_payout_npr}</Text>
+              <Text style={styles.meta}>Status: {p.payout_status} • SqFt: {p.leased_sqft}</Text>
+            </View>
+          ))}
         </View>
-      ))}
+      )}
 
-      <Text style={styles.secHdr}>Net Bank Payouts (After 10% Fee &amp; 10% Rent TDS)</Text>
-      {payouts.map((p, idx) => (
-        <View key={idx} style={styles.card}>
-          <Text style={styles.cardTitle}>{p.warehouse_title} ({p.lease_number})</Text>
-          <Text style={styles.meta}>Gross: Rs. {p.monthly_gross_rent} | TDS (10%): Rs. {p.tds_10pct}</Text>
-          <Text style={styles.price}>Net Bank Deposit: Rs. {p.net_bank_deposit_npr}</Text>
+      {tab === 'kyc' && (
+        <View style={styles.card}>
+          <Text style={styles.sec}>Citizenship &amp; Bank KYC ({kycStatus})</Text>
+          <TextInput value={citNo} onChangeText={setCitNo} placeholder="Citizenship Number (e.g. 27-01-74-01122)" style={styles.input} />
+          <TextInput value={bankName} onChangeText={setBankName} placeholder="Nepal Commercial Bank Name" style={styles.input} />
+          <TextInput value={bankAcc} onChangeText={setBankAcc} placeholder="Bank Account Number (for 90% Payouts)" style={styles.input} />
+          <TouchableOpacity onPress={() => snapFacilityPhoto(setCitFrontUrl)} style={styles.btnDark}>
+            <Text style={styles.btnLight}>{citFrontUrl ? 'Citizenship Photo Uploaded ✓' : 'Snap Citizenship Photo'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={submitOwnerKyc} style={styles.btnAmber}>
+            <Text style={styles.btnDarkText}>Submit Owner KYC to SuperAdmin</Text>
+          </TouchableOpacity>
         </View>
-      ))}
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { padding: 14, paddingBottom: 40 },
-  kycBox: { backgroundColor: '#fef3c7', padding: 12, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#fde68a' },
-  kycTitle: { fontWeight: '800', fontSize: 13, color: '#92400e' },
-  secHdr: { fontSize: 13, fontWeight: '800', color: '#0f172a', marginVertical: 8 },
-  card: { backgroundColor: '#fff', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 10 },
+  tabRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e2e8f0', alignItems: 'center' },
+  tabActive: { backgroundColor: '#0f172a' },
+  tabTxt: { fontSize: 11, fontWeight: '700', color: '#475569' },
+  tabTxtActive: { color: '#fff' },
+  sec: { fontSize: 14, fontWeight: '800', color: '#0f172a', marginBottom: 8 },
+  card: { backgroundColor: '#fff', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 12 },
   cardTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
   meta: { fontSize: 11, color: '#64748b', marginTop: 3 },
-  price: { fontSize: 12, fontWeight: '800', color: '#047857', marginTop: 4 },
-  input: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 9, marginTop: 6, fontSize: 12 },
-  row: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  btnDark: { flex: 1, backgroundColor: '#0f172a', padding: 10, borderRadius: 10, alignItems: 'center' },
-  btnAmber: { backgroundColor: '#f59e0b', padding: 12, borderRadius: 10, alignItems: 'center' },
+  input: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 10, fontSize: 13, marginBottom: 10 },
+  row: { flexDirection: 'row', gap: 6 },
+  btnDark: { backgroundColor: '#0f172a', padding: 11, borderRadius: 10, alignItems: 'center', marginBottom: 8 },
+  btnAmber: { backgroundColor: '#f59e0b', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 4 },
   btnLight: { color: '#fff', fontWeight: '700', fontSize: 11 },
-  btnDarkText: { color: '#0f172a', fontWeight: '800', fontSize: 12 },
+  btnDarkText: { color: '#0f172a', fontWeight: '900', fontSize: 13 },
 });

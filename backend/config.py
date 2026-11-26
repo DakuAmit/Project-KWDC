@@ -45,6 +45,18 @@ class Settings(BaseSettings):
     BREVO_SENDER_EMAIL: str = "amitsilwal85@gmail.com"
     BREVO_SENDER_NAME: str = "KTM-WDC"
 
+    # SMS Gateway Providers (Sparrow SMS for Nepal, Twilio for International, else Dev Outbox)
+    SPARROW_SMS_TOKEN: str = os.getenv("SPARROW_SMS_TOKEN", "").strip()
+    SPARROW_SMS_FROM: str = os.getenv("SPARROW_SMS_FROM", "KTMWDC").strip()
+    TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
+    TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
+    TWILIO_FROM_NUMBER: str = os.getenv("TWILIO_FROM_NUMBER", "").strip()
+
+    # Production Security & Cron Automation Controls
+    # Set ALLOW_DEMO_SHORTCUTS=false in production to disable test OTP "123456"/PIN "1234" shortcuts
+    ALLOW_DEMO_SHORTCUTS: bool = os.getenv("ALLOW_DEMO_SHORTCUTS", "true").lower() in ("true", "1", "yes")
+    CRON_SECRET: str = os.getenv("CRON_SECRET", "").strip()
+
     # Fiscal & IRD Nepal Parameters
     VAT_RATE: float = 0.13
     MIN_ADMIN_MARGIN: float = 0.10

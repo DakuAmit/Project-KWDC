@@ -1375,8 +1375,10 @@
       if (!el) return;
 
       fleetMapInstance = L.map('fleetMap').setView([27.700769, 85.300140], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap | KTM-WDC Live Fleet Telemetry'
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '© Google Maps | KTM-WDC Live Fleet Telemetry'
       }).addTo(fleetMapInstance);
 
       markersGroup = L.layerGroup().addTo(fleetMapInstance);

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Security Agency &amp; Guard Roster Portal | KTM-WDC Nepal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { navy: '#0f172a', amber: '#f59e0b', nepal: '#dc2626' },
+          fontFamily: { sans: ['Geist', 'system-ui', 'sans-serif'], mono: ['Geist Mono', 'monospace'] }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased font-sans">
+  <div id="drawerBackdrop" onclick="toggleDrawer()" class="fixed inset-0 bg-slate-950/60 z-40 hidden lg:hidden"></div>
+
+  <div class="flex h-screen overflow-hidden">
+    <!-- Left Navigation Drawer -->
+    <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-navy text-slate-300 flex flex-col border-r border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300">
+      <div class="p-5 border-b border-white/10 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2.5">
+          <span class="w-10 h-10 rounded-xl bg-amber text-navy grid place-items-center font-bold">
+            <i data-lucide="shield-alert" class="w-6 h-6"></i>
+          </span>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-extrabold text-white text-base">KTM-WDC</span>
+              <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded">NEPAL</span>
+            </div>
+            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5" data-i18n="role_badge">Security Operations</p>
+          </div>
+        </a>
+        <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm">
+        <button type="button" onclick="switchTab('roster')" id="nav-roster" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-white bg-white/10">
+          <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_roster">Guard Roster &amp; Sites</span></span>
+          <span id="badgeGuardCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
+        </button>
+        <button type="button" onclick="switchTab('patrols')" id="nav-patrols" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="radar" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_patrols">Shift Patrol Logs</span></span>
+        </button>
+        <button type="button" onclick="switchTab('incidents')" id="nav-incidents" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="siren" class="w-4 h-4 text-rose-400"></i> <span data-i18n="nav_incidents">Police &amp; Hazard Alert</span></span>
+        </button>
+      </nav>
+
+      <div class="p-4 border-t border-white/10 bg-black/20">
+        <div class="flex items-center justify-between">
+          <div class="truncate">
+            <p class="text-xs font-bold text-white truncate" id="secAgencyUserName">Security Partner</p>
+            <p class="text-[11px] text-slate-400 truncate" id="secLicenseStatus">Pending License Verification</p>
+          </div>
+          <button onclick="handleLogout()" title="Sign Out" class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/5">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleDrawer()" class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold text-navy" data-i18n="page_title">Licensed Security Agency Command Center</h1>
+            <p class="text-xs text-slate-500 hidden sm:block" data-i18n="page_sub">24/7 Perimeter Watch • Seal Integrity Checks • Emergency Nepal Police Dispatch</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <button type="button" id="langBtn" onclick="toggleLanguage()" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-100">
+            <span id="langLabel">नेपाली</span>
+          </button>
+          <button type="button" onclick="loadSecurityDashboard()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-navy text-white text-xs font-bold hover:bg-slate-800">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_refresh">Refresh</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="p-4 sm:p-6 max-w-6xl w-full mx-auto space-y-6">
+        <!-- Agency Profile Card -->
+        <section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <h2 class="font-bold text-navy text-sm sm:text-base" data-i18n="agency_title">Home Ministry License &amp; Agency Registration</h2>
+              <p class="text-xs text-slate-500">Required before deploying guards to verified KTM-WDC commercial warehouses.</p>
+            </div>
+            <span id="agencyVerifyBadge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">UNDER_REVIEW</span>
+          </div>
+          <form onsubmit="saveAgencyProfile(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end text-xs">
+            <div>
+              <label class="block font-bold text-navy mb-1">Agency Legal Name *</label>
+              <input type="text" id="agencyName" required placeholder="e.g. Gorkha Shield Security Pvt. Ltd." class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label class="block font-bold text-navy mb-1">Home Ministry License No *</label>
+              <input type="text" id="agencyLicenseNo" required placeholder="e.g. MOHA-SEC-2082-041" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono">
+            </div>
+            <div>
+              <label class="block font-bold text-navy mb-1">24/7 Control Room Phone *</label>
+              <input type="text" id="agencyPhone" required placeholder="+977-9801000099" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono">
+            </div>
+            <button type="submit" class="px-4 py-2.5 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold">
+              Save Agency Profile
+            </button>
+          </form>
+        </section>
+
+        <!-- View: Guard Roster -->
+        <section id="view-roster" class="space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <h3 class="font-bold text-navy text-sm mb-3">Deploy New Security Guard to Warehouse</h3>
+            <form onsubmit="addGuard(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end text-xs">
+              <div>
+                <label class="block font-bold text-navy mb-1">Guard Full Name *</label>
+                <input type="text" id="guardName" required placeholder="e.g. Prem Thapa Magar" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+              </div>
+              <div>
+                <label class="block font-bold text-navy mb-1">Mobile Number *</label>
+                <input type="text" id="guardPhone" required placeholder="98XXXXXXXX" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono">
+              </div>
+              <div>
+                <label class="block font-bold text-navy mb-1">Assigned Warehouse</label>
+                <select id="guardWarehouseId" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white">
+                  <option value="">Unassigned (Standby)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-navy mb-1">Shift</label>
+                <select id="guardShiftType" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white">
+                  <option value="DAY">DAY (06:00–18:00)</option>
+                  <option value="NIGHT">NIGHT (18:00–06:00)</option>
+                </select>
+              </div>
+              <button type="submit" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                + Add Guard
+              </button>
+            </form>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-slate-200 font-bold text-navy text-sm">Active Security Personnel &amp; Site Deployment</div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-3">Guard</th>
+                    <th class="px-4 py-3">Phone</th>
+                    <th class="px-4 py-3">Deployed Facility</th>
+                    <th class="px-4 py-3">Shift</th>
+                    <th class="px-4 py-3 text-right">Reassign Site</th>
+                  </tr>
+                </thead>
+                <tbody id="guardsTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">Loading security roster...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View: Shift Patrol Logs -->
+        <section id="view-patrols" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <h3 class="font-bold text-navy text-sm mb-3">Record Perimeter Check &amp; Seal Integrity Patrol</h3>
+            <form onsubmit="submitPatrolLog(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+              <div>
+                <label class="block font-bold text-navy mb-1">Warehouse *</label>
+                <select id="patrolWarehouseId" required class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"></select>
+              </div>
+              <div>
+                <label class="block font-bold text-navy mb-1">Patrol Guard</label>
+                <select id="patrolGuardId" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white">
+                  <option value="">Agency Supervisor</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-navy mb-1">Perimeter Status *</label>
+                <select id="patrolStatus" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white font-semibold">
+                  <option value="ALL_CLEAR">ALL_CLEAR (Normal)</option>
+                  <option value="SEAL_INTACT">SEAL_INTACT (Locks Verified)</option>
+                  <option value="SUSPICIOUS_ACTIVITY">SUSPICIOUS_ACTIVITY</option>
+                  <option value="HAZARD_DETECTED">HAZARD_DETECTED</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-navy mb-1">Shift</label>
+                <select id="patrolShift" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white">
+                  <option value="NIGHT">NIGHT</option>
+                  <option value="DAY">DAY</option>
+                </select>
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block font-bold text-navy mb-1">Observation Notes *</label>
+                <input type="text" id="patrolNotes" required placeholder="e.g. Main shutter locks intact, CCTV online, perimeter dry." class="w-full px-3 py-2 rounded-lg border border-slate-300">
+              </div>
+              <button type="submit" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold">
+                Log Patrol Check
+              </button>
+            </form>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-slate-200 font-bold text-navy text-sm">Recent Perimeter Patrol Logs</div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-3">Time</th>
+                    <th class="px-4 py-3">Facility</th>
+                    <th class="px-4 py-3">Guard / Shift</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="patrolTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No patrol logs yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View: Incidents & Emergency Police Alert -->
+        <section id="view-incidents" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-rose-200 p-5 shadow-sm">
+            <h3 class="font-bold text-rose-700 text-sm mb-3 flex items-center gap-2">
+              <i data-lucide="siren" class="w-4 h-4"></i> Report Breach / Fire Hazard &amp; Dispatch Nepal Police (100)
+            </h3>
+            <form onsubmit="submitSecurityIncident(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label class="block font-bold text-navy mb-1">Warehouse Facility *</label>
+                <select id="incWarehouseId" required class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"></select>
+              </div>
+              <div>
+                <label class="block font-bold text-navy mb-1">Incident Category *</label>
+                <select id="incCategory" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white">
+                  <option value="SEAL_TAMPERING">Seal Tampering / Forced Entry</option>
+                  <option value="BURGLARY_ATTEMPT">Burglary / Trespassing</option>
+                  <option value="FIRE_HAZARD">Fire / Smoke Detection</option>
+                  <option value="MONSOON_SEEPAGE">Monsoon Water Seepage</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-navy mb-1">Severity *</label>
+                <select id="incSeverity" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white">
+                  <option value="CRITICAL">CRITICAL (Emergency)</option>
+                  <option value="MAJOR">MAJOR</option>
+                  <option value="MODERATE">MODERATE</option>
+                  <option value="MINOR">MINOR</option>
+                </select>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block font-bold text-navy mb-1">Incident Description *</label>
+                <input type="text" id="incDesc" required placeholder="Describe security breach, seal status, and immediate containment..." class="w-full px-3 py-2 rounded-lg border border-slate-300">
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 font-bold text-rose-700 cursor-pointer">
+                  <input type="checkbox" id="incPoliceAlert" checked class="w-4 h-4 accent-rose-600">
+                  1-Click Police Alert
+                </label>
+                <button type="submit" class="ml-auto px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">
+                  Dispatch Alert
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="toastBox" class="fixed bottom-4 right-4 z-50 hidden px-4 py-3 rounded-xl text-xs font-bold shadow-lg text-white"></div>
+
+  <script>
+    const DICTIONARY = {
+      en: {
+        role_badge: "Security Operations",
+        nav_roster: "Guard Roster & Sites",
+        nav_patrols: "Shift Patrol Logs",
+        nav_incidents: "Police & Hazard Alert",
+        page_title: "Licensed Security Agency Command Center",
+        page_sub: "24/7 Perimeter Watch • Seal Integrity Checks • Emergency Nepal Police Dispatch",
+        btn_refresh: "Refresh",
+        agency_title: "Home Ministry License & Agency Registration"
+      },
+      ne: {
+        role_badge: "सुरक्षा सञ्चालन",
+        nav_roster: "गार्ड रोस्टर र गोदाम",
+        nav_patrols: "सिफ्ट गस्ती लग",
+        nav_incidents: "प्रहरी र जोखिम सूचना",
+        page_title: "इजाजतपत्र प्राप्त सुरक्षा एजेन्सी कमान्ड",
+        page_sub: "२४/७ गोदाम सुरक्षा • सिल जाँच • नेपाल प्रहरी आपतकालीन सूचना",
+        btn_refresh: "रिफ्रेस",
+        agency_title: "गृह मन्त्रालय इजाजतपत्र र एजेन्सी दर्ता"
+      }
+    };
+
+    function applyTranslations(lang) {
+      const dict = DICTIONARY[lang] || DICTIONARY.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.getAttribute('data-i18n');
+        if (dict[k]) el.textContent = dict[k];
+      });
+      const lbl = document.getElementById('langLabel');
+      if (lbl) lbl.textContent = (lang === 'ne') ? 'English' : 'नेपाली';
+    }
+
+    function toggleLanguage() {
+      const next = (localStorage.getItem('kwdc_lang') === 'ne') ? 'en' : 'ne';
+      localStorage.setItem('kwdc_lang', next);
+      applyTranslations(next);
+    }
+
+    function toggleDrawer() {
+      document.getElementById('leftDrawer').classList.toggle('-translate-x-full');
+      document.getElementById('drawerBackdrop').classList.toggle('hidden');
+    }
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem('kwdc_token');
+      return { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+    }
+
+    function showToast(msg, isErr = false) {
+      const box = document.getElementById('toastBox');
+      box.textContent = msg;
+      box.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-xl text-xs font-bold shadow-lg text-white ${isErr ? 'bg-rose-600' : 'bg-emerald-600'}`;
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 4000);
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function switchTab(tabId) {
+      ['roster', 'patrols', 'incidents'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabId);
+        const nav = document.getElementById(`nav-${t}`);
+        nav.classList.toggle('bg-white/10', t === tabId);
+        nav.classList.toggle('text-white', t === tabId);
+      });
+    }
+
+    let secWarehouses = [];
+
+    async function loadSecurityDashboard() {
+      try {
+        const res = await fetch('/api/security/dashboard', { headers: getAuthHeaders() });
+        if (!res.ok) {
+          showToast('Please sign in as a Security Agency account.', true);
+          return;
+        }
+        const data = await res.json();
+        secWarehouses = data.warehouses || [];
+        document.getElementById('secAgencyUserName').textContent = data.user.full_name;
+
+        if (data.agency) {
+          document.getElementById('agencyName').value = data.agency.agency_name;
+          document.getElementById('agencyLicenseNo').value = data.agency.home_ministry_license_no;
+          document.getElementById('agencyPhone').value = data.agency.emergency_contact_phone;
+          const badge = document.getElementById('agencyVerifyBadge');
+          badge.textContent = data.agency.is_verified ? 'VERIFIED AGENCY' : 'PENDING_AUDIT';
+          badge.className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${data.agency.is_verified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`;
+          document.getElementById('secLicenseStatus').textContent = data.agency.is_verified ? 'MOHA License Verified' : 'Pending License Verification';
+        }
+
+        const whOpts = secWarehouses.map(w => `<option value="${w.id}">${escapeHtml(w.title)} (${escapeHtml(w.city)})</option>`).join('');
+        document.getElementById('guardWarehouseId').innerHTML = `<option value="">Unassigned (Standby)</option>${whOpts}`;
+        document.getElementById('patrolWarehouseId').innerHTML = whOpts || '<option value="">No approved warehouses</option>';
+        document.getElementById('incWarehouseId').innerHTML = whOpts || '<option value="">No approved warehouses</option>';
+
+        const guards = data.guards || [];
+        document.getElementById('badgeGuardCount').textContent = guards.length;
+        document.getElementById('patrolGuardId').innerHTML = `<option value="">Agency Supervisor</option>` + guards.map(g => `<option value="${g.id}">${escapeHtml(g.guard_name)}</option>`).join('');
+
+        document.getElementById('guardsTableBody').innerHTML = guards.length ? guards.map(g => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-bold text-navy">${escapeHtml(g.guard_name)}</td>
+            <td class="px-4 py-3 font-mono">${escapeHtml(g.phone_number)}</td>
+            <td class="px-4 py-3 font-medium">${escapeHtml(g.assigned_warehouse_title)}</td>
+            <td class="px-4 py-3 font-mono">${escapeHtml(g.shift_type)}</td>
+            <td class="px-4 py-3 text-right">
+              <select onchange="if(this.value) reassignGuardSite(${g.id}, this.value); this.value='';" class="px-2 py-1 rounded-lg border border-slate-300 bg-white text-[11px]">
+                <option value="">Assign Warehouse...</option>
+                ${secWarehouses.map(w => `<option value="${w.id}">${escapeHtml(w.title)}</option>`).join('')}
+              </select>
+            </td>
+          </tr>
+        `).join('') : '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No security guards added yet.</td></tr>';
+
+        const patrols = data.patrol_logs || [];
+        document.getElementById('patrolTableBody').innerHTML = patrols.length ? patrols.map(p => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-mono text-slate-500">${escapeHtml(p.logged_at)}</td>
+            <td class="px-4 py-3 font-bold text-navy">${escapeHtml(p.warehouse_title)}</td>
+            <td class="px-4 py-3">${escapeHtml(p.guard_name)} (${escapeHtml(p.shift_type)})</td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded font-bold text-[10px] ${p.perimeter_status.includes('CLEAR') || p.perimeter_status.includes('INTACT') ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${escapeHtml(p.perimeter_status)}</span></td>
+            <td class="px-4 py-3">${escapeHtml(p.notes)}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No patrol logs recorded yet.</td></tr>';
+      } catch (e) {
+        showToast('Error loading security dashboard', true);
+      }
+    }
+
+    async function saveAgencyProfile(e) {
+      e.preventDefault();
+      const res = await fetch('/api/security/agency-profile', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          agency_name: document.getElementById('agencyName').value,
+          home_ministry_license_no: document.getElementById('agencyLicenseNo').value,
+          emergency_contact_phone: document.getElementById('agencyPhone').value
+        })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); loadSecurityDashboard(); } else showToast(d.detail || 'Error saving agency', true);
+    }
+
+    async function addGuard(e) {
+      e.preventDefault();
+      const whId = document.getElementById('guardWarehouseId').value;
+      const res = await fetch('/api/security/guards', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          guard_name: document.getElementById('guardName').value,
+          phone_number: document.getElementById('guardPhone').value,
+          assigned_warehouse_id: whId ? parseInt(whId) : null,
+          shift_type: document.getElementById('guardShiftType').value
+        })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); e.target.reset(); loadSecurityDashboard(); } else showToast(d.detail || 'Failed to add guard', true);
+    }
+
+    async function reassignGuardSite(guardId, warehouseId) {
+      const res = await fetch(`/api/security/guards/${guardId}/assign-warehouse`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ warehouse_id: parseInt(warehouseId) })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); loadSecurityDashboard(); } else showToast(d.detail || 'Reassign failed', true);
+    }
+
+    async function submitPatrolLog(e) {
+      e.preventDefault();
+      const whId = document.getElementById('patrolWarehouseId').value;
+      const gId = document.getElementById('patrolGuardId').value;
+      const res = await fetch('/api/security/patrol-log', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          warehouse_id: parseInt(whId),
+          guard_id: gId ? parseInt(gId) : null,
+          perimeter_status: document.getElementById('patrolStatus').value,
+          shift_type: document.getElementById('patrolShift').value,
+          notes: document.getElementById('patrolNotes').value
+        })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); document.getElementById('patrolNotes').value = ''; loadSecurityDashboard(); } else showToast(d.detail || 'Failed', true);
+    }
+
+    async function submitSecurityIncident(e) {
+      e.preventDefault();
+      const res = await fetch('/api/incharge/incident-report', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          warehouse_id: parseInt(document.getElementById('incWarehouseId').value),
+          incident_category: document.getElementById('incCategory').value,
+          severity: document.getElementById('incSeverity').value,
+          description: document.getElementById('incDesc').value,
+          police_alert_dispatched: document.getElementById('incPoliceAlert').checked
+        })
+      });
+      const d = await res.json();
+      if (res.ok) { showToast(d.message); document.getElementById('incDesc').value = ''; } else showToast(d.detail || 'Alert failed', true);
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('kwdc_token');
+      localStorage.removeItem('kwdc_user');
+      window.location.href = '/';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      applyTranslations(localStorage.getItem('kwdc_lang') || 'en');
+      loadSecurityDashboard();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

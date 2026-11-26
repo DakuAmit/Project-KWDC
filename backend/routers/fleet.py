@@ -896,7 +896,8 @@ def driver_login(
         raise HTTPException(status_code=401, detail="Driver with this mobile number is not registered.")
 
     driver_pin = getattr(driver, "login_pin", "1234") or "1234"
-    if driver_pin != pin_clean and pin_clean != "1234":
+    pin_demo_ok = settings.ALLOW_DEMO_SHORTCUTS and pin_clean == "1234"
+    if driver_pin != pin_clean and not pin_demo_ok:
         raise HTTPException(status_code=401, detail="Incorrect 4-digit access PIN. Contact your Fleet Manager.")
 
     token = create_access_token(
@@ -1293,7 +1294,8 @@ def complete_driver_trip(
     # OTP check
     expected_otp = getattr(order, 'delivery_otp', None)
     if expected_otp and payload.delivery_otp:
-        if payload.delivery_otp.strip() != expected_otp.strip() and payload.delivery_otp.strip() != "1234":
+        otp_demo_ok = settings.ALLOW_DEMO_SHORTCUTS and payload.delivery_otp.strip() == "1234"
+        if payload.delivery_otp.strip() != expected_otp.strip() and not otp_demo_ok:
             raise HTTPException(status_code=400, detail="Invalid delivery OTP. Please verify with consignee.")
 
     now = datetime.now(timezone.utc)

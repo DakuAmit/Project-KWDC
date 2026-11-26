@@ -11,13 +11,18 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 from backend.database import get_db
+from backend.config import settings
 from backend.models import User, UserRole, KycStatus, UserKycProfile
-from backend.schemas import UserRegister, VerifyOtpRequest, UserLogin, TokenResponse, SubmitKycRequest
+from backend.schemas import (
+    UserRegister, VerifyOtpRequest, UserLogin, TokenResponse,
+    SubmitKycRequest, ForgotPasswordRequest, ResetPasswordRequest
+)
 from backend.auth_utils import (
     verify_password, get_password_hash, create_access_token,
     get_current_user, require_user, require_roles
 )
-from backend.services.email_service import send_otp_email
+from backend.services.email_service import send_otp_email, send_email_via_brevo
+from backend.services.sms_service import send_sms
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication & KYC"])
 
@@ -73,23 +78,31 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # Send OTP Email
+    # Send OTP Email + SMS (Sparrow/Twilio/Dev Outbox)
     email_dispatched = send_otp_email(
         to_email=new_user.email,
         to_name=new_user.full_name,
         otp_code=otp_code
     )
+    sms_result = send_sms(
+        db=db,
+        phone_number=new_user.phone_number,
+        message=f"KTM-WDC Verification OTP: {otp_code}. Valid for 15 minutes.",
+        purpose="OTP"
+    )
 
     return {
-        "message": f"Welcome to KTM-WDC! A 6-digit verification code has been sent to {new_user.email}.",
+        "message": f"Welcome to KTM-WDC! A 6-digit verification code has been sent to {new_user.email} & {new_user.phone_number}.",
         "email": new_user.email,
         "email_dispatched": email_dispatched,
+        "sms_dispatched": sms_result["dispatched"],
+        "sms_provider": sms_result["provider"],
         "role": new_user.role.value
     }
 
 @router.post("/resend-otp")
 def resend_otp(payload: dict, db: Session = Depends(get_db)):
-    """Resends a new 6-digit OTP verification code."""
+    """Resends a new 6-digit OTP verification code via email & SMS."""
     email = (payload.get("email") or "").strip().lower()
     user = db.query(User).filter(User.email == email).first()
     if not user:
@@ -102,7 +115,16 @@ def resend_otp(payload: dict, db: Session = Depends(get_db)):
     db.commit()
 
     send_otp_email(to_email=user.email, to_name=user.full_name, otp_code=otp_code)
-    return {"message": f"A new 6-digit verification code has been sent to {user.email}."}
+    sms_result = send_sms(
+        db=db,
+        phone_number=user.phone_number,
+        message=f"KTM-WDC Verification OTP: {otp_code}. Valid for 15 minutes.",
+        purpose="OTP"
+    )
+    return {
+        "message": f"A new 6-digit verification code has been sent to {user.email} & {user.phone_number}.",
+        "sms_provider": sms_result["provider"]
+    }
 
 @router.post("/verify-otp", response_model=TokenResponse)
 def verify_otp(payload: VerifyOtpRequest, response: Response, db: Session = Depends(get_db)):
@@ -137,9 +159,10 @@ def verify_otp(payload: VerifyOtpRequest, response: Response, db: Session = Depe
             fleet_operator_type=user.fleet_operator_type
         )
 
-    # Check OTP match
-    if user.otp_code != payload.otp_code and payload.otp_code != "123456": # 123456 as local test fallback
-        raise HTTPException(status_code=400, detail="Invalid OTP verification code. Please check your email.")
+    # Check OTP match (test bypass only enabled when ALLOW_DEMO_SHORTCUTS=True)
+    demo_bypass = settings.ALLOW_DEMO_SHORTCUTS and payload.otp_code == "123456"
+    if user.otp_code != payload.otp_code and not demo_bypass:
+        raise HTTPException(status_code=400, detail="Invalid OTP verification code. Please check your email or SMS.")
 
     # Mark verified
     user.is_verified = True
@@ -369,3 +392,67 @@ def get_profile(current_user: User = Depends(require_user)):
 def logout(response: Response):
     response.delete_cookie(key="access_token")
     return {"message": "Logged out successfully."}
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Generates a 6-digit password reset code and dispatches via Brevo Email + SMS."""
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No account registered under that email address.")
+
+    reset_otp = f"{random.randint(100000, 999999)}"
+    now = datetime.now(timezone.utc)
+    user.otp_code = reset_otp
+    user.otp_expires_at = now + timedelta(minutes=15)
+    db.commit()
+
+    html = (
+        f"<p>Hello <strong>{user.full_name}</strong>,</p>"
+        f"<p>Your KTM-WDC password reset code is: <strong style='font-size:20px;letter-spacing:3px;'>{reset_otp}</strong></p>"
+        f"<p>This code expires in 15 minutes.</p>"
+    )
+    email_sent = send_email_via_brevo(user.email, user.full_name, "KTM-WDC Password Reset Code", html)
+    sms_res = send_sms(
+        db=db,
+        phone_number=user.phone_number,
+        message=f"KTM-WDC Password Reset OTP: {reset_otp}. Valid for 15 minutes.",
+        purpose="PASSWORD_RESET"
+    )
+    return {
+        "message": f"Password reset code dispatched to {user.email} & {user.phone_number}.",
+        "email_dispatched": email_sent,
+        "sms_dispatched": sms_res["dispatched"],
+        "sms_provider": sms_res["provider"]
+    }
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Validates reset OTP and updates user password securely."""
+    if payload.confirm_password is not None and payload.new_password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match.")
+
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    demo_bypass = settings.ALLOW_DEMO_SHORTCUTS and payload.otp_code == "123456"
+    if user.otp_code != payload.otp_code and not demo_bypass:
+        raise HTTPException(status_code=400, detail="Invalid password reset OTP code.")
+
+    if user.otp_expires_at and not demo_bypass:
+        exp = user.otp_expires_at
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > exp:
+            raise HTTPException(status_code=400, detail="Reset OTP code has expired. Request a new code.")
+
+    user.hashed_password = get_password_hash(payload.new_password)
+    user.otp_code = None
+    user.otp_expires_at = None
+    user.is_verified = True
+    db.commit()
+    return {"message": "Password updated successfully. You may now sign in."}

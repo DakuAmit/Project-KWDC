@@ -682,6 +682,8 @@ class StockInsurancePolicy(Base):
     total_payable_npr = Column(Float, default=0.0)
 
     status = Column(String(50), default="REQUESTED", nullable=False)
+    payment_status = Column(String(50), default="UNPAID") # UNPAID, PAYMENT_SUBMITTED, PAID
+    payment_ref = Column(String(120), nullable=True)
     coverage_start_date = Column(DateTime, nullable=True)
     coverage_end_date = Column(DateTime, nullable=True)
     admin_notes = Column(Text, nullable=True)
@@ -975,3 +977,70 @@ class WarehouseChangeRequest(Base):
 
     warehouse = relationship("Warehouse", back_populates="change_requests")
     owner = relationship("User")
+
+
+class SmsOutboxLog(Base):
+    """
+    Transactional SMS & Dev/QA Sandbox Outbox Log.
+    Records Sparrow SMS, Twilio, and zero-cost Sandbox OTP/alert dispatches.
+    """
+    __tablename__ = "sms_outbox_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    phone_number = Column(String(50), nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    purpose = Column(String(50), default="OTP") # OTP, PASSWORD_RESET, DISPATCH_ALERT, LIEN_NOTICE
+    provider = Column(String(50), default="SANDBOX_OUTBOX")
+    status = Column(String(50), default="QUEUED_SANDBOX")
+    external_ref = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class InsuranceClaim(Base):
+    """
+    Damage / Loss Insurance Claim filed against an insured StockInsurancePolicy.
+    """
+    __tablename__ = "insurance_claims"
+
+    id = Column(Integer, primary_key=True, index=True)
+    policy_id = Column(Integer, ForeignKey("stock_insurance_policies.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+
+    claim_number = Column(String(100), unique=True, nullable=False)
+    incident_type = Column(String(100), nullable=False) # FIRE, MONSOON_FLOOD, THEFT, WATER_DAMAGE, OTHER
+    incident_date = Column(String(50), nullable=False)
+    claim_amount_npr = Column(Float, nullable=False)
+    description = Column(Text, nullable=False)
+    evidence_photo_url = Column(String(500), nullable=True)
+
+    status = Column(String(50), default="SUBMITTED") # SUBMITTED, SURVEYING, APPROVED, REJECTED, SETTLED
+    approved_payout_npr = Column(Float, default=0.0)
+    admin_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+
+    policy = relationship("StockInsurancePolicy", foreign_keys=[policy_id])
+    client = relationship("User", foreign_keys=[client_id])
+    warehouse = relationship("Warehouse", foreign_keys=[warehouse_id])
+
+
+class SecurityPatrolLog(Base):
+    """
+    Facility security shift patrol & seal integrity log submitted by Security Agency / Guard.
+    """
+    __tablename__ = "security_patrol_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agency_id = Column(Integer, ForeignKey("security_agencies.id"), nullable=False)
+    guard_id = Column(Integer, ForeignKey("guard_personnel.id"), nullable=True)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    shift_type = Column(String(50), default="NIGHT")
+    perimeter_status = Column(String(80), default="ALL_CLEAR") # ALL_CLEAR, SEAL_INTACT, SUSPICIOUS_ACTIVITY, HAZARD_DETECTED
+    notes = Column(Text, nullable=False)
+    photo_url = Column(String(500), nullable=True)
+    logged_at = Column(DateTime, default=datetime.utcnow)
+
+    agency = relationship("SecurityAgency", foreign_keys=[agency_id])
+    guard = relationship("GuardPersonnel", foreign_keys=[guard_id])
+    warehouse = relationship("Warehouse", foreign_keys=[warehouse_id])

@@ -622,7 +622,10 @@
       <input id="loginEmail" type="email" required autocomplete="email" class="field mt-1.5" placeholder="admin@kwdc.com.np">
     </div>
     <div>
-      <label for="loginPassword" class="block text-sm font-medium text-slate-700">Password</label>
+      <div class="flex items-center justify-between">
+        <label for="loginPassword" class="block text-sm font-medium text-slate-700">Password</label>
+        <button type="button" onclick="openForgotPasswordMode()" class="text-xs font-semibold text-amber-700 hover:underline">Forgot password?</button>
+      </div>
       <input id="loginPassword" type="password" required autocomplete="current-password" class="field mt-1.5" placeholder="••••••••">
     </div>
 
@@ -651,6 +654,7 @@
         <option value="owner">🏠 Property Owner (Monetize empty basements, shutters, land)</option>
         <option value="fleet">🚚 Fleet Partner (Register trucks, pickups, 2-wheelers &amp; drivers)</option>
         <option value="equipment">🏗️ Heavy Equipment Owner (Rent forklifts, cranes, pallet jacks)</option>
+        <option value="security">🛡️ Security Agency (Provide licensed guard &amp; perimeter patrols)</option>
         <option value="client">🏢 Commercial Client (Book partitioned storage &amp; freight)</option>
       </select>
       <p id="roleHint" class="mt-1.5 text-xs text-slate-500" aria-live="polite">Pick the role that fits you best &mdash; you can add more later.</p>
@@ -1040,6 +1044,7 @@
           else if (data.user_role === 'property_owner') window.location.href = '/owner';
           else if (data.user_role === 'fleet_partner') window.location.href = '/fleet';
           else if (data.user_role === 'equipment_owner') window.location.href = '/equipment';
+          else if (data.user_role === 'security_agency') window.location.href = '/security';
           else if (data.user_role === 'warehouse_incharge') window.location.href = '/incharge';
           else window.location.href = '/marketplace';
         } else {
@@ -1086,6 +1091,7 @@
       'owner': 'property_owner',
       'fleet': 'fleet_partner',
       'equipment': 'equipment_owner',
+      'security': 'security_agency',
       'client': 'commercial_client',
       'incharge': 'warehouse_incharge'
     };
@@ -1226,6 +1232,7 @@
           if (data.user_role === 'property_owner') window.location.href = '/owner';
           else if (data.user_role === 'fleet_partner') window.location.href = '/fleet';
           else if (data.user_role === 'equipment_owner') window.location.href = '/equipment';
+          else if (data.user_role === 'security_agency') window.location.href = '/security';
           else if (data.user_role === 'warehouse_incharge') window.location.href = '/incharge';
           else window.location.href = '/marketplace';
         }, 1500);
@@ -1247,9 +1254,40 @@
     if (user.user_role === 'property_owner') window.location.href = '/owner';
     else if (user.user_role === 'fleet_partner') window.location.href = '/fleet';
     else if (user.user_role === 'equipment_owner') window.location.href = '/equipment';
+    else if (user.user_role === 'security_agency') window.location.href = '/security';
     else if (user.user_role === 'warehouse_incharge') window.location.href = '/incharge';
     else window.location.href = '/marketplace';
   });
+
+  window.openForgotPasswordMode = async function() {
+    const emailInput = document.getElementById('loginEmail');
+    const email = prompt('Enter your registered KTM-WDC account email for OTP password reset:', (emailInput && emailInput.value) || '');
+    if (!email || !email.trim()) return;
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
+      });
+      const d = await res.json();
+      if (!res.ok) { alert(d.detail || 'Unable to send reset OTP.'); return; }
+      alert(d.message + '\n(Testing SMS Provider: ' + (d.sms_provider || 'SANDBOX_OUTBOX') + ')');
+      const otp = prompt('Enter the 6-digit Reset OTP sent to your email / phone (local dev test: 123456):');
+      if (!otp) return;
+      const newPw = prompt('Enter your new password (min 6 characters):');
+      if (!newPw || newPw.length < 6) { alert('Password must be at least 6 characters.'); return; }
+      const r2 = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: email.trim().toLowerCase(), otp_code: otp.trim(), new_password: newPw, confirm_password: newPw })
+      });
+      const d2 = await r2.json();
+      if (r2.ok) alert(d2.message);
+      else alert(d2.detail || 'Password reset failed.');
+    } catch (e) {
+      alert('Connection error: ' + e.message);
+    }
+  };
 
   // Global Auth Header State Updater
   window.updateV0AuthHeader = function() {
@@ -1263,6 +1301,7 @@
       else if (user.user_role === 'property_owner') { dest = '/owner'; label = '🏠 My Space'; }
       else if (user.user_role === 'fleet_partner') { dest = '/fleet'; label = '🚚 My Fleet'; }
       else if (user.user_role === 'equipment_owner') { dest = '/equipment'; label = '🏗️ Machinery'; }
+      else if (user.user_role === 'security_agency') { dest = '/security'; label = '🛡️ Security'; }
       else if (user.user_role === 'warehouse_incharge') { dest = '/incharge'; label = '📋 Incharge'; }
 
       const desktopHtml = `
