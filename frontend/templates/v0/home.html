@@ -650,6 +650,7 @@
         <option value="" disabled selected>Choose your partnership type</option>
         <option value="owner">🏠 Property Owner (Monetize empty basements, shutters, land)</option>
         <option value="fleet">🚚 Fleet Partner (Register trucks, pickups, 2-wheelers &amp; drivers)</option>
+        <option value="equipment">🏗️ Heavy Equipment Owner (Rent forklifts, cranes, pallet jacks)</option>
         <option value="client">🏢 Commercial Client (Book partitioned storage &amp; freight)</option>
       </select>
       <p id="roleHint" class="mt-1.5 text-xs text-slate-500" aria-live="polite">Pick the role that fits you best &mdash; you can add more later.</p>
@@ -1038,6 +1039,7 @@
           if (data.user_role === 'superadmin') window.location.href = '/admin';
           else if (data.user_role === 'property_owner') window.location.href = '/owner';
           else if (data.user_role === 'fleet_partner') window.location.href = '/fleet';
+          else if (data.user_role === 'equipment_owner') window.location.href = '/equipment';
           else if (data.user_role === 'warehouse_incharge') window.location.href = '/incharge';
           else window.location.href = '/marketplace';
         } else {
@@ -1083,6 +1085,7 @@
     const roleMap = {
       'owner': 'property_owner',
       'fleet': 'fleet_partner',
+      'equipment': 'equipment_owner',
       'client': 'commercial_client',
       'incharge': 'warehouse_incharge'
     };
@@ -1222,6 +1225,7 @@
         setTimeout(() => {
           if (data.user_role === 'property_owner') window.location.href = '/owner';
           else if (data.user_role === 'fleet_partner') window.location.href = '/fleet';
+          else if (data.user_role === 'equipment_owner') window.location.href = '/equipment';
           else if (data.user_role === 'warehouse_incharge') window.location.href = '/incharge';
           else window.location.href = '/marketplace';
         }, 1500);
@@ -1242,6 +1246,7 @@
     const user = JSON.parse(localStorage.getItem('kwdc_user') || '{}');
     if (user.user_role === 'property_owner') window.location.href = '/owner';
     else if (user.user_role === 'fleet_partner') window.location.href = '/fleet';
+    else if (user.user_role === 'equipment_owner') window.location.href = '/equipment';
     else if (user.user_role === 'warehouse_incharge') window.location.href = '/incharge';
     else window.location.href = '/marketplace';
   });
@@ -1257,6 +1262,7 @@
       if (user.user_role === 'superadmin') { dest = '/admin'; label = '🛡️ SuperAdmin'; }
       else if (user.user_role === 'property_owner') { dest = '/owner'; label = '🏠 My Space'; }
       else if (user.user_role === 'fleet_partner') { dest = '/fleet'; label = '🚚 My Fleet'; }
+      else if (user.user_role === 'equipment_owner') { dest = '/equipment'; label = '🏗️ Machinery'; }
       else if (user.user_role === 'warehouse_incharge') { dest = '/incharge'; label = '📋 Incharge'; }
 
       const desktopHtml = `

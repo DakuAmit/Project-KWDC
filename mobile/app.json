@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "KTM-WDC Logistics",
+    "slug": "ktm-wdc-logistics",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow KTM-WDC Driver App to stream live GPS freight tracking coordinates."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow KTM-WDC to scan Warehouse Gate Pass QR codes and capture delivery proofs."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow KTM-WDC to upload property, license, machinery, and e-POD photos."
+        }
+      ]
+    ],
+    "android": {
+      "package": "np.com.kwdc.logistics",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "np.com.kwdc.logistics"
+    }
+  }
+}

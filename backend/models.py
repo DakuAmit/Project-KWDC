@@ -662,10 +662,15 @@ class HeavyEquipment(Base):
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     equipment_type = Column(String(100), nullable=False)
     model_name = Column(String(255), nullable=False)
+    registration_no = Column(String(100), nullable=True)
     capacity_ton = Column(Float, nullable=False)
+    hourly_rate_npr = Column(Float, default=1500.0)
     daily_rate_npr = Column(Float, nullable=False)
     monthly_rate_npr = Column(Float, nullable=False)
+    operator_included = Column(Boolean, default=True)
     location_city = Column(String(100), default="Kathmandu")
+    photo_url = Column(String(500), nullable=True)
+    is_approved = Column(Boolean, default=False)
     is_available = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -681,11 +686,30 @@ class EquipmentJob(Base):
     client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     duration_type = Column(String(50), default="DAILY")
     duration_units = Column(Integer, default=1)
+    site_address = Column(String(255), default="Kathmandu Valley Facility")
+    notes = Column(String(500), nullable=True)
+    base_cost_npr = Column(Float, default=0.0)
+    platform_fee_npr = Column(Float, default=0.0)
+    vat_13_percent = Column(Float, default=0.0)
     total_cost_npr = Column(Float, nullable=False)
     status = Column(String(50), default="CONFIRMED")
     start_date = Column(DateTime, default=datetime.utcnow)
 
     equipment = relationship("HeavyEquipment", back_populates="jobs")
+
+
+# ---------------------------------------------------------------------------
+# Module 8: Persistent Media Uploads (Works across Vercel & Mobile Apps)
+# ---------------------------------------------------------------------------
+class MediaAsset(Base):
+    __tablename__ = "media_assets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    uploader_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    filename = Column(String(255), nullable=False)
+    content_type = Column(String(100), default="image/jpeg")
+    data_base64 = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 # ---------------------------------------------------------------------------

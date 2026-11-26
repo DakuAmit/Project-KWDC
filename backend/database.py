@@ -100,6 +100,18 @@ def ensure_db_schema_extensions():
         add_col_if_missing("warehouse_requests", "is_forfeited", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
         add_col_if_missing("warehouse_requests", "last_reminder_sent_at", "TIMESTAMP")
         add_col_if_missing("warehouse_requests", "last_reminder_stage", "VARCHAR(50)")
+
+        add_col_if_missing("heavy_equipments", "registration_no", "VARCHAR(100)")
+        add_col_if_missing("heavy_equipments", "hourly_rate_npr", "FLOAT DEFAULT 1500.0")
+        add_col_if_missing("heavy_equipments", "operator_included", "BOOLEAN DEFAULT 1" if is_sqlite else "BOOLEAN DEFAULT TRUE")
+        add_col_if_missing("heavy_equipments", "photo_url", "VARCHAR(500)")
+        add_col_if_missing("heavy_equipments", "is_approved", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
+
+        add_col_if_missing("equipment_jobs", "site_address", "VARCHAR(255) DEFAULT 'Kathmandu Valley Facility'")
+        add_col_if_missing("equipment_jobs", "notes", "VARCHAR(500)")
+        add_col_if_missing("equipment_jobs", "base_cost_npr", "FLOAT DEFAULT 0.0")
+        add_col_if_missing("equipment_jobs", "platform_fee_npr", "FLOAT DEFAULT 0.0")
+        add_col_if_missing("equipment_jobs", "vat_13_percent", "FLOAT DEFAULT 0.0")
     except Exception as e:
         print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
 

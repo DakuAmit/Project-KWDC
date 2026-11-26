@@ -226,9 +226,12 @@
             <div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl flex items-center justify-between text-xs text-emerald-300">
               <span class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span data-i18n="telemetry_active_msg">Live GPS Corridors Broadcasting (100ms)</span>
+                <span>
+                  <span data-i18n="telemetry_active_msg">Live GPS Corridors Broadcasting</span>
+                  <span id="gpsAccuracyBadge" class="block text-[10px] font-mono text-amber-300">Acquiring GPS lock...</span>
+                </span>
               </span>
-              <button onclick="pingLiveLocation()" class="text-amber-400 underline font-bold" data-i18n="btn_sync_gps">Ping Location</button>
+              <button onclick="pingLiveLocation(true)" class="text-amber-400 underline font-bold" data-i18n="btn_sync_gps">Ping Location</button>
             </div>
 
             <button onclick="openCompleteDeliveryModal()" class="w-full py-4 rounded-3xl bg-amber hover:bg-amber-400 text-navy font-black text-base shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 transition active:scale-[0.98]">
@@ -658,29 +661,55 @@
     // -------------------------------------------------------------
     // Live Telemetry GPS Streaming
     // -------------------------------------------------------------
+    let gpsWatchId = null;
+
     function startGpsTracking() {
       if (gpsStreamInterval) clearInterval(gpsStreamInterval);
-      pingLiveLocation(); // immediate ping
-      gpsStreamInterval = setInterval(pingLiveLocation, 10000); // every 10 seconds
+      if (gpsWatchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+      }
+      if (navigator.geolocation) {
+        gpsWatchId = navigator.geolocation.watchPosition(
+          (pos) => handleGeoReading(pos, false),
+          (err) => {
+            const b = document.getElementById('gpsAccuracyBadge');
+            if (b) b.textContent = `GPS blocked/unavailable (${err.message}). Use KTM-WDC Mobile App for lock.`;
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
+        );
+      }
+      pingLiveLocation(false);
+      gpsStreamInterval = setInterval(() => pingLiveLocation(false), 10000);
     }
 
-    function pingLiveLocation() {
+    function handleGeoReading(pos, showFeedback = false) {
+      const acc = Math.round(pos.coords.accuracy || 0);
+      const b = document.getElementById('gpsAccuracyBadge');
+      if (b) {
+        b.textContent = acc <= 80
+          ? `Satellite GPS Lock (±${acc}m)`
+          : `Low-Accuracy IP/Wi-Fi (±${acc}m) — Use Phone App`;
+      }
+      sendLocationUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.heading || 0);
+      if (showFeedback) {
+        showToast(`GPS transmitted: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (±${acc}m)`);
+      }
+    }
+
+    function pingLiveLocation(showFeedback = false) {
       if (!activeTripData) return;
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (pos) => sendLocationUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.heading || 0),
-          () => {
-            // Simulated movement along Kathmandu Valley Ring Road
-            const simLat = 27.700769 + (Math.random() - 0.5) * 0.008;
-            const simLng = 85.300140 + (Math.random() - 0.5) * 0.008;
-            sendLocationUpdate(simLat, simLng, 45.0);
+          (pos) => handleGeoReading(pos, showFeedback),
+          (err) => {
+            const b = document.getElementById('gpsAccuracyBadge');
+            if (b) b.textContent = `GPS signal unavailable (${err.message})`;
+            if (showFeedback) showToast("Enable Location/GPS permissions on your device to broadcast live location.", true);
           },
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
         );
-      } else {
-        const simLat = 27.700769 + (Math.random() - 0.5) * 0.008;
-        const simLng = 85.300140 + (Math.random() - 0.5) * 0.008;
-        sendLocationUpdate(simLat, simLng, 45.0);
+      } else if (showFeedback) {
+        showToast("Browser Geolocation unsupported — use the KTM-WDC React Native Driver App.", true);
       }
     }
 

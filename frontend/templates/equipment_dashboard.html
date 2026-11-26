@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Heavy Equipment Portal — KTM-WDC Nepal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#0f172a',
+            amber: '#f59e0b',
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased">
+  <div class="min-h-screen flex flex-col">
+    <!-- Top Bar -->
+    <header class="bg-navy text-white border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="w-10 h-10 rounded-xl bg-amber text-navy font-black grid place-items-center text-sm shadow">EQ</span>
+        <div>
+          <h1 class="text-base sm:text-lg font-extrabold tracking-tight" data-i18n="header_title">Heavy Equipment Owner Cockpit</h1>
+          <p class="text-[11px] text-slate-400" data-i18n="header_sub">Forklifts • Mobile Cranes • Reach-Stackers • 90/10 Settlement</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-bold text-white transition">
+          <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
+        </button>
+        <button onclick="openRegisterModal()" class="px-4 py-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold text-xs shadow flex items-center gap-1.5 transition">
+          <i data-lucide="plus" class="w-4 h-4"></i> <span data-i18n="btn_add_eq">Register Machinery</span>
+        </button>
+        <button onclick="handleLogout()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-200 transition">
+          Sign Out
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 flex-1">
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-[11px] font-mono uppercase text-slate-500">Registered Units</span>
+          <p id="kpiTotalUnits" class="text-2xl font-black text-navy mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-[11px] font-mono uppercase text-slate-500">Active Deployments</span>
+          <p id="kpiActiveJobs" class="text-2xl font-black text-sky-600 mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-[11px] font-mono uppercase text-slate-500">Gross Rental Billed</span>
+          <p id="kpiGrossRev" class="text-2xl font-black text-navy mt-1">Rs. 0</p>
+        </div>
+        <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-200 shadow-sm">
+          <span class="text-[11px] font-mono uppercase text-emerald-700 font-bold">Net Owner Payout (90%)</span>
+          <p id="kpiNetPayout" class="text-2xl font-black text-emerald-700 mt-1">Rs. 0</p>
+        </div>
+      </div>
+
+      <!-- Registered Machinery Fleet -->
+      <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-navy text-base" data-i18n="sec_fleet">My Heavy Machinery Fleet</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Machines approved by SuperAdmin appear in the Commercial Client rental catalog.</p>
+          </div>
+          <button onclick="loadEquipmentDashboard()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-navy flex items-center gap-1.5">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+          </button>
+        </div>
+        <div id="equipmentGrid" class="p-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <p class="text-xs text-slate-400 col-span-full text-center py-8">Loading your machinery fleet...</p>
+        </div>
+      </section>
+
+      <!-- Active Rental Jobs -->
+      <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-200">
+          <h2 class="font-bold text-navy text-base" data-i18n="sec_jobs">Client Rental Bookings &amp; Dispatch Jobs</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Track ongoing hourly/daily/monthly deployments at warehouses and dry ports.</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
+              <tr>
+                <th class="px-5 py-3">Job Ref</th>
+                <th class="px-5 py-3">Machinery</th>
+                <th class="px-5 py-3">Site Location</th>
+                <th class="px-5 py-3">Duration</th>
+                <th class="px-5 py-3">Total Bill</th>
+                <th class="px-5 py-3">Status</th>
+                <th class="px-5 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="eqJobsBody" class="divide-y divide-slate-100">
+              <tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">Loading equipment bookings...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal: Register Heavy Equipment -->
+  <dialog id="registerEqModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 bg-navy text-white rounded-t-2xl flex items-center justify-between">
+      <h3 class="font-bold text-base">Register Material Handling Machinery</h3>
+      <button onclick="document.getElementById('registerEqModal').close()" class="text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleRegisterEquipment(event)" class="p-6 space-y-4 text-xs">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Machinery Category *</label>
+          <select id="eqType" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+            <option value="Forklift">Electric / Diesel Forklift</option>
+            <option value="Reach Stacker">Container Reach Stacker</option>
+            <option value="Mobile Crane">Mobile Hydraulic Crane</option>
+            <option value="Pallet Jack">Hydraulic Pallet Jack</option>
+            <option value="Excavator">Mini Excavator / Loader</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Model &amp; Brand *</label>
+          <input type="text" id="eqModel" required placeholder="e.g. Toyota 8FD30 (3-Ton)" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Lifting Capacity (Tonnes) *</label>
+          <input type="number" id="eqCapacity" step="0.5" min="0.5" required value="3.0" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Registration / Serial #</label>
+          <input type="text" id="eqRegNo" placeholder="e.g. Ba 1 Ka 9021" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Hourly (Rs.) *</label>
+          <input type="number" id="eqHourly" min="200" required value="1500" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Daily Rate (Rs.) *</label>
+          <input type="number" id="eqDaily" min="500" required value="8500" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Monthly Rate (Rs.) *</label>
+          <input type="number" id="eqMonthly" min="5000" required value="165000" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 items-center">
+        <div>
+          <label class="block font-bold text-navy mb-1">Operating City *</label>
+          <input type="text" id="eqCity" required value="Kathmandu" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+        </div>
+        <label class="flex items-center gap-2 pt-4 font-semibold text-navy cursor-pointer">
+          <input type="checkbox" id="eqOperator" checked class="rounded text-navy">
+          Certified Operator Included
+        </label>
+      </div>
+
+      <div>
+        <label class="block font-bold text-navy mb-1">Upload Machine Photo (or URL)</label>
+        <div class="flex gap-2 items-center">
+          <input type="file" id="eqPhotoFile" accept="image/*" onchange="uploadEqPhoto()" class="w-1/2 text-[11px]">
+          <input type="text" id="eqPhotoUrl" placeholder="/api/uploads/media/..." class="w-1/2 px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-[11px]">
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('registerEqModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold">Submit for Safety Audit</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-3 rounded-xl bg-navy text-white text-xs font-bold shadow-xl"></div>
+
+  <script>
+    function getAuthHeaders(isJson = true) {
+      const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
+      const h = token ? { 'Authorization': `Bearer ${token}` } : {};
+      if (isJson) h['Content-Type'] = 'application/json';
+      return h;
+    }
+
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl text-xs font-bold shadow-xl ${isError ? 'bg-red-600 text-white' : 'bg-navy text-white'}`;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 4000);
+    }
+
+    function openRegisterModal() {
+      document.getElementById('registerEqModal').showModal();
+      lucide.createIcons();
+    }
+
+    async function uploadEqPhoto() {
+      const fileInput = document.getElementById('eqPhotoFile');
+      if (!fileInput.files || !fileInput.files[0]) return;
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      try {
+        const res = await fetch('/api/uploads/image', {
+          method: 'POST',
+          headers: getAuthHeaders(false),
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          document.getElementById('eqPhotoUrl').value = data.url;
+          showToast('Photo uploaded securely!');
+        } else {
+          showToast(data.detail || 'Upload failed', true);
+        }
+      } catch (err) {
+        showToast('Upload error: ' + err.message, true);
+      }
+    }
+
+    async function handleRegisterEquipment(e) {
+      e.preventDefault();
+      const payload = {
+        equipment_type: document.getElementById('eqType').value,
+        model_name: document.getElementById('eqModel').value.trim(),
+        capacity_ton: parseFloat(document.getElementById('eqCapacity').value) || 3.0,
+        registration_no: document.getElementById('eqRegNo').value.trim() || undefined,
+        hourly_rate_npr: parseFloat(document.getElementById('eqHourly').value) || 1500,
+        daily_rate_npr: parseFloat(document.getElementById('eqDaily').value) || 8500,
+        monthly_rate_npr: parseFloat(document.getElementById('eqMonthly').value) || 165000,
+        location_city: document.getElementById('eqCity').value.trim() || 'Kathmandu',
+        operator_included: document.getElementById('eqOperator').checked,
+        photo_url: document.getElementById('eqPhotoUrl').value.trim() || undefined
+      };
+      const res = await fetch('/api/equipment/register', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message);
+        document.getElementById('registerEqModal').close();
+        loadEquipmentDashboard();
+      } else {
+        showToast(data.detail || 'Failed to register machinery', true);
+      }
+    }
+
+    async function updateJobStatus(jobId, nextStatus) {
+      const res = await fetch(`/api/equipment/jobs/${jobId}/status?status_str=${nextStatus}`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message);
+        loadEquipmentDashboard();
+      } else {
+        showToast(data.detail || 'Update failed', true);
+      }
+    }
+
+    async function loadEquipmentDashboard() {
+      const res = await fetch('/api/equipment/my-fleet', { headers: getAuthHeaders() });
+      if (res.status === 401) {
+        showToast('Please sign in first on the Home page.', true);
+        return;
+      }
+      if (!res.ok) return;
+      const data = await res.json();
+      const s = data.summary || {};
+      document.getElementById('kpiTotalUnits').textContent = s.total_units || 0;
+      document.getElementById('kpiActiveJobs').textContent = s.active_jobs || 0;
+      document.getElementById('kpiGrossRev').textContent = 'Rs. ' + Number(s.gross_revenue_npr || 0).toLocaleString('en-IN');
+      document.getElementById('kpiNetPayout').textContent = 'Rs. ' + Number(s.net_payout_npr || 0).toLocaleString('en-IN');
+
+      const grid = document.getElementById('equipmentGrid');
+      if (!data.equipment || data.equipment.length === 0) {
+        grid.innerHTML = '<p class="text-xs text-slate-400 col-span-full text-center py-8">No machinery registered yet. Click "Register Machinery" to list forklifts, cranes or pallet jacks.</p>';
+      } else {
+        grid.innerHTML = data.equipment.map(e => `
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+            ${e.photo_url ? `<img src="${e.photo_url}" alt="${e.model_name}" class="w-full h-32 object-cover rounded-lg border border-slate-200">` : ''}
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200">${e.equipment_type}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${e.is_approved ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                ${e.is_approved ? 'APPROVED' : 'PENDING AUDIT'}
+              </span>
+            </div>
+            <h4 class="font-bold text-navy text-sm">${e.model_name}</h4>
+            <p class="text-[11px] font-mono text-slate-600">${e.capacity_ton}T • ${e.registration_no} • ${e.location_city}</p>
+            <div class="pt-2 border-t border-slate-200 flex justify-between text-[11px] font-mono">
+              <span>Daily: <strong>Rs. ${Number(e.daily_rate_npr).toLocaleString('en-IN')}</strong></span>
+              <span>Monthly: <strong>Rs. ${Number(e.monthly_rate_npr).toLocaleString('en-IN')}</strong></span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const tbody = document.getElementById('eqJobsBody');
+      if (!data.jobs || data.jobs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">No rental bookings yet.</td></tr>';
+      } else {
+        tbody.innerHTML = data.jobs.map(j => `
+          <tr>
+            <td class="px-5 py-3 font-mono font-bold text-navy">${j.job_ref}</td>
+            <td class="px-5 py-3 font-semibold">${j.equipment_model} (${j.equipment_type})</td>
+            <td class="px-5 py-3">${j.site_address}</td>
+            <td class="px-5 py-3 font-mono">${j.duration_units} ${j.duration_type}</td>
+            <td class="px-5 py-3 font-mono font-bold text-emerald-700">Rs. ${Number(j.total_cost_npr).toLocaleString('en-IN')}</td>
+            <td class="px-5 py-3 font-bold">${j.status}</td>
+            <td class="px-5 py-3 text-right space-x-1">
+              ${j.status === 'CONFIRMED' ? `<button onclick="updateJobStatus(${j.id}, 'IN_PROGRESS')" class="px-2.5 py-1 rounded bg-sky-600 text-white font-bold text-[11px]">Deploy</button>` : ''}
+              ${j.status === 'IN_PROGRESS' ? `<button onclick="updateJobStatus(${j.id}, 'COMPLETED')" class="px-2.5 py-1 rounded bg-emerald-600 text-white font-bold text-[11px]">Complete</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+      }
+      lucide.createIcons();
+    }
+
+    function handleLogout() {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/';
+    }
+
+    const I18N_EQ = {
+      en: { header_title: "Heavy Equipment Owner Cockpit", btn_add_eq: "Register Machinery", sec_fleet: "My Heavy Machinery Fleet", sec_jobs: "Client Rental Bookings & Dispatch Jobs" },
+      ne: { header_title: "हेभी इक्विपमेन्ट मालिक ककपिट", btn_add_eq: "मेसिनरी दर्ता गर्नुहोस्", sec_fleet: "मेरो हेभी मेसिनरी फ्लीट", sec_jobs: "ग्राहक भाडा बुकिङहरू" }
+    };
+    let curLang = 'en';
+    function toggleLanguage() {
+      curLang = curLang === 'en' ? 'ne' : 'en';
+      document.getElementById('langLabel').textContent = curLang === 'en' ? 'नेपाली' : 'English';
+      const dict = I18N_EQ[curLang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.getAttribute('data-i18n');
+        if (dict[k]) el.textContent = dict[k];
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadEquipmentDashboard();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

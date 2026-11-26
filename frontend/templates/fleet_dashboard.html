@@ -1345,17 +1345,33 @@
 
       fleetMapInstance = L.map('fleetMap').setView([27.700769, 85.300140], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors | KTM-WDC Fleet Telemetry'
+        attribution: '© OpenStreetMap | KTM-WDC Live Fleet Telemetry'
       }).addTo(fleetMapInstance);
 
       markersGroup = L.layerGroup().addTo(fleetMapInstance);
       window.fleetMap = fleetMapInstance;
+      refreshLiveFleetRadar();
+      setInterval(refreshLiveFleetRadar, 10000);
+    }
 
-      renderTelemetryPins([
-        { id: 1, plate: "Ba 2 Kha 4921", driver: "Ramesh Thapa", lat: 27.7320, lng: 85.3020, speed: 42, status: "In Transit to Kalanki" },
-        { id: 2, plate: "Ba 3 Kha 1109", driver: "Bikram Lama", lat: 27.6710, lng: 85.3120, speed: 35, status: "Loading at Chobhar Dry Port" },
-        { id: 3, plate: "Pradesh 3-01 8841", driver: "Sunil Magar", lat: 27.6750, lng: 85.4200, speed: 48, status: "En Route to Sallaghari Hub" }
-      ]);
+    async function refreshLiveFleetRadar() {
+      if (!markersGroup) return;
+      try {
+        const res = await fetch('/api/fleet/dispatch-orders', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const jobs = await res.json();
+        const active = jobs.filter(j => j.live_lat && j.live_lng);
+        const trucks = active.map(j => ({
+          id: j.id,
+          plate: j.vehicle_plate || j.order_number,
+          driver: j.driver_name || 'Assigned Driver',
+          lat: j.live_lat,
+          lng: j.live_lng,
+          speed: j.status === 'in_transit' ? 'In Transit' : j.status,
+          status: `${j.pickup_address} → ${j.destination_address}`
+        }));
+        renderTelemetryPins(trucks);
+      } catch (_) {}
     }
 
     function renderTelemetryPins(trucks) {
@@ -1379,23 +1395,32 @@
         const marker = L.marker([t.lat, t.lng], { icon: icon }).addTo(markersGroup);
         marker.bindPopup(`
           <div class="font-sans text-xs p-1">
-            <h5 class="font-bold text-navy font-mono">${t.plate}</h5>
-            <p class="text-slate-600 mt-0.5"><strong>Driver:</strong> ${t.driver}</p>
-            <p class="text-slate-600"><strong>Speed:</strong> ${t.speed} km/h</p>
-            <p class="text-emerald-700 font-bold mt-1">${t.status}</p>
+            <h5 class="font-bold text-navy font-mono">${escapeHtml(String(t.plate))}</h5>
+            <p class="text-slate-600 mt-0.5"><strong>Driver:</strong> ${escapeHtml(String(t.driver))}</p>
+            <p class="text-slate-600"><strong>State:</strong> ${escapeHtml(String(t.speed))}</p>
+            <p class="text-emerald-700 font-bold mt-1">${escapeHtml(String(t.status))}</p>
           </div>
         `);
       });
     }
 
     async function simulateGpsPing() {
-      showToast("GPS Telemetry ping dispatched from driver cabin terminal.");
-      // slightly jitter coordinates
-      renderTelemetryPins([
-        { id: 1, plate: "Ba 2 Kha 4921", driver: "Ramesh Thapa", lat: 27.7320 + (Math.random() - 0.5) * 0.005, lng: 85.3020 + (Math.random() - 0.5) * 0.005, speed: Math.round(35 + Math.random() * 15), status: "Active Corridor Transit" },
-        { id: 2, plate: "Ba 3 Kha 1109", driver: "Bikram Lama", lat: 27.6710 + (Math.random() - 0.5) * 0.005, lng: 85.3120 + (Math.random() - 0.5) * 0.005, speed: Math.round(20 + Math.random() * 20), status: "Departing Chobhar Gate" },
-        { id: 3, plate: "Pradesh 3-01 8841", driver: "Sunil Magar", lat: 27.6750 + (Math.random() - 0.5) * 0.005, lng: 85.4200 + (Math.random() - 0.5) * 0.005, speed: Math.round(40 + Math.random() * 10), status: "Approaching Koteshwor" }
-      ]);
+      if (navigator.geolocation && cachedVehicles.length > 0) {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          await fetch(`/api/fleet/telemetry/ping?vehicle_id=${cachedVehicles[0].id}&latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+          });
+          showToast(`GPS telemetry synced (±${Math.round(pos.coords.accuracy || 0)}m).`);
+          refreshLiveFleetRadar();
+        }, () => {
+          refreshLiveFleetRadar();
+          showToast("Refreshed live radar from driver feeds.", false);
+        }, { enableHighAccuracy: true, timeout: 6000 });
+      } else {
+        refreshLiveFleetRadar();
+        showToast("Synced radar with live active fleet telemetry.", false);
+      }
     }
 
     async function loadDispatchOrders() {

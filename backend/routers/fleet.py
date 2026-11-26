@@ -31,6 +31,7 @@ from backend.schemas import (
 from backend.auth_utils import require_user, require_roles, create_access_token, oauth2_scheme
 from backend.services.vat_service import generate_ird_tax_invoice
 from backend.services.fare_service import calculate_freight_benchmark, get_platform_config
+from backend.services.maps_service import calculate_road_distance, geocode_address
 
 router = APIRouter(prefix="/api/fleet", tags=["Fleet Partner & Logistics"])
 
@@ -1147,8 +1148,32 @@ def create_client_dispatch_order(
     vcat_input = payload.vehicle_category_other if (payload.required_vehicle_category in ["OTHER", "other"] and payload.vehicle_category_other) else payload.required_vehicle_category
     vcat = normalize_vehicle_category(vcat_input)
 
+    # Resolve geocoded coordinates & road distance via Google Maps (or fallback)
+    pickup_lat = payload.pickup_lat
+    pickup_lng = payload.pickup_lng
+    dest_lat = payload.dest_lat
+    dest_lng = payload.dest_lng
+
+    if pickup_lat is None or pickup_lng is None:
+        g_orig = geocode_address(payload.pickup_address)
+        if g_orig:
+            pickup_lat, pickup_lng = g_orig["lat"], g_orig["lng"]
+    if dest_lat is None or dest_lng is None:
+        g_dest = geocode_address(payload.destination_address)
+        if g_dest:
+            dest_lat, dest_lng = g_dest["lat"], g_dest["lng"]
+
     # Tariff calculation via Admin Platform Config Engine
-    dist_km = max(float(payload.estimated_distance_km or 8.0), 1.0)
+    if payload.estimated_distance_km and float(payload.estimated_distance_km) > 0:
+        dist_km = max(float(payload.estimated_distance_km), 1.0)
+    else:
+        route_res = calculate_road_distance(
+            payload.pickup_address,
+            payload.destination_address,
+            (pickup_lat, pickup_lng) if (pickup_lat and pickup_lng) else None,
+            (dest_lat, dest_lng) if (dest_lat and dest_lng) else None,
+        )
+        dist_km = max(float(route_res["distance_km"]), 1.0)
     cargo_wt_kg = max(float(payload.cargo_weight_kg or 1000.0), 0.0)
 
     benchmark_calc = calculate_freight_benchmark(
@@ -1175,8 +1200,8 @@ def create_client_dispatch_order(
         cargo_description=cargo_desc,
         required_vehicle_category=vcat,
         pickup_address=payload.pickup_address,
-        pickup_lat=payload.pickup_lat or 27.7172,
-        pickup_lng=payload.pickup_lng or 85.3240,
+        pickup_lat=pickup_lat or 27.7172,
+        pickup_lng=pickup_lng or 85.3240,
         total_distance_km=dist_km,
         benchmark_fare_npr=benchmark_fare,
         client_offered_fare_npr=client_offered,
@@ -1198,8 +1223,8 @@ def create_client_dispatch_order(
         consignee_name=payload.consignee_name,
         consignee_phone=payload.consignee_phone,
         destination_address=payload.destination_address,
-        dest_lat=payload.dest_lat or 27.7000,
-        dest_lng=payload.dest_lng or 85.3000,
+        dest_lat=dest_lat or 27.7000,
+        dest_lng=dest_lng or 85.3000,
         is_completed=False
     )
     db.add(stop)

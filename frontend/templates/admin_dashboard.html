@@ -318,6 +318,36 @@
               </table>
             </div>
           </div>
+
+          <!-- Heavy Equipment Audits -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base">Heavy Equipment Safety Audits &amp; Approvals</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Verify forklifts, mobile cranes, reach-stackers &amp; pallet jacks for Client rental.</p>
+              </div>
+              <button onclick="loadAdminEquipment()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Model / Type</th>
+                    <th class="px-5 py-3">Owner</th>
+                    <th class="px-5 py-3">Capacity &amp; City</th>
+                    <th class="px-5 py-3">Daily / Monthly</th>
+                    <th class="px-5 py-3">Status</th>
+                    <th class="px-5 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="adminEquipmentBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="px-5 py-6 text-center text-slate-400">Loading registered heavy machinery...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <!-- View 3: Client Leases & Activation -->
@@ -1432,6 +1462,47 @@
         lucide.createIcons();
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+      await loadAdminEquipment();
+    }
+
+    async function loadAdminEquipment() {
+      const tbody = document.getElementById('adminEquipmentBody');
+      if (!tbody) return;
+      try {
+        const res = await fetch('/api/equipment/admin/all', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const list = await res.json();
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-center text-slate-400">No heavy equipment registered yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = list.map(e => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3 font-bold text-navy">${escapeHtml(e.model_name)} <span class="text-[10px] font-mono text-indigo-600">(${escapeHtml(e.equipment_type)})</span></td>
+            <td class="px-5 py-3 text-xs">${escapeHtml(e.owner_name)}<br/><span class="text-slate-400 font-mono">${escapeHtml(e.owner_phone)}</span></td>
+            <td class="px-5 py-3 font-mono text-xs">${e.capacity_ton}T • ${escapeHtml(e.location_city)}</td>
+            <td class="px-5 py-3 font-mono text-xs">Rs. ${Number(e.daily_rate_npr).toLocaleString()} / Rs. ${Number(e.monthly_rate_npr).toLocaleString()}</td>
+            <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${e.is_approved ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${e.is_approved ? 'APPROVED' : 'PENDING'}</span></td>
+            <td class="px-5 py-3 text-right">
+              ${e.is_approved ? `<button onclick="approveAdminEquipment(${e.id}, false)" class="px-2.5 py-1 rounded bg-slate-200 text-slate-700 text-xs font-semibold">Suspend</button>` : `<button onclick="approveAdminEquipment(${e.id}, true)" class="px-3 py-1 rounded bg-emerald-600 text-white text-xs font-bold">Approve</button>`}
+            </td>
+          </tr>
+        `).join('');
+      } catch (_) {}
+    }
+
+    async function approveAdminEquipment(eqId, approved) {
+      const res = await fetch(`/api/equipment/admin/${eqId}/approve?approved=${approved}`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message);
+        loadAdminEquipment();
+      } else {
+        showToast(data.detail || 'Approval failed', true);
       }
     }
 

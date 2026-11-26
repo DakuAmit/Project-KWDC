@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from backend.config import settings
 from backend.database import init_db_if_needed, get_db_info
-from backend.routers import auth, warehouses, admin, incharge, fleet, insurance
+from backend.routers import auth, warehouses, admin, incharge, fleet, insurance, maps, uploads, equipment
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +32,9 @@ app.include_router(admin.router)
 app.include_router(incharge.router)
 app.include_router(fleet.router)
 app.include_router(insurance.router)
+app.include_router(maps.router)
+app.include_router(uploads.router)
+app.include_router(equipment.router)
 
 # Ensure DB schema extensions & seed accounts run on serverless / TestClient imports too
 init_db_if_needed()
@@ -126,6 +129,10 @@ def fleet_page(request: Request):
 @app.get("/driver", response_class=HTMLResponse)
 def driver_page(request: Request):
     return templates.TemplateResponse(request=request, name="driver_run.html", context={"app_name": settings.APP_NAME})
+
+@app.get("/equipment", response_class=HTMLResponse)
+def equipment_page(request: Request):
+    return templates.TemplateResponse(request=request, name="equipment_dashboard.html", context={"app_name": settings.APP_NAME})
 
 @app.get("/invoice", response_class=HTMLResponse)
 def invoice_page(request: Request):

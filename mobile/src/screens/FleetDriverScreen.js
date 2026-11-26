@@ -1,0 +1,196 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import { apiRequest, uploadBase64Image } from '../api/client';
+
+export default function FleetDriverScreen({ session }) {
+  const isDriverPinMode = session.mode === 'driver';
+  const [activeTrip, setActiveTrip] = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [gpsStatus, setGpsStatus] = useState('Idle');
+  const [otpInput, setOtpInput] = useState('');
+  const [epodPhotoUrl, setEpodPhotoUrl] = useState('');
+  const watchSubRef = useRef(null);
+
+  async function refresh() {
+    try {
+      if (isDriverPinMode) {
+        const res = await apiRequest('/api/fleet/driver/active-trip');
+        setActiveTrip(res.has_active_trip ? (res.trip || res.active_trip) : null);
+      } else {
+        const list = await apiRequest('/api/fleet/dispatch-orders');
+        setJobs(Array.isArray(list) ? list : []);
+      }
+    } catch (err) {
+      Alert.alert('Sync Notice', err.message);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    return () => {
+      watchSubRef.current?.remove?.();
+    };
+  }, []);
+
+  async function startSatelliteGps(orderId) {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Location Required', 'Grant GPS location permission so clients can track live transit.');
+      return;
+    }
+    watchSubRef.current?.remove?.();
+    watchSubRef.current = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+      async (loc) => {
+        const acc = Math.round(loc.coords.accuracy || 0);
+        setGpsStatus(`Satellite GPS Lock: ${loc.coords.latitude.toFixed(5)}, ${loc.coords.longitude.toFixed(5)} (±${acc}m)`);
+        try {
+          await apiRequest(`/api/fleet/driver/trips/${orderId}/location`, {
+            method: 'POST',
+            body: { latitude: loc.coords.latitude, longitude: loc.coords.longitude, heading: loc.coords.heading || 0 },
+          });
+        } catch {}
+      }
+    );
+  }
+
+  async function startTrip() {
+    if (!activeTrip) return;
+    try {
+      await apiRequest(`/api/fleet/driver/trips/${activeTrip.order_id}/start`, { method: 'POST' });
+      await startSatelliteGps(activeTrip.order_id);
+      Alert.alert('Transit Started', 'Live phone GPS telemetry is now broadcasting.');
+      refresh();
+    } catch (err) {
+      Alert.alert('Start Failed', err.message);
+    }
+  }
+
+  async function captureEpodPhoto() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return Alert.alert('Camera Needed', 'Enable camera permission.');
+    const shot = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
+    if (!shot.canceled && shot.assets?.[0]?.base64) {
+      const url = await uploadBase64Image({ filename: 'epod.jpg', base64: shot.assets[0].base64 });
+      setEpodPhotoUrl(url);
+      Alert.alert('e-POD Captured', 'Delivery proof photo uploaded.');
+    }
+  }
+
+  async function completeDelivery() {
+    if (!activeTrip) return;
+    try {
+      await apiRequest(`/api/fleet/driver/trips/${activeTrip.order_id}/complete`, {
+        method: 'POST',
+        body: {
+          delivery_otp: otpInput.trim() || undefined,
+          proof_photo_url: epodPhotoUrl || undefined,
+          consignee_remarks: 'Delivered safely via Mobile Cab App',
+        },
+      });
+      watchSubRef.current?.remove?.();
+      setGpsStatus('Idle');
+      Alert.alert('Delivered!', 'Trip completed & e-POD recorded.');
+      refresh();
+    } catch (err) {
+      Alert.alert('Completion Error', err.message);
+    }
+  }
+
+  async function acceptFleetJob(id) {
+    try {
+      const res = await apiRequest(`/api/fleet/dispatch-orders/${id}/accept`, { method: 'POST' });
+      Alert.alert('Accepted', res.message || 'Freight order claimed!');
+      refresh();
+    } catch (err) {
+      Alert.alert('Error', err.message);
+    }
+  }
+
+  if (isDriverPinMode) {
+    return (
+      <ScrollView contentContainerStyle={styles.wrap}>
+        <View style={styles.gpsBox}>
+          <Text style={styles.gpsTitle}>Driver Cab GPS Status</Text>
+          <Text style={styles.gpsText}>{gpsStatus}</Text>
+        </View>
+
+        {!activeTrip ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>No Assigned Active Trip</Text>
+            <Text style={styles.meta}>Wait for Fleet Manager assignment or refresh below.</Text>
+            <TouchableOpacity onPress={refresh} style={[styles.btnDark, { marginTop: 10 }]}>
+              <Text style={styles.btnLight}>Check Active Assignment</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{activeTrip.order_number} • {activeTrip.status}</Text>
+            <Text style={styles.meta}>Cargo: {activeTrip.cargo_description}</Text>
+            <Text style={styles.meta}>Pickup: {activeTrip.pickup_address}</Text>
+            <Text style={styles.meta}>Drop: {activeTrip.destination_address} ({activeTrip.consignee_name})</Text>
+            <Text style={styles.price}>Delivery OTP: {activeTrip.delivery_otp || 'Generated on Start'}</Text>
+
+            {activeTrip.status !== 'in_transit' ? (
+              <TouchableOpacity onPress={startTrip} style={[styles.btnAmber, { marginTop: 12 }]}>
+                <Text style={styles.btnDarkText}>START TRANSIT &amp; SATELLITE GPS</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ marginTop: 12 }}>
+                <TouchableOpacity onPress={() => startSatelliteGps(activeTrip.order_id)} style={styles.btnDark}>
+                  <Text style={styles.btnLight}>Resume Live Satellite GPS</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={captureEpodPhoto} style={[styles.btnDark, { marginTop: 8 }]}>
+                  <Text style={styles.btnLight}>{epodPhotoUrl ? 'e-POD Photo Uploaded ✓' : 'Snap Delivery e-POD Photo'}</Text>
+                </TouchableOpacity>
+                <TextInput value={otpInput} onChangeText={setOtpInput} placeholder="Enter Consignee 4-Digit OTP" keyboardType="number-pad" style={styles.input} />
+                <TouchableOpacity onPress={completeDelivery} style={[styles.btnAmber, { marginTop: 8 }]}>
+                  <Text style={styles.btnDarkText}>COMPLETE DELIVERY &amp; SUBMIT e-POD</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={styles.wrap}>
+      <Text style={styles.sec}>Live Freight Load Board ({jobs.length})</Text>
+      {jobs.length === 0 ? (
+        <View style={styles.card}><Text style={styles.meta}>No open freight jobs right now.</Text></View>
+      ) : jobs.map((j) => (
+        <View key={j.id} style={styles.card}>
+          <Text style={styles.cardTitle}>{j.order_number} ({j.status})</Text>
+          <Text style={styles.meta}>{j.pickup_address} → {j.destination_address}</Text>
+          <Text style={styles.price}>Offer: Rs. {j.client_offered_fare_npr || j.gross_fare_npr} (Net: Rs. {j.net_fleet_earnings_npr})</Text>
+          {j.status === 'requested' && (
+            <TouchableOpacity onPress={() => acceptFleetJob(j.id)} style={[styles.btnAmber, { marginTop: 8 }]}>
+              <Text style={styles.btnDarkText}>Accept Freight Job</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: { padding: 14, paddingBottom: 40 },
+  gpsBox: { backgroundColor: '#0f172a', padding: 14, borderRadius: 14, marginBottom: 12 },
+  gpsTitle: { color: '#f59e0b', fontWeight: '800', fontSize: 12 },
+  gpsText: { color: '#34d399', fontSize: 12, marginTop: 4, fontWeight: '700' },
+  sec: { fontSize: 13, fontWeight: '800', color: '#0f172a', marginBottom: 8 },
+  card: { backgroundColor: '#fff', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 10 },
+  cardTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
+  meta: { fontSize: 11, color: '#64748b', marginTop: 3 },
+  price: { fontSize: 12, fontWeight: '800', color: '#047857', marginTop: 4 },
+  input: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 9, marginTop: 8, fontSize: 12 },
+  btnDark: { backgroundColor: '#0f172a', padding: 11, borderRadius: 10, alignItems: 'center' },
+  btnAmber: { backgroundColor: '#f59e0b', padding: 12, borderRadius: 10, alignItems: 'center' },
+  btnLight: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  btnDarkText: { color: '#0f172a', fontWeight: '900', fontSize: 12 },
+});

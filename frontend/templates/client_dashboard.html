@@ -77,6 +77,10 @@
           <i data-lucide="calculator" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_calculator">Area & Tariff Estimator</span>
         </button>
 
+        <button type="button" onclick="switchTab('equipment')" id="nav-equipment" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <i data-lucide="forklift" class="w-4 h-4 text-amber-400"></i> <span>Heavy Equipment Rental</span>
+        </button>
+
         <button type="button" onclick="switchTab('gatepass')" id="nav-gatepass" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
           <i data-lucide="qr-code" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_gatepass">Digital Gate Passes</span>
         </button>
@@ -695,11 +699,17 @@
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label class="block text-[11px] font-bold text-navy mb-1" data-i18n="label_est_dist">Estimated Distance (Kilometers) *</label>
+                      <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] font-bold text-navy" data-i18n="label_est_dist">Estimated Distance (Kilometers) *</label>
+                        <button type="button" onclick="autoCalcDirectRoadKm()" class="text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded border border-indigo-200 flex items-center gap-1">
+                          <i data-lucide="route" class="w-3 h-3"></i> Auto Google Road KM
+                        </button>
+                      </div>
                       <div class="flex items-center gap-2">
                         <input type="number" id="directDistKm" min="1" max="1200" step="0.5" value="12" oninput="calcDirectTariff()" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs bg-white">
                         <span class="text-xs font-mono text-slate-500">km</span>
                       </div>
+                      <p id="directEtaBadge" class="text-[10px] text-emerald-700 font-mono mt-1 hidden"></p>
                     </div>
                     <div class="flex items-center gap-4 pt-4">
                       <label class="flex items-center gap-1.5 text-xs cursor-pointer">
@@ -780,6 +790,45 @@
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View: Heavy Equipment Rental Catalog -->
+        <section id="view-equipment" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+              <div>
+                <h3 class="font-bold text-navy text-base">Rent Approved Heavy Equipment (Forklifts, Cranes, Reach-Stackers)</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Book verified machinery on Hourly, Daily or Monthly terms with certified operators &amp; 13% VAT invoice.</p>
+              </div>
+              <button type="button" onclick="loadClientEquipment()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-navy flex items-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+              </button>
+            </div>
+            <div id="clientEqCatalogGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <p class="text-xs text-slate-400 col-span-full text-center py-8">Loading approved machinery...</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h4 class="font-bold text-navy text-sm mb-3">My Machinery Rentals</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
+                  <tr>
+                    <th class="p-3">Ref</th>
+                    <th class="p-3">Machinery</th>
+                    <th class="p-3">Site</th>
+                    <th class="p-3">Duration</th>
+                    <th class="p-3">Total (incl. VAT)</th>
+                    <th class="p-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="clientEqRentalsBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="p-6 text-center text-slate-400">No machinery rentals yet.</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
@@ -1690,7 +1739,7 @@
     }
 
     function switchTab(tabId) {
-      ['catalog', 'bookings', 'inventory', 'calculator', 'gatepass', 'invoices', 'insurance', 'pickup-dispatch', 'pickup-drop'].forEach(id => {
+      ['catalog', 'bookings', 'inventory', 'calculator', 'equipment', 'gatepass', 'invoices', 'insurance', 'pickup-dispatch', 'pickup-drop'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const nav = document.getElementById('nav-' + id);
         const mob = document.getElementById('mob-' + id);
@@ -1719,6 +1768,7 @@
       if (tabId === 'catalog') loadCatalog();
       if (tabId === 'bookings') loadMyBookings();
       if (tabId === 'inventory') loadClientInventory();
+      if (tabId === 'equipment') loadClientEquipment();
       if (tabId === 'gatepass') loadClientGatePasses();
       if (tabId === 'insurance') loadClientInsurance();
       if (tabId === 'pickup-dispatch' || tabId === 'pickup-drop') {
@@ -2725,17 +2775,117 @@
     }
 
     let clientTrackMapInst = null;
-    function openLiveTrackingModal(orderId) {
-      const o = (window.clientOrdersCache || []).find(x => x.id === orderId);
-      if (!o) return;
-      document.getElementById('trackModalSub').textContent = `${o.order_number} • ${o.pickup_address} → ${o.destination_address}`;
-      document.getElementById('trackDriverName').textContent = o.driver_name || 'Driver';
-      document.getElementById('trackVehiclePlate').textContent = o.vehicle_plate || '-';
-      document.getElementById('trackDeliveryOtp').textContent = o.delivery_otp || 'Generated on Transit';
-      document.getElementById('trackLastPing').textContent = o.last_telemetry_at || 'Live Telemetry';
-      document.getElementById('liveTrackingModal').showModal();
+    let clientTrackPollTimer = null;
 
-      setTimeout(() => {
+    async function autoCalcDirectRoadKm() {
+      const origin = document.getElementById('directPickupAddr')?.value.trim();
+      const dest = document.getElementById('directDestAddr')?.value.trim();
+      if (!origin || !dest) {
+        showToast('Enter Pickup Origin and Destination addresses first.', true);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/maps/route-distance?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}`);
+        const data = await res.json();
+        if (res.ok && data.distance_km) {
+          document.getElementById('directDistKm').value = data.distance_km;
+          const badge = document.getElementById('directEtaBadge');
+          if (badge) {
+            badge.textContent = `${data.distance_km} km • ${data.duration_text} (${data.source === 'google_distance_matrix' ? 'Google Maps Live' : 'Estimate'})`;
+            badge.classList.remove('hidden');
+          }
+          calcDirectTariff();
+          showToast(`Road distance computed: ${data.distance_km} km (${data.duration_text})`);
+        }
+      } catch (err) {
+        showToast('Route calculation error: ' + err.message, true);
+      }
+    }
+
+    async function loadClientEquipment() {
+      const grid = document.getElementById('clientEqCatalogGrid');
+      const tbody = document.getElementById('clientEqRentalsBody');
+      try {
+        const [catRes, myRes] = await Promise.all([
+          fetch('/api/equipment/catalog'),
+          fetch('/api/equipment/my-rentals', { headers: getAuthHeaders() })
+        ]);
+        if (catRes.ok && grid) {
+          const items = await catRes.json();
+          if (items.length === 0) {
+            grid.innerHTML = '<p class="text-xs text-slate-400 col-span-full text-center py-8">No heavy machinery available right now.</p>';
+          } else {
+            grid.innerHTML = items.map(e => `
+              <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                ${e.photo_url ? `<img src="${e.photo_url}" alt="${escapeHtml(e.model_name)}" class="w-full h-32 object-cover rounded-lg border border-slate-200">` : ''}
+                <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200">${escapeHtml(e.equipment_type)}</span>
+                <h4 class="font-bold text-navy text-sm">${escapeHtml(e.model_name)}</h4>
+                <p class="text-[11px] font-mono text-slate-600">${e.capacity_ton}T • ${escapeHtml(e.location_city)} ${e.operator_included ? '• Operator Included' : ''}</p>
+                <p class="text-xs font-mono text-emerald-700 font-bold">Rs. ${Number(e.daily_rate_npr).toLocaleString()}/day • Rs. ${Number(e.monthly_rate_npr).toLocaleString()}/mo</p>
+                <button type="button" onclick="rentEquipmentQuick(${e.id}, '${escapeHtml(e.model_name)}')" class="w-full py-2 rounded-lg bg-navy hover:bg-slate-800 text-white font-bold text-xs mt-1">
+                  Rent Now (Daily / Monthly)
+                </button>
+              </div>
+            `).join('');
+          }
+        }
+        if (myRes.ok && tbody) {
+          const rentals = await myRes.json();
+          tbody.innerHTML = rentals.length ? rentals.map(r => `
+            <tr>
+              <td class="p-3 font-mono font-bold text-navy">${r.job_ref}</td>
+              <td class="p-3">${escapeHtml(r.equipment_model)} (${escapeHtml(r.equipment_type)})</td>
+              <td class="p-3">${escapeHtml(r.site_address)}</td>
+              <td class="p-3 font-mono">${r.duration_units} ${r.duration_type}</td>
+              <td class="p-3 font-mono font-bold text-emerald-700">Rs. ${Number(r.total_cost_npr).toLocaleString()}</td>
+              <td class="p-3 font-bold">${r.status}</td>
+            </tr>
+          `).join('') : '<tr><td colspan="6" class="p-6 text-center text-slate-400">No machinery rentals yet.</td></tr>';
+        }
+      } catch (_) {}
+    }
+
+    async function rentEquipmentQuick(eqId, modelName) {
+      const unitsStr = prompt(`Book "${modelName}" — How many DAYS?`, "2");
+      if (!unitsStr) return;
+      const site = prompt("Enter Delivery / Warehouse Site Address:", "Balaju Industrial Area, Kathmandu");
+      if (!site) return;
+      const res = await fetch('/api/equipment/book', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          equipment_id: eqId,
+          duration_type: 'DAILY',
+          duration_units: Math.max(1, parseInt(unitsStr, 10) || 1),
+          site_address: site
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message);
+        loadClientEquipment();
+      } else {
+        showToast(data.detail || 'Booking failed', true);
+      }
+    }
+
+    function openLiveTrackingModal(orderId) {
+      const modal = document.getElementById('liveTrackingModal');
+      if (clientTrackPollTimer) clearInterval(clientTrackPollTimer);
+
+      const renderTrack = async () => {
+        try {
+          const r = await fetch('/api/fleet/client-orders', { headers: getAuthHeaders() });
+          if (r.ok) window.clientOrdersCache = await r.json();
+        } catch (_) {}
+        const o = (window.clientOrdersCache || []).find(x => x.id === orderId);
+        if (!o) return;
+        document.getElementById('trackModalSub').textContent = `${o.order_number} • ${o.pickup_address} → ${o.destination_address}`;
+        document.getElementById('trackDriverName').textContent = o.driver_name || 'Driver';
+        document.getElementById('trackVehiclePlate').textContent = o.vehicle_plate || '-';
+        document.getElementById('trackDeliveryOtp').textContent = o.delivery_otp || 'Generated on Transit';
+        document.getElementById('trackLastPing').textContent = o.last_telemetry_at || 'Live Telemetry';
+
         if (clientTrackMapInst) { clientTrackMapInst.remove(); clientTrackMapInst = null; }
         const lat = o.live_lat || o.pickup_lat || 27.7172;
         const lng = o.live_lng || o.pickup_lng || 85.3240;
@@ -2747,7 +2897,18 @@
         L.marker([dLat, dLng]).addTo(clientTrackMapInst).bindPopup(`Destination: ${escapeHtml(o.destination_address)}`);
         L.polyline([[lat, lng], [dLat, dLng]], { color: '#0f172a', weight: 3, dashArray: '6 6' }).addTo(clientTrackMapInst);
         lucide.createIcons();
-      }, 150);
+      };
+
+      modal.showModal();
+      setTimeout(renderTrack, 150);
+      clientTrackPollTimer = setInterval(() => {
+        if (!modal.open) {
+          clearInterval(clientTrackPollTimer);
+          clientTrackPollTimer = null;
+          return;
+        }
+        renderTrack();
+      }, 6000);
     }
 
     function openEpodModal(orderId) {

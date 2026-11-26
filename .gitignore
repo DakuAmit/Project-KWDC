@@ -46,3 +46,9 @@ venv.bak/
 *.sublime-workspace
 .DS_Store
 Thumbs.db
+
+# React Native / Expo Mobile
+node_modules/
+.expo/
+mobile/node_modules/
+mobile/.expo/
