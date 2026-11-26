@@ -91,6 +91,11 @@
               <span id="badgePendingCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
             </button>
 
+            <button type="button" onclick="switchTab('warehouses')" id="nav-warehouses" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+              <span class="flex items-center gap-2.5"><i data-lucide="warehouse" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_warehouses">Total Warehouses</span></span>
+              <span id="badgeTotalWarehouses" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
+            </button>
+
             <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
               <span class="flex items-center gap-2.5"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_leases">Client Leases &amp; Continuous Sq Ft</span></span>
               <span id="badgeBookingsCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
@@ -344,6 +349,54 @@
                 </thead>
                 <tbody id="adminEquipmentBody" class="divide-y divide-slate-100">
                   <tr><td colspan="6" class="px-5 py-6 text-center text-slate-400">Loading registered heavy machinery...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 2B: Total Warehouses Master Registry & Status Filters -->
+        <section id="view-warehouses" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                  <i data-lucide="warehouse" class="w-5 h-5 text-amber-600"></i> Master Warehouse Registry
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Monitor all registered spaces, filter operational states, assign Incharge inspectors, and manage Client Base Tariffs independently from Owner Payout Rates.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <input type="text" id="adminWarehouseSearch" oninput="renderAdminWarehousesTable()" placeholder="Search title, owner, district..." class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-navy/20 w-48">
+                <button onclick="loadAllAdminWarehouses(currentAdminWhFilter)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-navy bg-slate-100 hover:bg-slate-200 transition">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+                </button>
+              </div>
+            </div>
+
+            <!-- Filter Pills -->
+            <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-2">
+              <button type="button" onclick="setAdminWhFilter('all')" data-wh-filter="all" class="wh-filter-btn px-3 py-1.5 rounded-full text-xs font-bold bg-navy text-white transition">All (<span id="whCountAll">0</span>)</button>
+              <button type="button" onclick="setAdminWhFilter('verified')" data-wh-filter="verified" class="wh-filter-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition">Verified (<span id="whCountVerified">0</span>)</button>
+              <button type="button" onclick="setAdminWhFilter('on_lease')" data-wh-filter="on_lease" class="wh-filter-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition">On Lease (<span id="whCountLease">0</span>)</button>
+              <button type="button" onclick="setAdminWhFilter('empty')" data-wh-filter="empty" class="wh-filter-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition">Empty (<span id="whCountEmpty">0</span>)</button>
+              <button type="button" onclick="setAdminWhFilter('on_hold')" data-wh-filter="on_hold" class="wh-filter-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition">On Hold (<span id="whCountHold">0</span>)</button>
+              <button type="button" onclick="setAdminWhFilter('pending_audit')" data-wh-filter="pending_audit" class="wh-filter-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition">Pending Audits (<span id="whCountPending">0</span>)</button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">Facility &amp; Location</th>
+                    <th class="px-5 py-3">Owner &amp; Inspector</th>
+                    <th class="px-5 py-3">Occupancy / Sq Ft</th>
+                    <th class="px-5 py-3">Owner vs Client Tariff</th>
+                    <th class="px-5 py-3">Status Flags</th>
+                    <th class="px-5 py-3 text-right">Controls</th>
+                  </tr>
+                </thead>
+                <tbody id="allWarehousesTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading warehouses...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1269,6 +1322,72 @@
     </div>
   </dialog>
 
+  <!-- Modal: Assign Warehouse Incharge for On-Site Inspection -->
+  <dialog id="adminAssignInchargeModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-indigo-950 text-white rounded-t-2xl">
+      <div>
+        <h3 class="font-bold text-base">Assign Incharge for Inspection</h3>
+        <p class="text-xs text-indigo-200" id="assignModalWhTitle">Property</p>
+      </div>
+      <button type="button" onclick="document.getElementById('adminAssignInchargeModal').close()" class="text-slate-300 hover:text-white p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <form onsubmit="submitAdminAssignIncharge(event)" class="p-5 space-y-4 text-xs sm:text-sm">
+      <input type="hidden" id="assignModalWhId">
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Select Warehouse Incharge Inspector *</label>
+        <select id="assignModalInchargeSelect" required class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+          <option value="">Loading staff directory...</option>
+        </select>
+        <p class="text-[11px] text-slate-500 mt-1" id="assignInchargeHelper">Assigns staff for physical verification prior to Master Contract execution.</p>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Inspection Instructions (Optional)</label>
+        <textarea id="assignModalNotes" rows="2" placeholder="e.g. Verify 24 ft road clearance, roof waterproofing &amp; 3-phase meter." class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-xs"></textarea>
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('adminAssignInchargeModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs">Cancel</button>
+        <button type="submit" id="btnSubmitAssignIncharge" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition">Dispatch Inspector</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Edit Client Base Tariff vs Owner Rate -->
+  <dialog id="adminTariffModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div>
+        <h3 class="font-bold text-base">Edit Client Base Tariff Rate</h3>
+        <p class="text-xs text-slate-300" id="tariffModalWhTitle">Property</p>
+      </div>
+      <button type="button" onclick="document.getElementById('adminTariffModal').close()" class="text-slate-300 hover:text-white p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <form onsubmit="submitAdminTariff(event)" class="p-5 space-y-4 text-xs sm:text-sm">
+      <input type="hidden" id="tariffModalWhId">
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-[11px] font-bold text-slate-500 uppercase">Property Owner Rate (Base Cost)</p>
+          <p class="text-sm font-mono font-bold text-navy" id="tariffModalOwnerRateLabel">Rs. 0 / sq ft</p>
+        </div>
+        <div class="text-right">
+          <label class="block text-[10px] font-bold text-slate-500">Adjust Owner Rate?</label>
+          <input type="number" id="tariffModalOwnerRateInput" min="5" step="0.5" class="w-24 px-2 py-1 rounded-lg border border-slate-300 font-mono text-xs text-right bg-white">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Client Catalog Base Tariff (Rs. / sq ft / month) *</label>
+        <input type="number" id="tariffModalClientRateInput" required min="5" step="0.5" class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50/40 font-mono font-bold text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+        <p class="text-[11px] text-slate-500 mt-1">Clients see and get billed at this Client Base Tariff, independent from Owner Payout Rate.</p>
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('adminTariffModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs">Cancel</button>
+        <button type="submit" id="btnSubmitAdminTariff" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition">Save Client Tariff</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- ===================================================================== -->
   <!-- JAVASCRIPT MASTER GOVERNANCE ENGINE -->
   <!-- ===================================================================== -->
@@ -1367,7 +1486,8 @@
 
     const TAB_TITLES = {
       overview: 'Executive Governance Console',
-      pending: 'Property Audits & Lockout Controls',
+      pending: 'Property Audits & Inspection Dispatch',
+      warehouses: 'Total Warehouses Master Registry',
       bookings: 'Commercial Client Leases & Continuous Sq Ft',
       incharges: 'Warehouse Incharge Staff & Provisioning (Ops)',
       logs: 'Facility Incharge Shift Logs & Gate Records',
@@ -1382,7 +1502,7 @@
     };
 
     function switchTab(tabId) {
-      const tabs = ['overview', 'pending', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'invoices', 'tariff-margin', 'maintenance-holds', 'lien-auctions', 'insurance', 'users'];
+      const tabs = ['overview', 'pending', 'warehouses', 'bookings', 'incharges', 'logs', 'fleet-radar', 'payouts', 'invoices', 'tariff-margin', 'maintenance-holds', 'lien-auctions', 'insurance', 'users'];
       tabs.forEach(t => {
         const view = document.getElementById(`view-${t}`);
         const nav = document.getElementById(`nav-${t}`);
@@ -1401,6 +1521,8 @@
 
       if (tabId === 'fleet-radar') {
         setTimeout(initFleetRadarMap, 100);
+      } else if (tabId === 'warehouses') {
+        loadAllAdminWarehouses(currentAdminWhFilter);
       } else if (tabId === 'incharges') {
         loadIncharges();
       } else if (tabId === 'payouts') {
@@ -1423,8 +1545,11 @@
     }
 
     // -------------------------------------------------------------------------
-    // 1. PROPERTY AUDITS
+    // 1. PROPERTY AUDITS & TOTAL WAREHOUSES REGISTRY
     // -------------------------------------------------------------------------
+    let cachedAllAdminWarehouses = [];
+    let currentAdminWhFilter = 'all';
+
     async function loadPendingWarehouses() {
       const tbody = document.getElementById('pendingTableBody');
       try {
@@ -1439,31 +1564,265 @@
           return;
         }
 
-        tbody.innerHTML = data.map(w => `
+        tbody.innerHTML = data.map(w => {
+          const ownerRate = Number(w.owner_rate_per_sqft || w.monthly_rate_per_sqft || 0);
+          const clientRate = Number(w.client_rate_per_sqft || ownerRate);
+          const safeTitle = escapeHtml(w.title).replace(/'/g, "\\'");
+          return `
           <tr class="hover:bg-slate-50/80 transition">
             <td class="px-5 py-3">
-              <p class="font-bold text-navy">${w.title}</p>
-              <p class="text-[11px] text-slate-500">${w.neighborhood_landmark || 'Kathmandu'}</p>
+              <p class="font-bold text-navy">${escapeHtml(w.title)}</p>
+              <p class="text-[11px] text-slate-500">${escapeHtml(w.neighborhood_landmark || 'Kathmandu')}</p>
+              ${w.assigned_incharge_name ? `<span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold">Inspector: ${escapeHtml(w.assigned_incharge_name)} (${escapeHtml(w.physical_audit_status || 'IN_PROGRESS')})</span>` : `<span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-semibold">Awaiting Inspector Dispatch</span>`}
             </td>
             <td class="px-5 py-3">
-              <p class="font-medium text-slate-700">${w.owner_name}</p>
-              <p class="text-[11px] text-slate-500">${w.owner_phone || w.owner_email}</p>
+              <p class="font-medium text-slate-700">${escapeHtml(w.owner_name)}</p>
+              <p class="text-[11px] text-slate-500">${escapeHtml(w.owner_phone || w.owner_email)}</p>
             </td>
             <td class="px-5 py-3 font-mono font-bold text-navy">${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</td>
-            <td class="px-5 py-3 font-mono text-emerald-700 font-semibold">Rs. ${w.monthly_rate_per_sqft}/sq ft</td>
-            <td class="px-5 py-3 text-[11px] text-slate-600">${w.road_access_ft ? w.road_access_ft + ' ft road' : 'Pickup access'} &bull; ${w.space_type}</td>
+            <td class="px-5 py-3 font-mono">
+              <p class="text-xs text-slate-600">Owner: <strong>Rs. ${ownerRate}</strong>/sq ft</p>
+              <p class="text-xs text-emerald-700 font-bold">Client Tariff: Rs. ${clientRate}/sq ft</p>
+              <button type="button" onclick="openAdminTariffModal(${w.id}, '${safeTitle}', ${ownerRate}, ${clientRate})" class="mt-1 text-[10px] font-sans font-bold text-indigo-600 hover:underline">Edit Client Rate</button>
+            </td>
+            <td class="px-5 py-3 text-[11px] text-slate-600">${w.road_access_ft ? w.road_access_ft + ' ft road' : 'Pickup access'} &bull; ${escapeHtml(w.space_type)}</td>
             <td class="px-5 py-3 text-right">
-              <button onclick="approveWarehouse(${w.id}, '${w.title}')" class="px-3 py-1.5 rounded-lg bg-navy hover:bg-slate-800 text-white font-semibold text-xs shadow-sm transition flex items-center gap-1.5 ml-auto">
-                <i data-lucide="check" class="w-3.5 h-3.5"></i> Verify &amp; Dispatch Contract
-              </button>
+              <div class="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-1.5">
+                <button type="button" onclick="openAdminAssignInchargeModal(${w.id}, '${safeTitle}', ${w.assigned_incharge_id || 'null'})" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm transition flex items-center gap-1.5">
+                  <i data-lucide="user-check" class="w-3.5 h-3.5"></i> ${w.assigned_incharge_name ? 'Reassign Incharge' : 'Assign Incharge'}
+                </button>
+                <button type="button" onclick="approveWarehouse(${w.id}, '${safeTitle}')" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs shadow-sm transition flex items-center gap-1.5" title="Execute Master Commercial Contract and publish">
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i> Approve Contract
+                </button>
+              </div>
             </td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
         lucide.createIcons();
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
       }
       await loadAdminEquipment();
+    }
+
+    function setAdminWhFilter(filterKey) {
+      currentAdminWhFilter = filterKey;
+      document.querySelectorAll('.wh-filter-btn').forEach(btn => {
+        const active = btn.getAttribute('data-wh-filter') === filterKey;
+        btn.className = active
+          ? 'wh-filter-btn px-3 py-1.5 rounded-full text-xs font-bold bg-navy text-white transition'
+          : 'wh-filter-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition';
+      });
+      renderAdminWarehousesTable();
+    }
+
+    async function loadAllAdminWarehouses(filterKey = currentAdminWhFilter) {
+      currentAdminWhFilter = filterKey || 'all';
+      try {
+        const res = await fetch('/api/admin/warehouses', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load warehouse registry');
+        cachedAllAdminWarehouses = await res.json();
+        const badge = document.getElementById('badgeTotalWarehouses');
+        if (badge) badge.textContent = cachedAllAdminWarehouses.length;
+
+        const c = (tag) => cachedAllAdminWarehouses.filter(w => (w.status_tags || []).includes(tag)).length;
+        const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        setTxt('whCountAll', cachedAllAdminWarehouses.length);
+        setTxt('whCountVerified', c('verified'));
+        setTxt('whCountLease', c('on_lease'));
+        setTxt('whCountEmpty', c('empty'));
+        setTxt('whCountHold', c('on_hold'));
+        setTxt('whCountPending', c('pending_audit'));
+
+        renderAdminWarehousesTable();
+      } catch (err) {
+        const tbody = document.getElementById('allWarehousesTableBody');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    function renderAdminWarehousesTable() {
+      const tbody = document.getElementById('allWarehousesTableBody');
+      if (!tbody) return;
+      const q = (document.getElementById('adminWarehouseSearch')?.value || '').trim().toLowerCase();
+      const rows = cachedAllAdminWarehouses.filter(w => {
+        if (currentAdminWhFilter !== 'all' && !(w.status_tags || []).includes(currentAdminWhFilter)) return false;
+        if (!q) return true;
+        return `${w.title} ${w.owner_name} ${w.district} ${w.neighborhood_landmark || ''} ${w.assigned_incharge_name || ''}`.toLowerCase().includes(q);
+      });
+
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No warehouses match the selected status filter.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map(w => {
+        const safeTitle = escapeHtml(w.title).replace(/'/g, "\\'");
+        const tags = (w.status_tags || []).map(tag => {
+          const map = {
+            verified: ['Verified', 'bg-emerald-100 text-emerald-800 border-emerald-200'],
+            on_lease: ['On Lease', 'bg-sky-100 text-sky-800 border-sky-200'],
+            empty: ['Empty', 'bg-slate-100 text-slate-700 border-slate-200'],
+            on_hold: ['On Hold', 'bg-amber-100 text-amber-900 border-amber-300'],
+            pending_audit: ['Pending Audit', 'bg-rose-100 text-rose-800 border-rose-200']
+          }[tag] || [tag, 'bg-slate-100 text-slate-700 border-slate-200'];
+          return `<span class="px-2 py-0.5 rounded text-[10px] font-bold border ${map[1]}">${map[0]}</span>`;
+        }).join(' ');
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3">
+              <p class="font-bold text-navy">${escapeHtml(w.title)}</p>
+              <p class="text-[11px] text-slate-500">${escapeHtml(w.district)} &bull; ${escapeHtml(w.neighborhood_landmark || '')}</p>
+            </td>
+            <td class="px-5 py-3">
+              <p class="font-medium text-slate-800">${escapeHtml(w.owner_name)}</p>
+              <p class="text-[11px] text-slate-500">${w.assigned_incharge_name ? 'Inspector: ' + escapeHtml(w.assigned_incharge_name) : 'No Incharge Assigned'}</p>
+            </td>
+            <td class="px-5 py-3 font-mono">
+              <p class="font-bold text-navy">${Number(w.occupied_sqft).toLocaleString('en-IN')} / ${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</p>
+              <div class="w-28 h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1">
+                <div class="h-full bg-emerald-600" style="width: ${Math.min(100, w.occupancy_percent || 0)}%"></div>
+              </div>
+              <p class="text-[10px] text-slate-500 mt-0.5">${w.occupancy_percent}% leased</p>
+            </td>
+            <td class="px-5 py-3 font-mono">
+              <p class="text-[11px] text-slate-600">Owner: <strong>Rs. ${w.owner_rate_per_sqft}</strong>/sqft</p>
+              <p class="text-xs text-emerald-700 font-bold">Client Tariff: Rs. ${w.client_rate_per_sqft}/sqft</p>
+            </td>
+            <td class="px-5 py-3">
+              <div class="flex flex-wrap gap-1">${tags}</div>
+            </td>
+            <td class="px-5 py-3 text-right">
+              <div class="flex flex-wrap items-center justify-end gap-1.5">
+                <button type="button" onclick="openAdminTariffModal(${w.id}, '${safeTitle}', ${w.owner_rate_per_sqft}, ${w.client_rate_per_sqft})" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold">Edit Tariff</button>
+                <button type="button" onclick="openAdminAssignInchargeModal(${w.id}, '${safeTitle}', ${w.assigned_incharge_id || 'null'})" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-[11px] font-bold">Assign Incharge</button>
+                <button type="button" onclick="adminToggleWarehouseHold(${w.id}, ${w.is_on_maintenance_hold})" class="px-2.5 py-1 rounded-lg ${w.is_on_maintenance_hold ? 'bg-slate-800 text-white' : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200'} text-[11px] font-bold">${w.is_on_maintenance_hold ? 'Release Hold' : 'Hold'}</button>
+                ${!w.is_approved ? `<button type="button" onclick="approveWarehouse(${w.id}, '${safeTitle}')" class="px-2.5 py-1 rounded-lg bg-navy hover:bg-slate-800 text-white text-[11px] font-bold">Approve</button>` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    async function openAdminAssignInchargeModal(warehouseId, title, currentInchargeId = null) {
+      document.getElementById('assignModalWhId').value = warehouseId;
+      document.getElementById('assignModalWhTitle').textContent = title;
+      document.getElementById('assignModalNotes').value = '';
+      const select = document.getElementById('assignModalInchargeSelect');
+      select.innerHTML = '<option value="">Loading staff directory...</option>';
+      document.getElementById('adminAssignInchargeModal').showModal();
+      lucide.createIcons();
+      try {
+        const res = await fetch('/api/admin/incharges', { headers: getAuthHeaders() });
+        const staff = res.ok ? await res.json() : [];
+        if (!Array.isArray(staff) || staff.length === 0) {
+          select.innerHTML = '<option value="">No Warehouse Incharge staff created yet — add under Incharge Staff (Ops)</option>';
+          return;
+        }
+        select.innerHTML = '<option value="">Select inspector...</option>' + staff.map(s =>
+          `<option value="${s.id}" ${Number(currentInchargeId) === Number(s.id) ? 'selected' : ''}>${escapeHtml(s.full_name)} (${escapeHtml(s.phone_number || s.email)})</option>`
+        ).join('');
+      } catch (e) {
+        select.innerHTML = '<option value="">Failed to load staff list</option>';
+      }
+    }
+
+    async function submitAdminAssignIncharge(e) {
+      e.preventDefault();
+      const whId = document.getElementById('assignModalWhId').value;
+      const inchargeId = parseInt(document.getElementById('assignModalInchargeSelect').value, 10);
+      const notes = document.getElementById('assignModalNotes').value.trim();
+      if (!inchargeId) {
+        showToast('Please select a Warehouse Incharge staff member first.', true);
+        return;
+      }
+      const btn = document.getElementById('btnSubmitAssignIncharge');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/warehouses/${whId}/assign-incharge`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ incharge_id: inchargeId, notes: notes || null })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Incharge assigned for inspection.');
+          document.getElementById('adminAssignInchargeModal').close();
+          refreshData();
+        } else {
+          showToast(data.detail || 'Failed to assign incharge.', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function openAdminTariffModal(warehouseId, title, ownerRate, clientRate) {
+      document.getElementById('tariffModalWhId').value = warehouseId;
+      document.getElementById('tariffModalWhTitle').textContent = title;
+      document.getElementById('tariffModalOwnerRateLabel').textContent = `Rs. ${ownerRate} / sq ft`;
+      document.getElementById('tariffModalOwnerRateInput').value = ownerRate;
+      document.getElementById('tariffModalClientRateInput').value = clientRate || ownerRate;
+      document.getElementById('adminTariffModal').showModal();
+      lucide.createIcons();
+    }
+
+    async function submitAdminTariff(e) {
+      e.preventDefault();
+      const whId = document.getElementById('tariffModalWhId').value;
+      const clientRate = parseFloat(document.getElementById('tariffModalClientRateInput').value);
+      const ownerRate = parseFloat(document.getElementById('tariffModalOwnerRateInput').value);
+      const btn = document.getElementById('btnSubmitAdminTariff');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/warehouses/${whId}/set-tariff`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            client_rate_per_sqft: clientRate,
+            owner_rate_per_sqft: Number.isFinite(ownerRate) ? ownerRate : null
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Tariff updated.');
+          document.getElementById('adminTariffModal').close();
+          refreshData();
+        } else {
+          showToast(data.detail || 'Failed to update tariff.', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function adminToggleWarehouseHold(whId, isCurrentlyOnHold) {
+      const action = isCurrentlyOnHold ? 'RELEASE' : 'APPROVE';
+      const note = isCurrentlyOnHold ? '' : (prompt('Enter maintenance hold reason (visible to Property Owner):', 'Scheduled inspection / structural maintenance') || '');
+      try {
+        const res = await fetch(`/api/admin/maintenance-holds/${whId}/action`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ action, admin_notes: note || null })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Maintenance hold state updated.');
+          refreshData();
+        } else {
+          showToast(data.detail || 'Failed to update hold state.', true);
+        }
+      } catch (err) {
+        showToast('Connection error: ' + err.message, true);
+      }
     }
 
     async function loadAdminEquipment() {
@@ -2876,6 +3235,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
 
     function refreshData() {
       loadPendingWarehouses();
+      loadAllAdminWarehouses(currentAdminWhFilter);
       loadBookings();
       loadIncharges();
       loadInchargeLogs();
@@ -2900,6 +3260,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
         cat_governance: "Governance & Controls",
         nav_overview: "Executive Overview",
         nav_audits: "Property Audits",
+        nav_warehouses: "Total Warehouses",
         nav_leases: "Client Leases & Continuous Sq Ft",
         nav_incharges: "Incharge Staff (Ops)",
         nav_shift_logs: "Facility Shift Logs",
@@ -2917,6 +3278,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
         cat_governance: "सुशासन तथा नियन्त्रण",
         nav_overview: "कार्यकारी सारांश",
         nav_audits: "गोदाम अडिट तथा स्वीकृति",
+        nav_warehouses: "कुल गोदाम विवरण",
         nav_leases: "ग्राहक सम्झौता तथा क्षेत्रफल",
         nav_incharges: "इन्चार्ज कर्मचारी (सञ्चालन)",
         nav_shift_logs: "दैनिक सिफ्ट लगहरू",

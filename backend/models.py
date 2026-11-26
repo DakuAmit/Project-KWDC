@@ -212,6 +212,7 @@ class Warehouse(Base):
     original_input_value = Column(Float, nullable=True)
 
     monthly_rate_per_sqft = Column(Float, nullable=False)
+    client_rate_per_sqft = Column(Float, nullable=True)  # Admin-set client base tariff (falls back to monthly_rate_per_sqft if None)
     min_lease_months = Column(Integer, default=1)
     
     # Location

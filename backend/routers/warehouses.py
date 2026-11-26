@@ -35,6 +35,14 @@ from backend.config import settings
 
 router = APIRouter(prefix="/api/warehouses", tags=["Warehouses & Storage"])
 
+
+def get_client_rate(w: Warehouse) -> float:
+    """Return SuperAdmin-configured client tariff if set, else owner base rate."""
+    if getattr(w, "client_rate_per_sqft", None) is not None and float(w.client_rate_per_sqft) > 0:
+        return float(w.client_rate_per_sqft)
+    return float(w.monthly_rate_per_sqft or 0.0)
+
+
 def normalize_space_type(val) -> SpaceType:
     if not val:
         return SpaceType.COVERED_GODOWN
@@ -409,7 +417,7 @@ def get_public_catalog(
             "space_type": w.space_type.value,
             "total_sqft": w.total_sqft,
             "available_sqft": w.available_sqft,
-            "monthly_rate_per_sqft": w.monthly_rate_per_sqft,
+            "monthly_rate_per_sqft": get_client_rate(w),
             "district": w.district,
             "municipality": w.municipality,
             "neighborhood_landmark": w.neighborhood_landmark,
@@ -484,7 +492,7 @@ def book_warehouse_space(
 
     calc = calculate_flexible_storage_cost(
         allocated_sqft=allocated_sqft,
-        monthly_rate_per_sqft=warehouse.monthly_rate_per_sqft,
+        monthly_rate_per_sqft=get_client_rate(warehouse),
         booking_duration_type=dtype,
         duration_value=dval
     )
@@ -594,7 +602,7 @@ def get_client_bookings(
             "neighborhood_landmark": b.warehouse.neighborhood_landmark if b.warehouse else "Kathmandu",
             "district": b.warehouse.district if b.warehouse else "Kathmandu",
             "warehouse_available_sqft": b.warehouse.available_sqft if b.warehouse else 0.0,
-            "monthly_rate_per_sqft": b.warehouse.monthly_rate_per_sqft if b.warehouse else 45.0,
+            "monthly_rate_per_sqft": get_client_rate(b.warehouse) if b.warehouse else 45.0,
             "requested_sqft": b.requested_sqft,
             "allocated_billed_sqft": b.allocated_billed_sqft,
             "booking_duration_type": getattr(b, "booking_duration_type", "MONTHLY") or "MONTHLY",
@@ -736,7 +744,7 @@ def modify_booking_lifecycle(
     # Recalculate billing for updated sq ft
     calc = calculate_flexible_storage_cost(
         allocated_sqft=booking.allocated_billed_sqft,
-        monthly_rate_per_sqft=wh.monthly_rate_per_sqft if wh else 45.0,
+        monthly_rate_per_sqft=get_client_rate(wh) if wh else 45.0,
         booking_duration_type=booking.booking_duration_type or "MONTHLY",
         duration_value=booking.duration_value or 3
     )

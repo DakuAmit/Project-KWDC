@@ -100,6 +100,7 @@ def ensure_db_schema_extensions():
         add_col_if_missing("warehouse_requests", "is_forfeited", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
         add_col_if_missing("warehouse_requests", "last_reminder_sent_at", "TIMESTAMP")
         add_col_if_missing("warehouse_requests", "last_reminder_stage", "VARCHAR(50)")
+        add_col_if_missing("warehouses", "client_rate_per_sqft", "FLOAT")
 
         add_col_if_missing("heavy_equipments", "registration_no", "VARCHAR(100)")
         add_col_if_missing("heavy_equipments", "hourly_rate_npr", "FLOAT DEFAULT 1500.0")

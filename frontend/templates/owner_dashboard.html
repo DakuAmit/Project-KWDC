@@ -684,19 +684,35 @@
       </div>
 
       <div>
-        <label class="block text-xs font-bold text-navy mb-1" data-i18n="label_address">Neighborhood / Landmark *</label>
-        <input type="text" id="propAddress" required placeholder="e.g. Near Ring Road crossing, Balaju Industrial Area" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20">
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <label class="block text-xs font-bold text-navy" data-i18n="label_address">Neighborhood / Landmark *</label>
+          <span class="text-[10px] text-emerald-700 font-semibold" id="ownerGeocodeHint">Auto-pins Google Map from landmark</span>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="propAddress" required placeholder="e.g. Near Ring Road crossing, Balaju Industrial Area" class="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy/20">
+          <button type="button" onclick="geocodeOwnerLandmark(true)" class="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-bold shrink-0 flex items-center gap-1.5 transition" title="Center map from entered landmark">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i> Locate Area
+          </button>
+        </div>
       </div>
 
-      <!-- Interactive GPS Map Pin Picker & Photo Gallery -->
+      <!-- Interactive Google Map Pin Picker & Photo Gallery -->
       <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <label class="text-xs font-bold text-navy flex items-center gap-1.5">
-            <i data-lucide="map-pin" class="w-4 h-4 text-rose-600"></i> Pin Exact Property GPS Coordinates (Click Map)
+            <i data-lucide="map-pin" class="w-4 h-4 text-rose-600"></i> Pin Property GPS (Google Map — Click, Drag or GPS)
           </label>
-          <span class="text-[11px] font-mono text-slate-600" id="propCoordsBadge">27.7172, 85.3240</span>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="pinOwnerCurrentLocation()" id="btnPinMyLocation" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition">
+              <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i> Pin My Location
+            </button>
+            <button type="button" onclick="toggleOwnerMapSatellite()" id="btnOwnerMapLayer" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold transition">
+              Satellite
+            </button>
+            <span class="text-[11px] font-mono text-slate-600" id="propCoordsBadge">27.7172, 85.3240</span>
+          </div>
         </div>
-        <div id="ownerPinMap" class="w-full h-44 rounded-xl border border-slate-300 bg-slate-200"></div>
+        <div id="ownerPinMap" class="w-full h-52 rounded-xl border border-slate-300 bg-slate-200"></div>
         <input type="hidden" id="propLat" value="27.7172">
         <input type="hidden" id="propLng" value="85.3240">
         <div>
@@ -1215,6 +1231,88 @@
 
     let ownerPinMapInst = null;
     let ownerPinMarker = null;
+    let ownerMapTileLayer = null;
+    let ownerMapHybridMode = false;
+    let ownerPinManualOverride = false;
+    let ownerGeocodeTimer = null;
+
+    function setOwnerPinCoords(lat, lng, zoom = 16, markManual = false) {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      if (markManual) ownerPinManualOverride = true;
+      document.getElementById('propLat').value = lat.toFixed(6);
+      document.getElementById('propLng').value = lng.toFixed(6);
+      document.getElementById('propCoordsBadge').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      if (ownerPinMarker) ownerPinMarker.setLatLng([lat, lng]);
+      if (ownerPinMapInst) ownerPinMapInst.setView([lat, lng], zoom);
+    }
+
+    function toggleOwnerMapSatellite() {
+      if (!ownerPinMapInst) return;
+      ownerMapHybridMode = !ownerMapHybridMode;
+      if (ownerMapTileLayer) ownerPinMapInst.removeLayer(ownerMapTileLayer);
+      const lyrs = ownerMapHybridMode ? 'y' : 'm';
+      ownerMapTileLayer = L.tileLayer(`https://{s}.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`, {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '© Google Maps'
+      }).addTo(ownerPinMapInst);
+      const btn = document.getElementById('btnOwnerMapLayer');
+      if (btn) btn.textContent = ownerMapHybridMode ? 'Street Map' : 'Satellite';
+    }
+
+    function pinOwnerCurrentLocation() {
+      if (!navigator.geolocation) {
+        showToast('Browser geolocation is not supported on this device.', true);
+        return;
+      }
+      const btn = document.getElementById('btnPinMyLocation');
+      if (btn) btn.disabled = true;
+      showToast('Detecting your current GPS location...');
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          if (btn) btn.disabled = false;
+          setOwnerPinCoords(pos.coords.latitude, pos.coords.longitude, 17, true);
+          const hint = document.getElementById('ownerGeocodeHint');
+          if (hint) hint.textContent = `Pinned via device GPS (±${Math.round(pos.coords.accuracy || 20)}m)`;
+          showToast('Pinned your current GPS location on the map.');
+        },
+        err => {
+          if (btn) btn.disabled = false;
+          showToast('Could not read GPS location: ' + (err.message || 'Permission denied'), true);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    async function geocodeOwnerLandmark(force = false) {
+      if (!force && ownerPinManualOverride) return;
+      const addrInput = document.getElementById('propAddress');
+      const distSel = document.getElementById('propDistrict');
+      const distOther = document.getElementById('propDistrictOther');
+      const district = distSel && distSel.value === 'OTHER'
+        ? (distOther ? distOther.value.trim() : '')
+        : (distSel ? distSel.value : 'Kathmandu');
+      const landmark = addrInput ? addrInput.value.trim() : '';
+      const query = [landmark, district, 'Nepal'].filter(Boolean).join(', ');
+      if (query.length < 4) return;
+      const hint = document.getElementById('ownerGeocodeHint');
+      if (hint) hint.textContent = 'Locating on Google Maps...';
+      try {
+        const res = await fetch(`/api/maps/geocode?address=${encodeURIComponent(query)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.found && data.lat && data.lng) {
+          setOwnerPinCoords(Number(data.lat), Number(data.lng), landmark ? 16 : 13, false);
+          if (hint) hint.textContent = `Pinned: ${data.formatted_address || landmark || district}`;
+          if (force) showToast(`Map centered on ${data.formatted_address || landmark}`);
+        } else if (force) {
+          showToast('Could not pinpoint exact landmark — please click the map directly.', true);
+          if (hint) hint.textContent = 'Click map or drag pin to exact spot';
+        }
+      } catch (err) {
+        if (hint) hint.textContent = 'Click map or drag pin to exact spot';
+      }
+    }
 
     async function openListingModal() {
       const token = localStorage.getItem('kwdc_token') || sessionStorage.getItem('kwdc_token');
@@ -1236,26 +1334,41 @@
         switchTab('kyc');
         return;
       }
+      ownerPinManualOverride = false;
       document.getElementById('listSpaceModal').showModal();
       convertUnits();
       setTimeout(() => {
         if (!ownerPinMapInst) {
-          ownerPinMapInst = L.map('ownerPinMap').setView([27.7172, 85.3240], 12);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(ownerPinMapInst);
+          ownerPinMapInst = L.map('ownerPinMap').setView([27.7172, 85.3240], 13);
+          ownerMapTileLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '© Google Maps'
+          }).addTo(ownerPinMapInst);
           ownerPinMarker = L.marker([27.7172, 85.3240], { draggable: true }).addTo(ownerPinMapInst);
-          const updatePin = (lat, lng) => {
-            document.getElementById('propLat').value = lat.toFixed(6);
-            document.getElementById('propLng').value = lng.toFixed(6);
-            document.getElementById('propCoordsBadge').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-          };
           ownerPinMapInst.on('click', ev => {
-            ownerPinMarker.setLatLng(ev.latlng);
-            updatePin(ev.latlng.lat, ev.latlng.lng);
+            setOwnerPinCoords(ev.latlng.lat, ev.latlng.lng, ownerPinMapInst.getZoom(), true);
           });
           ownerPinMarker.on('dragend', () => {
             const p = ownerPinMarker.getLatLng();
-            updatePin(p.lat, p.lng);
+            setOwnerPinCoords(p.lat, p.lng, ownerPinMapInst.getZoom(), true);
           });
+          const addrEl = document.getElementById('propAddress');
+          const distEl = document.getElementById('propDistrict');
+          if (addrEl) {
+            addrEl.addEventListener('input', () => {
+              ownerPinManualOverride = false;
+              clearTimeout(ownerGeocodeTimer);
+              ownerGeocodeTimer = setTimeout(() => geocodeOwnerLandmark(false), 750);
+            });
+            addrEl.addEventListener('blur', () => geocodeOwnerLandmark(false));
+          }
+          if (distEl) {
+            distEl.addEventListener('change', () => {
+              ownerPinManualOverride = false;
+              geocodeOwnerLandmark(false);
+            });
+          }
         } else {
           ownerPinMapInst.invalidateSize();
         }
@@ -1559,15 +1672,15 @@
                 <button onclick="openOwnerContractModal(${w.id})" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition flex items-center gap-1">
                   <i data-lucide="file-check-2" class="w-3.5 h-3.5"></i> Contract
                 </button>
-                <div class="flex items-center gap-1.5">
+                <div class="flex flex-wrap items-center gap-1.5">
                   ${w.is_approved ? `
                     <button onclick="openChangeRequestModal(${w.id}, '${escapeHtml(w.title).replace(/'/g, "\\'")}', ${w.monthly_rate_per_sqft || 45})" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-slate-100 text-navy hover:bg-slate-200 transition flex items-center gap-1">
                       <i data-lucide="file-edit" class="w-3 h-3"></i> Revise / Delist
                     </button>
-                    <button onclick="openMaintenanceModal(${w.id}, '${escapeHtml(w.title).replace(/'/g, "\\'")}', ${w.is_on_maintenance_hold})" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg ${w.is_on_maintenance_hold ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'} transition flex items-center gap-1">
-                      <i data-lucide="wrench" class="w-3 h-3"></i> ${w.is_on_maintenance_hold ? 'Release Hold' : 'Hold'}
-                    </button>
-                  ` : '<span class="text-[10px] text-slate-400 font-mono">Pending audit</span>'}
+                  ` : '<span class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded font-mono">Pending audit</span>'}
+                  <button onclick="openMaintenanceModal(${w.id}, '${escapeHtml(w.title).replace(/'/g, "\\'")}', ${w.is_on_maintenance_hold})" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg ${w.is_on_maintenance_hold ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'} transition flex items-center gap-1">
+                    <i data-lucide="wrench" class="w-3 h-3"></i> ${w.is_on_maintenance_hold ? 'Release Hold' : 'Maintenance Hold'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1968,7 +2081,7 @@
             </div>
 
             <div class="shrink-0">
-              <button onclick="openMaintenanceModal(${w.id}, '${w.title.replace(/'/g, "\'")}', ${w.is_on_maintenance_hold})" class="px-4 py-2 rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5 ${w.is_on_maintenance_hold ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-amber-500 text-white hover:bg-amber-600'}">
+              <button onclick="openMaintenanceModal(${w.id}, '${escapeHtml(w.title).replace(/'/g, "\\'")}', ${w.is_on_maintenance_hold})" class="px-4 py-2 rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5 ${w.is_on_maintenance_hold ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-amber-500 text-white hover:bg-amber-600'}">
                 <i data-lucide="${w.is_on_maintenance_hold ? 'unlock' : 'lock'}" class="w-3.5 h-3.5"></i>
                 ${w.is_on_maintenance_hold ? 'Release Maintenance Hold' : 'Trigger Maintenance Hold'}
               </button>

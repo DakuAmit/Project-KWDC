@@ -25,7 +25,7 @@ from backend.models import (
     Warehouse, WarehouseRequest, User, UserRole,
     BookingStatus, TaxInvoice, PaymentStatus, WarehouseActivityLog,
     WarehouseInchargeAssignment, KycStatus, Vehicle, Driver, GatePass, IncidentReport, UserKycProfile,
-    PlatformConfig, StockAuctionItem, LienNotificationLog, WarehouseChangeRequest
+    PlatformConfig, StockAuctionItem, LienNotificationLog, WarehouseChangeRequest, PhysicalAuditStatus
 )
 from backend.auth_utils import require_user, require_roles, get_password_hash
 from backend.services.contract_service import generate_master_lease_contract
@@ -63,6 +63,15 @@ class UserKycUpdateRequest(BaseModel):
     kyc_status: str
     admin_notes: Optional[str] = None
 
+class AssignInchargeAuditRequest(BaseModel):
+    incharge_id: int
+    notes: Optional[str] = None
+
+class WarehouseTariffUpdateRequest(BaseModel):
+    client_rate_per_sqft: float
+    owner_rate_per_sqft: Optional[float] = None
+    notes: Optional[str] = None
+
 class FareConfigUpdateRequest(BaseModel):
     platform_margin_percent: Optional[float] = 10.0
     flag_drop_van_pickup: Optional[float] = 1200.0
@@ -87,10 +96,15 @@ def get_pending_warehouses(
     current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
-    """Lists all properties awaiting SuperAdmin audit."""
-    pending = db.query(Warehouse).filter(Warehouse.is_approved == False).all()
+    """Lists all properties awaiting SuperAdmin / Incharge inspection & approval."""
+    pending = db.query(Warehouse).filter(Warehouse.is_approved == False).order_by(Warehouse.created_at.desc()).all()
     results = []
     for w in pending:
+        auditor = w.incharge_auditor or (
+            db.query(User).filter(User.id == w.audited_by_incharge_id).first()
+            if getattr(w, "audited_by_incharge_id", None) else None
+        )
+        client_rate = float(w.client_rate_per_sqft if getattr(w, "client_rate_per_sqft", None) is not None else w.monthly_rate_per_sqft)
         results.append({
             "id": w.id,
             "owner_name": w.owner.full_name if w.owner else "Property Owner",
@@ -100,11 +114,178 @@ def get_pending_warehouses(
             "space_type": w.space_type.value if hasattr(w.space_type, "value") else str(w.space_type),
             "total_sqft": w.total_sqft,
             "monthly_rate_per_sqft": w.monthly_rate_per_sqft,
+            "owner_rate_per_sqft": w.monthly_rate_per_sqft,
+            "client_rate_per_sqft": client_rate,
             "neighborhood_landmark": w.neighborhood_landmark,
+            "district": w.district,
+            "latitude": w.latitude,
+            "longitude": w.longitude,
             "road_access_ft": w.road_access_ft,
+            "physical_audit_status": w.physical_audit_status.value if hasattr(w.physical_audit_status, "value") else str(w.physical_audit_status or "PENDING_INSPECTION"),
+            "assigned_incharge_id": getattr(w, "audited_by_incharge_id", None),
+            "assigned_incharge_name": auditor.full_name if auditor else None,
+            "is_on_maintenance_hold": bool(w.is_on_maintenance_hold),
             "created_at": w.created_at.strftime("%Y-%m-%d %H:%M") if w.created_at else "Recent"
         })
     return results
+
+
+@router.get("/warehouses")
+def get_all_admin_warehouses(
+    status_filter: Optional[str] = None,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    Lists ALL registered warehouses across the platform with operational status tags,
+    occupancy metrics, Owner Rate vs Client Base Tariff, and assigned Incharge details.
+    """
+    all_wh = db.query(Warehouse).order_by(Warehouse.created_at.desc()).all()
+    results = []
+    for w in all_wh:
+        tot = float(w.total_sqft or 0.0)
+        avail = float(w.available_sqft or 0.0)
+        occ = round(max(0.0, tot - avail), 2)
+        occ_pct = round((occ / tot) * 100.0, 1) if tot > 0 else 0.0
+        owner_rate = float(w.monthly_rate_per_sqft or 45.0)
+        client_rate = float(w.client_rate_per_sqft if getattr(w, "client_rate_per_sqft", None) is not None else owner_rate)
+
+        auditor = w.incharge_auditor or (
+            db.query(User).filter(User.id == w.audited_by_incharge_id).first()
+            if getattr(w, "audited_by_incharge_id", None) else None
+        )
+        if not auditor:
+            active_assign = db.query(WarehouseInchargeAssignment).filter(
+                WarehouseInchargeAssignment.warehouse_id == w.id,
+                WarehouseInchargeAssignment.is_active == True
+            ).first()
+            if active_assign and active_assign.incharge:
+                auditor = active_assign.incharge
+
+        tags = []
+        if w.is_approved:
+            tags.append("verified")
+        else:
+            tags.append("pending_audit")
+        if occ > 0:
+            tags.append("on_lease")
+        else:
+            tags.append("empty")
+        if w.is_on_maintenance_hold:
+            tags.append("on_hold")
+
+        if status_filter and status_filter != "all" and status_filter not in tags:
+            continue
+
+        results.append({
+            "id": w.id,
+            "title": w.title,
+            "owner_name": w.owner.full_name if w.owner else "Property Owner",
+            "owner_phone": w.owner.phone_number if w.owner else "-",
+            "space_type": w.space_type.value if hasattr(w.space_type, "value") else str(w.space_type),
+            "district": w.district,
+            "neighborhood_landmark": w.neighborhood_landmark,
+            "total_sqft": tot,
+            "available_sqft": avail,
+            "occupied_sqft": occ,
+            "occupancy_percent": occ_pct,
+            "owner_rate_per_sqft": owner_rate,
+            "client_rate_per_sqft": client_rate,
+            "is_approved": bool(w.is_approved),
+            "is_available": bool(w.is_available),
+            "is_on_maintenance_hold": bool(w.is_on_maintenance_hold),
+            "hold_reason_note": w.hold_reason_note,
+            "physical_audit_status": w.physical_audit_status.value if hasattr(w.physical_audit_status, "value") else str(w.physical_audit_status or "PENDING_INSPECTION"),
+            "assigned_incharge_id": auditor.id if auditor else None,
+            "assigned_incharge_name": auditor.full_name if auditor else None,
+            "status_tags": tags,
+            "created_at": w.created_at.strftime("%Y-%m-%d %H:%M") if w.created_at else "Recent"
+        })
+    return results
+
+
+@router.post("/warehouses/{warehouse_id}/assign-incharge")
+def assign_incharge_for_inspection(
+    warehouse_id: int,
+    payload: AssignInchargeAuditRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Assigns a Warehouse Incharge staff member to inspect a property before final approval."""
+    wh = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found.")
+
+    inc = db.query(User).filter(
+        User.id == payload.incharge_id,
+        User.role == UserRole.WAREHOUSE_INCHARGE
+    ).first()
+    if not inc:
+        raise HTTPException(status_code=404, detail="Warehouse Incharge staff member not found.")
+
+    existing = db.query(WarehouseInchargeAssignment).filter(
+        WarehouseInchargeAssignment.warehouse_id == wh.id,
+        WarehouseInchargeAssignment.incharge_id == inc.id,
+        WarehouseInchargeAssignment.is_active == True
+    ).first()
+    if not existing:
+        db.add(WarehouseInchargeAssignment(
+            warehouse_id=wh.id,
+            incharge_id=inc.id,
+            is_active=True
+        ))
+
+    wh.audited_by_incharge_id = inc.id
+    if not wh.is_approved:
+        wh.physical_audit_status = PhysicalAuditStatus.AUDIT_SCHEDULED
+    if payload.notes:
+        wh.physical_audit_notes = payload.notes.strip()
+
+    db.add(WarehouseActivityLog(
+        warehouse_id=wh.id,
+        incharge_id=inc.id,
+        log_type="PHYSICAL_INSPECTION_ASSIGNED",
+        summary=f"Assigned {inc.full_name} for on-site physical audit of {wh.title}",
+        detailed_notes=payload.notes or "SuperAdmin dispatched on-site inspector to verify area, access road & fire safety."
+    ))
+    db.commit()
+    return {
+        "message": f"Assigned '{inc.full_name}' to inspect '{wh.title}'.",
+        "warehouse_id": wh.id,
+        "incharge_id": inc.id,
+        "incharge_name": inc.full_name,
+        "physical_audit_status": wh.physical_audit_status.value
+    }
+
+
+@router.post("/warehouses/{warehouse_id}/set-tariff")
+def set_warehouse_client_tariff(
+    warehouse_id: int,
+    payload: WarehouseTariffUpdateRequest,
+    current_user: User = Depends(require_roles([UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    Allows SuperAdmin to set the Client-facing Base Tariff Rate independently
+    from the Property Owner's base rate (without reducing Owner payouts).
+    """
+    wh = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found.")
+    if payload.client_rate_per_sqft < 5:
+        raise HTTPException(status_code=400, detail="Client base tariff must be at least Rs. 5/sq ft.")
+
+    wh.client_rate_per_sqft = round(float(payload.client_rate_per_sqft), 2)
+    if payload.owner_rate_per_sqft is not None and payload.owner_rate_per_sqft >= 5:
+        wh.monthly_rate_per_sqft = round(float(payload.owner_rate_per_sqft), 2)
+
+    db.commit()
+    return {
+        "message": f"Updated '{wh.title}' — Client Tariff: Rs. {wh.client_rate_per_sqft}/sqft (Owner Rate: Rs. {wh.monthly_rate_per_sqft}/sqft).",
+        "warehouse_id": wh.id,
+        "client_rate_per_sqft": wh.client_rate_per_sqft,
+        "owner_rate_per_sqft": wh.monthly_rate_per_sqft
+    }
 
 @router.post("/warehouses/{warehouse_id}/approve")
 @router.post("/warehouses/{warehouse_id}/audit")

@@ -24,30 +24,81 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
+def _clean_landmark_query(address: str) -> str:
+    import re
+    cleaned = re.sub(r"\b(near|opposite\s+to|opposite|beside|behind|in\s+front\s+of|next\s+to)\b", " ", address, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", cleaned).strip(" ,")
+
+
+def _google_geocode_once(query_text: str, key: str) -> Optional[Dict[str, Any]]:
+    query = urllib.parse.urlencode({
+        "address": f"{query_text}, Nepal" if "nepal" not in query_text.lower() else query_text,
+        "region": "np",
+        "key": key,
+    })
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?{query}"
+    with urllib.request.urlopen(url, timeout=6) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    if data.get("status") == "OK" and data.get("results"):
+        top = data["results"][0]
+        loc = top["geometry"]["location"]
+        return {
+            "lat": float(loc["lat"]),
+            "lng": float(loc["lng"]),
+            "formatted_address": top.get("formatted_address", query_text),
+            "source": "google_geocoding"
+        }
+    return None
+
+
 def geocode_address(address: str) -> Optional[Dict[str, Any]]:
     key = get_google_maps_key() or settings.GOOGLE_MAPS_API_KEY
-    if not key or not address or len(address.strip()) < 3:
+    if not address or len(address.strip()) < 3:
         return None
+    raw = address.strip()
+    cleaned = _clean_landmark_query(raw)
+    candidates = [raw]
+    if cleaned and cleaned.lower() != raw.lower():
+        candidates.append(cleaned)
+    # Also try chunk-by-chunk (e.g. comma-separated parts) if compound landmark text misses
+    if "," in cleaned:
+        parts = [p.strip() for p in cleaned.split(",") if p.strip()]
+        if len(parts) > 1:
+            candidates.append(", ".join(parts[1:]))
+
+    if key:
+        try:
+            for cand in candidates:
+                res = _google_geocode_once(cand, key)
+                if res:
+                    return res
+        except Exception as e:
+            print("[MAPS GEOCODE NOTICE]", e)
+
+    # Fallback to Nominatim if Google key is absent or returns ZERO_RESULTS on informal landmark text
     try:
-        query = urllib.parse.urlencode({
-            "address": f"{address.strip()}, Nepal" if "nepal" not in address.lower() else address.strip(),
-            "region": "np",
-            "key": key,
-        })
-        url = f"https://maps.googleapis.com/maps/api/geocode/json?{query}"
-        with urllib.request.urlopen(url, timeout=6) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        if data.get("status") == "OK" and data.get("results"):
-            top = data["results"][0]
-            loc = top["geometry"]["location"]
-            return {
-                "lat": float(loc["lat"]),
-                "lng": float(loc["lng"]),
-                "formatted_address": top.get("formatted_address", address),
-                "source": "google_geocoding"
-            }
+        for cand in candidates[:2]:
+            q = urllib.parse.urlencode({
+                "q": f"{cand}, Nepal" if "nepal" not in cand.lower() else cand,
+                "format": "json",
+                "limit": 1,
+                "countrycodes": "np"
+            })
+            req = urllib.request.Request(
+                f"https://nominatim.openstreetmap.org/search?{q}",
+                headers={"User-Agent": "KTM-WDC-Logistics/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                nom = json.loads(resp.read().decode("utf-8"))
+            if isinstance(nom, list) and nom:
+                return {
+                    "lat": float(nom[0]["lat"]),
+                    "lng": float(nom[0]["lon"]),
+                    "formatted_address": nom[0].get("display_name", cand),
+                    "source": "nominatim_fallback"
+                }
     except Exception as e:
-        print("[MAPS GEOCODE NOTICE]", e)
+        print("[MAPS NOMINATIM NOTICE]", e)
     return None
 
 
