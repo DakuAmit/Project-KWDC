@@ -83,7 +83,7 @@ class FareConfigUpdateRequest(BaseModel):
     rate_per_km_heavy_truck: Optional[float] = 125.0
     rate_per_km_container_trailer: Optional[float] = 175.0
     weight_rate_per_tonne: Optional[float] = 150.0
-    vat_rate_percent: Optional[float] = 13.0
+    vat_rate_percent: Optional[float] = 0.0
     fuel_multiplier: Optional[float] = 1.0
 
 

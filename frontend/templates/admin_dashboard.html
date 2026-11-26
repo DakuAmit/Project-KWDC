@@ -761,7 +761,7 @@
                   </div>
                   <input type="range" id="cfgMarginSlider" min="1" max="25" step="0.5" value="10" oninput="handleMarginSlider(this.value)" class="w-full accent-amber-500 cursor-pointer">
                   <input type="number" id="cfgMarginPercent" step="0.1" min="0" max="100" value="10.0" oninput="handleMarginInput(this.value)" class="mt-2 w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-bold text-navy focus:border-amber-500 focus:outline-none">
-                  <p class="text-[10px] text-slate-500 mt-1">Platform fee retained by KTM-WDC from each locked job before driver payout.</p>
+                  <p class="text-[10px] text-slate-500 mt-1">Platform commission payable to KTM-WDC (Client &amp; Driver see the same Zero-VAT Trip Fare).</p>
                 </div>
 
                 <div>
@@ -776,9 +776,8 @@
                   <p class="text-[10px] text-slate-500 mt-1">Additional tariff per 1,000 KG (1 Metric Tonne) of payload.</p>
                 </div>
 
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1">Statutory IRD VAT % *</label>
-                  <input type="number" id="cfgVatPercent" step="0.5" min="0" value="13.0" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-semibold text-navy focus:border-amber-500 focus:outline-none">
+                <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 font-semibold">
+                  Zero Freight VAT active — pickup &amp; dispatch fares do not add 13% VAT.
                 </div>
               </div>
 
@@ -3018,7 +3017,6 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
 
         document.getElementById('cfgFuelMultiplier').value = data.fuel_multiplier || 1.0;
         document.getElementById('cfgWeightRate').value = data.weight_rate_per_tonne || 150.0;
-        document.getElementById('cfgVatPercent').value = data.vat_rate_percent || 13.0;
 
         if (data.flag_drops) {
           document.getElementById('cfgFlagVan').value = data.flag_drops.van_pickup || 1200.0;
@@ -3071,7 +3069,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
         platform_margin_percent: parseFloat(document.getElementById('cfgMarginPercent').value) || 10.0,
         fuel_multiplier: parseFloat(document.getElementById('cfgFuelMultiplier').value) || 1.0,
         weight_rate_per_tonne: parseFloat(document.getElementById('cfgWeightRate').value) || 150.0,
-        vat_rate_percent: parseFloat(document.getElementById('cfgVatPercent').value) || 13.0,
+        vat_rate_percent: 0.0,
 
         flag_drop_van_pickup: parseFloat(document.getElementById('cfgFlagVan').value) || 1200.0,
         flag_drop_mini_truck: parseFloat(document.getElementById('cfgFlagMini').value) || 1800.0,
