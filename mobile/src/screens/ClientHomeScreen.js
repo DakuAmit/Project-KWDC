@@ -78,7 +78,7 @@ export default function ClientHomeScreen({ session }) {
       const res = await apiRequest('/api/fleet/dispatch-orders', {
         method: 'POST',
         body: {
-          dispatch_mode: 'DIRECT_HAUL',
+          movement_type: 'DIRECT_HAUL',
           pickup_address: pickup,
           pickup_contact_name: session.user.full_name || 'Client',
           pickup_contact_phone: session.user.phone_number || '+977-9800000000',
@@ -112,7 +112,7 @@ export default function ClientHomeScreen({ session }) {
         <View key={w.id} style={styles.card}>
           <Text style={styles.cardTitle}>{w.title}</Text>
           <Text style={styles.meta}>{w.municipality}, {w.district} • Avail: {w.available_sqft} sq ft</Text>
-          <Text style={styles.price}>Rs. {w.monthly_rate_per_sqft}/sq ft / month</Text>
+          <Text style={styles.price}>Client Tariff: Rs. {w.monthly_rate_per_sqft ?? w.base_rate_per_sqft}/sq ft / month</Text>
           <View style={styles.row}>
             <TouchableOpacity onPress={() => bookStorageSample(w, 'DAILY', 3)} style={styles.btnDark}>
               <Text style={styles.btnLightText}>Book 3 Days</Text>
@@ -153,7 +153,8 @@ export default function ClientHomeScreen({ session }) {
             <View key={o.id} style={styles.card}>
               <Text style={styles.cardTitle}>{o.order_number} ({o.status})</Text>
               <Text style={styles.meta}>{o.pickup_address} → {o.destination_address}</Text>
-              <Text style={styles.price}>Driver Live GPS: {o.live_lat ? `${o.live_lat.toFixed(4)}, ${o.live_lng.toFixed(4)}` : 'Pending Pickup'}</Text>
+              <Text style={styles.price}>Agreed Trip Fare (Zero VAT): Rs. {o.agreed_fare_npr || o.total_fare_npr}</Text>
+              <Text style={styles.meta}>Driver Live GPS: {o.live_lat ? `${o.live_lat.toFixed(4)}, ${o.live_lng.toFixed(4)}` : 'Pending Pickup'}</Text>
             </View>
           ))}
         </View>

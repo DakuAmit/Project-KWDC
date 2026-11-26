@@ -6,10 +6,15 @@ import { apiRequest, uploadBase64Image } from '../api/client';
 
 export default function FleetDriverScreen({ session }) {
   const isDriverPinMode = session.mode === 'driver';
+  const [driverMode, setDriverMode] = useState('COMMERCIAL_3PL');
+  const [vehicleCategory, setVehicleCategory] = useState(null);
   const [activeTrip, setActiveTrip] = useState(null);
+  const [openDriverJobs, setOpenDriverJobs] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [earnings, setEarnings] = useState(null);
   const [gpsStatus, setGpsStatus] = useState('Idle');
   const [otpInput, setOtpInput] = useState('');
+  const [bidFare, setBidFare] = useState('');
   const [epodPhotoUrl, setEpodPhotoUrl] = useState('');
   const watchSubRef = useRef(null);
 
@@ -17,10 +22,23 @@ export default function FleetDriverScreen({ session }) {
     try {
       if (isDriverPinMode) {
         const res = await apiRequest('/api/fleet/driver/active-trip');
+        const mode = res.driver_mode || 'COMMERCIAL_3PL';
+        setDriverMode(mode);
+        setVehicleCategory(res.vehicle_category || null);
         setActiveTrip(res.has_active_trip ? (res.trip || res.active_trip) : null);
+        if (mode === 'INDEPENDENT_OWNER') {
+          const openRes = await apiRequest('/api/fleet/driver/available-jobs');
+          setOpenDriverJobs(Array.isArray(openRes.jobs) ? openRes.jobs : []);
+        } else {
+          setOpenDriverJobs([]);
+        }
       } else {
-        const list = await apiRequest('/api/fleet/dispatch-orders');
+        const [list, earn] = await Promise.all([
+          apiRequest('/api/fleet/dispatch-orders'),
+          apiRequest('/api/fleet/earnings'),
+        ]);
         setJobs(Array.isArray(list) ? list : []);
+        setEarnings(earn || null);
       }
     } catch (err) {
       Alert.alert('Sync Notice', err.message);
@@ -99,6 +117,38 @@ export default function FleetDriverScreen({ session }) {
     }
   }
 
+  async function driverAcceptOpenJob(orderId) {
+    try {
+      const res = await apiRequest(`/api/fleet/driver/jobs/${orderId}/accept`, { method: 'POST' });
+      Alert.alert('Trip Accepted', res.message || 'Claimed!');
+      refresh();
+    } catch (err) {
+      Alert.alert('Accept Error', err.message);
+    }
+  }
+
+  async function driverBidOpenJob(orderId, currentFare) {
+    const fare = parseFloat(bidFare) || currentFare;
+    try {
+      const res = await apiRequest(`/api/fleet/driver/jobs/${orderId}/counter-offer`, {
+        method: 'POST',
+        body: { offered_fare_npr: fare, counter_note: 'Mobile Driver App Bid' },
+      });
+      Alert.alert('Bid Sent', res.message || 'Counter-offer submitted.');
+      setBidFare('');
+      refresh();
+    } catch (err) {
+      Alert.alert('Bid Error', err.message);
+    }
+  }
+
+  async function driverDeclineOpenJob(orderId) {
+    try {
+      await apiRequest(`/api/fleet/driver/jobs/${orderId}/decline`, { method: 'POST' });
+      refresh();
+    } catch {}
+  }
+
   async function acceptFleetJob(id) {
     try {
       const res = await apiRequest(`/api/fleet/dispatch-orders/${id}/accept`, { method: 'POST' });
@@ -110,30 +160,61 @@ export default function FleetDriverScreen({ session }) {
   }
 
   if (isDriverPinMode) {
+    const isIndependent = driverMode === 'INDEPENDENT_OWNER';
+    const tripStatusUpper = String(activeTrip?.status || '').toUpperCase();
     return (
       <ScrollView contentContainerStyle={styles.wrap}>
         <View style={styles.gpsBox}>
-          <Text style={styles.gpsTitle}>Driver Cab GPS Status</Text>
+          <Text style={styles.gpsTitle}>
+            {isIndependent ? 'Independent Owner-Driver' : 'Logistics Fleet Driver'} {vehicleCategory ? `(${vehicleCategory})` : ''}
+          </Text>
           <Text style={styles.gpsText}>{gpsStatus}</Text>
         </View>
 
         {!activeTrip ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>No Assigned Active Trip</Text>
-            <Text style={styles.meta}>Wait for Fleet Manager assignment or refresh below.</Text>
-            <TouchableOpacity onPress={refresh} style={[styles.btnDark, { marginTop: 10 }]}>
-              <Text style={styles.btnLight}>Check Active Assignment</Text>
-            </TouchableOpacity>
+          <View>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>No Assigned Active Trip</Text>
+              <Text style={styles.meta}>
+                {isIndependent
+                  ? 'Accept or counter-offer matching open loads below.'
+                  : 'Wait for your Logistics Fleet Manager to assign a run to your vehicle.'}
+              </Text>
+              <TouchableOpacity onPress={refresh} style={[styles.btnDark, { marginTop: 10 }]}>
+                <Text style={styles.btnLight}>Refresh Jobs</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isIndependent && (
+              <View>
+                <Text style={styles.sec}>Matching Available Loads ({openDriverJobs.length})</Text>
+                {openDriverJobs.map((j) => (
+                  <View key={j.id} style={styles.card}>
+                    <Text style={styles.cardTitle}>{j.order_number} • Rs. {j.agreed_fare_npr}</Text>
+                    <Text style={styles.meta}>{j.cargo_description}</Text>
+                    <Text style={styles.meta}>{j.pickup_address} → {j.delivery_address} ({j.total_distance_km} KM)</Text>
+                    <Text style={styles.price}>Commission: Rs. {j.kwdc_commission_npr} • Net Retained: Rs. {j.net_retained_npr}</Text>
+                    <TextInput value={bidFare} onChangeText={setBidFare} placeholder={`Counter Fare (NPR) e.g. ${j.agreed_fare_npr}`} keyboardType="numeric" style={styles.input} />
+                    <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
+                      <TouchableOpacity onPress={() => driverAcceptOpenJob(j.id)} style={[styles.btnAmber, { flex: 1 }]}><Text style={styles.btnDarkText}>Accept</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => driverBidOpenJob(j.id, j.agreed_fare_npr)} style={[styles.btnDark, { flex: 1 }]}><Text style={styles.btnLight}>Raise Fare</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => driverDeclineOpenJob(j.id)} style={[styles.btnDark, { flex: 0.7, backgroundColor: '#475569' }]}><Text style={styles.btnLight}>Decline</Text></TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{activeTrip.order_number} • {activeTrip.status}</Text>
+            <Text style={styles.cardTitle}>{activeTrip.order_number} • {tripStatusUpper}</Text>
             <Text style={styles.meta}>Cargo: {activeTrip.cargo_description}</Text>
             <Text style={styles.meta}>Pickup: {activeTrip.pickup_address}</Text>
             <Text style={styles.meta}>Drop: {activeTrip.destination_address} ({activeTrip.consignee_name})</Text>
-            <Text style={styles.price}>Delivery OTP: {activeTrip.delivery_otp || 'Generated on Start'}</Text>
+            <Text style={styles.price}>Agreed Trip Fare (COD): Rs. {activeTrip.agreed_fare_npr || 0}</Text>
+            <Text style={styles.meta}>Delivery OTP: {activeTrip.delivery_otp || 'Generated on Start'}</Text>
 
-            {activeTrip.status !== 'in_transit' ? (
+            {tripStatusUpper !== 'IN_TRANSIT' ? (
               <TouchableOpacity onPress={startTrip} style={[styles.btnAmber, { marginTop: 12 }]}>
                 <Text style={styles.btnDarkText}>START TRANSIT &amp; SATELLITE GPS</Text>
               </TouchableOpacity>
@@ -159,21 +240,31 @@ export default function FleetDriverScreen({ session }) {
 
   return (
     <ScrollView contentContainerStyle={styles.wrap}>
+      {earnings && (
+        <View style={styles.gpsBox}>
+          <Text style={styles.gpsTitle}>Total Earnings: Rs. {earnings.total_gross_npr || 0} | Net: Rs. {earnings.net_fleet_earnings_npr || 0}</Text>
+          <Text style={styles.gpsText}>Platform Commission Due to KTM-WDC: Rs. {earnings.commission_due_to_kwdc_npr || 0}</Text>
+        </View>
+      )}
       <Text style={styles.sec}>Live Freight Load Board ({jobs.length})</Text>
       {jobs.length === 0 ? (
         <View style={styles.card}><Text style={styles.meta}>No open freight jobs right now.</Text></View>
-      ) : jobs.map((j) => (
-        <View key={j.id} style={styles.card}>
-          <Text style={styles.cardTitle}>{j.order_number} ({j.status})</Text>
-          <Text style={styles.meta}>{j.pickup_address} → {j.destination_address}</Text>
-          <Text style={styles.price}>Offer: Rs. {j.client_offered_fare_npr || j.gross_fare_npr} (Net: Rs. {j.net_fleet_earnings_npr})</Text>
-          {j.status === 'requested' && (
-            <TouchableOpacity onPress={() => acceptFleetJob(j.id)} style={[styles.btnAmber, { marginTop: 8 }]}>
-              <Text style={styles.btnDarkText}>Accept Freight Job</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ))}
+      ) : jobs.map((j) => {
+        const stUpper = String(j.status || '').toUpperCase();
+        const fare = j.agreed_fare_npr || j.client_offered_fare_npr || j.gross_fare_npr || 0;
+        return (
+          <View key={j.id} style={styles.card}>
+            <Text style={styles.cardTitle}>{j.order_number} ({stUpper})</Text>
+            <Text style={styles.meta}>{j.pickup_address} → {j.destination_address}</Text>
+            <Text style={styles.price}>Trip Fare: Rs. {fare} (Due to KTM-WDC: Rs. {j.kwdc_margin_npr || 0} • Net: Rs. {j.net_fleet_earnings_npr || 0})</Text>
+            {stUpper === 'REQUESTED' && (
+              <TouchableOpacity onPress={() => acceptFleetJob(j.id)} style={[styles.btnAmber, { marginTop: 8 }]}>
+                <Text style={styles.btnDarkText}>Accept at Rs. {fare}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      })}
     </ScrollView>
   );
 }

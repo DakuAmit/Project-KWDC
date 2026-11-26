@@ -113,6 +113,18 @@ def ensure_db_schema_extensions():
         add_col_if_missing("equipment_jobs", "base_cost_npr", "FLOAT DEFAULT 0.0")
         add_col_if_missing("equipment_jobs", "platform_fee_npr", "FLOAT DEFAULT 0.0")
         add_col_if_missing("equipment_jobs", "vat_13_percent", "FLOAT DEFAULT 0.0")
+
+        add_col_if_missing("dispatch_orders", "commission_settled", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
+        add_col_if_missing("dispatch_orders", "commission_settled_at", "TIMESTAMP")
+
+        add_col_if_missing("stock_items", "booking_id", "INTEGER")
+        add_col_if_missing("stock_items", "reserved_quantity", "INTEGER DEFAULT 0")
+        add_col_if_missing("stock_items", "dispatched_quantity", "INTEGER DEFAULT 0")
+        add_col_if_missing("stock_items", "verification_status", "VARCHAR(40) DEFAULT 'PENDING_DOCK_VERIFICATION'")
+        add_col_if_missing("stock_items", "bay_rack_location", "VARCHAR(100) DEFAULT 'Zone A / Bay-1'")
+
+        add_col_if_missing("gate_passes", "stock_item_id", "INTEGER")
+        add_col_if_missing("gate_passes", "booking_id", "INTEGER")
     except Exception as e:
         print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
 

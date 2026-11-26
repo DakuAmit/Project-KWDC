@@ -12,10 +12,10 @@ from datetime import datetime, timezone
 from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseInchargeAssignment, WarehouseActivityLog,
-    IncidentReport, IncidentSeverity, GatePass, User, UserRole, StockItem, InventoryUnit,
-    WarehouseRequest
+    IncidentReport, IncidentSeverity, GatePass, User, UserRole, StockItem, StockMovementLog,
+    InventoryUnit, WarehouseRequest
 )
-from backend.schemas import InchargeReportCreate, IncidentReportCreate, GatePassCreate
+from backend.schemas import InchargeReportCreate, IncidentReportCreate, GatePassCreate, InchargeStockVerifyRequest
 from backend.auth_utils import require_user, require_roles
 
 router = APIRouter(prefix="/api/incharge", tags=["Warehouse Incharge"])
@@ -150,6 +150,8 @@ def process_gate_pass(
         warehouse_id=payload.warehouse_id,
         client_id=c_id,
         incharge_id=current_user.id,
+        stock_item_id=payload.stock_item_id,
+        booking_id=payload.booking_id,
         pass_type=p_type,
         vehicle_plate=payload.vehicle_plate,
         driver_name=payload.driver_name,
@@ -161,19 +163,180 @@ def process_gate_pass(
     db.commit()
     db.refresh(gate_pass)
 
+    # Sync StockItem & StockMovementLog when linked to a specific SKU batch
+    if payload.stock_item_id:
+        stock = db.query(StockItem).filter(StockItem.id == payload.stock_item_id).first()
+        if stock:
+            if p_type in ("INWARD", "INBOUND"):
+                stock.total_quantity = int(stock.total_quantity or 0) + units
+                stock.verification_status = "VERIFIED_IN_STORAGE"
+                db.add(StockMovementLog(
+                    stock_item_id=stock.id,
+                    booking_id=stock.booking_id,
+                    warehouse_id=stock.warehouse_id,
+                    client_id=stock.client_id,
+                    actor_user_id=current_user.id,
+                    movement_type="INWARD_VERIFIED",
+                    quantity_delta=units,
+                    balance_after=stock.total_quantity,
+                    gate_pass_id=gate_pass.id,
+                    remarks=f"Inward Gate Pass GP-2083-{gate_pass.id:04d} cleared ({payload.vehicle_plate})."
+                ))
+            elif p_type in ("OUTWARD", "OUTBOUND"):
+                reserved = int(getattr(stock, "reserved_quantity", 0) or 0)
+                if reserved >= units:
+                    stock.reserved_quantity = reserved - units
+                else:
+                    remainder = units - reserved
+                    stock.reserved_quantity = 0
+                    stock.total_quantity = max(0, int(stock.total_quantity or 0) - remainder)
+                stock.dispatched_quantity = int(getattr(stock, "dispatched_quantity", 0) or 0) + units
+                db.add(StockMovementLog(
+                    stock_item_id=stock.id,
+                    booking_id=stock.booking_id,
+                    warehouse_id=stock.warehouse_id,
+                    client_id=stock.client_id,
+                    actor_user_id=current_user.id,
+                    movement_type="OUTWARD_DISPATCHED",
+                    quantity_delta=-units,
+                    balance_after=int(stock.total_quantity or 0),
+                    gate_pass_id=gate_pass.id,
+                    remarks=f"Outward Gate Pass GP-2083-{gate_pass.id:04d} dispatched via {payload.vehicle_plate}."
+                ))
+            db.commit()
+
     return {
         "message": f"Gate pass {p_type} clearance stamped.",
         "gate_pass_id": gate_pass.id,
         "pass_token": f"GP-2083-{gate_pass.id:04d}",
+        "scanned_units": gate_pass.scanned_units_count,
         "status": "CLEARED"
     }
-    db.refresh(gate_pass)
 
-    return {
-        "message": f"Gate Pass #{gate_pass.id} verified and stamped for {payload.pass_type.upper()}.",
-        "gate_pass_id": gate_pass.id,
-        "scanned_units": gate_pass.scanned_units_count
-    }
+
+@router.get("/my-logs")
+def get_incharge_own_logs(
+    current_user: User = Depends(require_roles([UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Returns shift activity logs visible to the Warehouse Incharge without requiring SuperAdmin role."""
+    q = db.query(WarehouseActivityLog).order_by(WarehouseActivityLog.created_at.desc())
+    if current_user.role != UserRole.SUPERADMIN:
+        assigned_wh_ids = [
+            a.warehouse_id
+            for a in db.query(WarehouseInchargeAssignment).filter(
+                WarehouseInchargeAssignment.incharge_id == current_user.id,
+                WarehouseInchargeAssignment.is_active == True
+            ).all()
+        ]
+        if assigned_wh_ids:
+            q = q.filter(
+                (WarehouseActivityLog.incharge_id == current_user.id) |
+                (WarehouseActivityLog.warehouse_id.in_(assigned_wh_ids))
+            )
+        else:
+            q = q.filter(WarehouseActivityLog.incharge_id == current_user.id)
+    logs = q.limit(50).all()
+    return [
+        {
+            "id": l.id,
+            "warehouse_id": l.warehouse_id,
+            "log_type": l.log_type,
+            "summary": l.summary,
+            "detailed_notes": l.detailed_notes,
+            "admin_reviewed": bool(l.admin_reviewed),
+            "timestamp": l.created_at.strftime("%Y-%m-%d %H:%M") if l.created_at else "",
+            "created_at": l.created_at.strftime("%Y-%m-%d %H:%M") if l.created_at else ""
+        }
+        for l in logs
+    ]
+
+
+@router.get("/stock-queue")
+def get_incharge_stock_queue(
+    current_user: User = Depends(require_roles([UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Lists client stock batches across assigned warehouses for Incharge physical dock verification & outward confirmation."""
+    q = db.query(StockItem).order_by(StockItem.updated_at.desc())
+    if current_user.role != UserRole.SUPERADMIN:
+        assigned_wh_ids = [
+            a.warehouse_id
+            for a in db.query(WarehouseInchargeAssignment).filter(
+                WarehouseInchargeAssignment.incharge_id == current_user.id,
+                WarehouseInchargeAssignment.is_active == True
+            ).all()
+        ]
+        if assigned_wh_ids:
+            q = q.filter(StockItem.warehouse_id.in_(assigned_wh_ids))
+        else:
+            return []
+    items = q.limit(100).all()
+    return [
+        {
+            "id": s.id,
+            "sku_code": s.sku_code,
+            "item_name": s.item_name,
+            "warehouse_id": s.warehouse_id,
+            "warehouse_title": s.warehouse.title if s.warehouse else f"Warehouse #{s.warehouse_id}",
+            "client_id": s.client_id,
+            "unit_type": s.unit_type.value if hasattr(s.unit_type, "value") else str(s.unit_type),
+            "total_quantity": int(s.total_quantity or 0),
+            "reserved_quantity": int(getattr(s, "reserved_quantity", 0) or 0),
+            "dispatched_quantity": int(getattr(s, "dispatched_quantity", 0) or 0),
+            "verification_status": getattr(s, "verification_status", "PENDING_DOCK_VERIFICATION"),
+            "bay_rack_location": getattr(s, "bay_rack_location", "Zone A / Bay-1"),
+        }
+        for s in items
+    ]
+
+
+@router.post("/stock/{stock_item_id}/verify")
+def incharge_verify_stock_batch(
+    stock_item_id: int,
+    payload: InchargeStockVerifyRequest,
+    current_user: User = Depends(require_roles([UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Incharge physically verifies an inward SKU batch, assigns Bay/Rack zone, or clears reserved outward dispatch."""
+    s = db.query(StockItem).filter(StockItem.id == stock_item_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Stock item not found.")
+
+    if payload.bay_rack_location:
+        s.bay_rack_location = payload.bay_rack_location.strip()
+        for u in s.units:
+            u.bay_rack_location = s.bay_rack_location
+
+    if payload.verified_quantity is not None and payload.verified_quantity >= 0:
+        s.total_quantity = int(payload.verified_quantity)
+
+    reserved = int(getattr(s, "reserved_quantity", 0) or 0)
+    if reserved > 0:
+        s.dispatched_quantity = int(getattr(s, "dispatched_quantity", 0) or 0) + reserved
+        s.reserved_quantity = 0
+        mv_type = "OUTWARD_DISPATCHED"
+        delta = -reserved
+        msg = f"Cleared {reserved} reserved units outward for {s.sku_code}."
+    else:
+        s.verification_status = "VERIFIED_IN_STORAGE"
+        mv_type = "INWARD_VERIFIED"
+        delta = 0
+        msg = f"Physically verified {s.sku_code} at {s.bay_rack_location}."
+
+    db.add(StockMovementLog(
+        stock_item_id=s.id,
+        booking_id=s.booking_id,
+        warehouse_id=s.warehouse_id,
+        client_id=s.client_id,
+        actor_user_id=current_user.id,
+        movement_type=mv_type,
+        quantity_delta=delta,
+        balance_after=int(s.total_quantity or 0),
+        remarks=payload.notes or msg
+    ))
+    db.commit()
+    return {"message": msg, "verification_status": s.verification_status, "bay_rack_location": s.bay_rack_location}
 
 @router.get("/my-gate-passes")
 def get_my_gate_passes(

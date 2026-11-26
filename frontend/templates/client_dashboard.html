@@ -347,15 +347,15 @@
               </div>
             </div>
 
-            <div class="p-4 rounded-xl bg-purple-50/60 border border-purple-200">
-              <div class="flex items-center justify-between text-xs font-bold text-navy mb-1.5">
-                <span>Leased Godown Floor Utilization Gauge</span>
-                <span class="font-mono text-purple-700" id="invUtilPctLabel">0% Occupied</span>
-              </div>
-              <div class="w-full h-3 bg-purple-200/70 rounded-full overflow-hidden">
-                <div id="invUtilBar" class="h-full bg-purple-600 rounded-full transition-all duration-500" style="width: 0%;"></div>
-              </div>
+            <div class="flex items-center justify-between gap-2 text-xs font-bold text-navy pt-1">
+              <span>Leased Godown Floor Utilization &amp; Active Lease Windows</span>
+              <span class="font-mono text-purple-700" id="invUtilPctLabel">0% Occupied</span>
             </div>
+            <div class="w-full h-3 bg-purple-200/70 rounded-full overflow-hidden">
+              <div id="invUtilBar" class="h-full bg-purple-600 rounded-full transition-all duration-500" style="width: 0%;"></div>
+            </div>
+
+            <div id="invLeaseWindowsBar" class="grid sm:grid-cols-2 gap-3"></div>
 
             <div class="overflow-x-auto rounded-xl border border-slate-200">
               <table class="w-full text-left text-xs">
@@ -363,16 +363,37 @@
                   <tr>
                     <th class="p-3.5">SKU Code</th>
                     <th class="p-3.5">Commodity / Item Name</th>
-                    <th class="p-3.5">Facility Location</th>
-                    <th class="p-3.5">Unit Type</th>
-                    <th class="p-3.5">Qty In Storage</th>
-                    <th class="p-3.5">ISO/IEC 18004 QR &amp; Bay</th>
+                    <th class="p-3.5">Facility &amp; Verification</th>
+                    <th class="p-3.5">Balances (Avail / Rsv / Out)</th>
+                    <th class="p-3.5">ISO QR &amp; Bay</th>
+                    <th class="p-3.5 text-right">Stock Action</th>
                   </tr>
                 </thead>
                 <tbody id="clientInventoryTbody" class="divide-y divide-slate-100 font-mono">
                   <tr><td colspan="6" class="p-8 text-center text-slate-400 font-sans">Loading stored inventory ledger...</td></tr>
                 </tbody>
               </table>
+            </div>
+
+            <div class="pt-2">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Double-Entry Stock Movement Audit Log</h4>
+              <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200 text-[11px]">
+                    <tr>
+                      <th class="p-3">Time</th>
+                      <th class="p-3">SKU</th>
+                      <th class="p-3">Movement</th>
+                      <th class="p-3">Qty Change</th>
+                      <th class="p-3">Available After</th>
+                      <th class="p-3">Notes / Pass</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientStockMovementsTbody" class="divide-y divide-slate-100 font-mono">
+                    <tr><td colspan="6" class="p-5 text-center text-slate-400 font-sans">No movements logged yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
@@ -730,29 +751,29 @@
                 <div>
                   <div class="flex items-center justify-between border-b border-white/10 pb-3">
                     <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest" data-i18n="tariff_summary_title">Freight Fare Guarantee</span>
-                    <span class="text-[10px] bg-white/10 px-2 py-0.5 rounded font-mono text-slate-300">Nepal IRD 13%</span>
+                    <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono">Zero Freight VAT</span>
                   </div>
 
                   <div class="mt-4 space-y-2.5 font-mono text-xs text-slate-300 border-b border-white/10 pb-4">
                     <div class="flex justify-between">
-                      <span data-i18n="tariff_carrier_base">Carrier Base Tariff:</span>
+                      <span data-i18n="tariff_carrier_base">Agreed Trip Fare (Matched with Driver):</span>
                       <strong class="text-white" id="directBaseTariff">Rs. 2,940</strong>
                     </div>
                     <div class="flex justify-between">
-                      <span data-i18n="tariff_platform_fee">KWDC Telemetry &amp; Brokerage (10%):</span>
+                      <span data-i18n="tariff_platform_fee">Platform Fee (Settled by Carrier Later):</span>
                       <strong class="text-amber-400" id="directPlatformFee">Rs. 294</strong>
                     </div>
                     <div class="flex justify-between">
-                      <span data-i18n="tariff_vat">13% Statutory VAT:</span>
-                      <strong class="text-emerald-400" id="directVat">Rs. 420</strong>
+                      <span data-i18n="tariff_vat">Freight VAT (Exempt / Removed):</span>
+                      <strong class="text-emerald-400" id="directVat">Rs. 0</strong>
                     </div>
                   </div>
 
                   <div class="mt-4">
-                    <p class="text-[11px] text-slate-400" data-i18n="tariff_total_payable">Total Guaranteed Freight Outlay</p>
-                    <h4 class="text-2xl font-black text-white font-mono mt-0.5" id="directTotalFare">Rs. 3,654</h4>
+                    <p class="text-[11px] text-slate-400" data-i18n="tariff_total_payable">Total Net Trip Fare (Same on Client &amp; Driver App)</p>
+                    <h4 class="text-2xl font-black text-white font-mono mt-0.5" id="directTotalFare">Rs. 2,940</h4>
                     <p class="text-[10px] text-emerald-300 mt-1 flex items-center gap-1">
-                      <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Fixed price lock. No roadside extortion.
+                      <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Fixed transparent fare. Zero hidden charges.
                     </p>
                   </div>
                 </div>
@@ -1249,6 +1270,69 @@
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
         <button type="button" onclick="document.getElementById('stockEntryModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold">Cancel</button>
         <button type="submit" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow">Register Stock &amp; QR</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Partial or Full Outward Stock Dispatch / Move-Out -->
+  <dialog id="stockDispatchModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div>
+        <h3 class="font-bold text-base text-white" id="stkDispModalTitle">Dispatch / Clear Stored Stock</h3>
+        <p class="text-xs text-slate-400" id="stkDispModalSub">Select partial quantity or full lease clearance</p>
+      </div>
+      <button type="button" onclick="document.getElementById('stockDispatchModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="handleStockDispatchSubmit(event)" class="p-6 space-y-3.5 text-xs">
+      <input type="hidden" id="stkDispItemId">
+      <input type="hidden" id="stkDispBookingId">
+      <input type="hidden" id="stkDispAllFlag" value="false">
+      <div id="stkDispQtyRow">
+        <label class="block font-bold text-navy mb-1">Quantity to Dispatch (Available: <strong id="stkDispAvailLabel">0</strong>)</label>
+        <input type="number" id="stkDispQty" min="1" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Pickup / Transport Method *</label>
+        <select id="stkDispMode" onchange="toggleStkDispFreightFields()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-medium">
+          <option value="SELF_PICKUP">Client Self-Pickup (Issue Outward Gate Pass)</option>
+          <option value="KTM_FREIGHT">Book KTM-WDC Freight Pickup + Outward Gate Pass</option>
+        </select>
+      </div>
+      <div id="stkDispSelfBox" class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Vehicle Plate</label>
+          <input type="text" id="stkDispPlate" placeholder="Ba 2 Kha 4401" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Driver / Authorized Name</label>
+          <input type="text" id="stkDispDriver" placeholder="Driver Name" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+        </div>
+      </div>
+      <div id="stkDispFreightBox" class="hidden space-y-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200">
+        <div>
+          <label class="block font-bold text-navy mb-1">Delivery Destination Address *</label>
+          <input type="text" id="stkDispDest" placeholder="e.g. Kalanki Chowk, Kathmandu" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-navy mb-1">Vehicle Class</label>
+            <select id="stkDispVehCat" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+              <option value="mini_truck">Mini Truck</option>
+              <option value="medium_pickup">Medium Pickup</option>
+              <option value="six_wheeler">6-Wheeler Heavy</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-navy mb-1">Est. Distance (KM)</label>
+            <input type="number" id="stkDispKm" value="10" min="1" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-mono">
+          </div>
+        </div>
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="document.getElementById('stockDispatchModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold shadow">Confirm Outward Dispatch</button>
       </div>
     </form>
   </dialog>
@@ -1929,8 +2013,8 @@
                   <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(w.municipality || 'Kathmandu')}, ${escapeHtml(w.district)}</p>
                 </div>
                 <div class="text-right">
-                  <span class="text-[10px] text-slate-400 uppercase font-bold">Base Tariff</span>
-                  <p class="text-base font-black text-navy font-mono">Rs. ${w.base_rate_per_sqft}<span class="text-xs font-normal text-slate-500">/sq ft</span></p>
+                  <span class="text-[10px] text-slate-400 uppercase font-bold">Client Tariff</span>
+                  <p class="text-base font-black text-navy font-mono">Rs. ${Number(w.monthly_rate_per_sqft ?? w.base_rate_per_sqft ?? 0).toLocaleString('en-IN')}<span class="text-xs font-normal text-slate-500">/sq ft</span></p>
                 </div>
               </div>
 
@@ -1949,7 +2033,7 @@
                 </div>
                 <div class="flex justify-between">
                   <span class="text-slate-400">Road Width:</span>
-                  <span>${w.road_access_width_ft || 24} ft commercial access</span>
+                  <span>${w.road_access_width_ft || w.road_access_ft || 24} ft commercial access</span>
                 </div>
               </div>
 
@@ -1965,7 +2049,7 @@
               <span class="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live Verified
               </span>
-              <button onclick="openBookingModal(${w.id}, '${w.title.replace(/'/g, "\'")}', '${w.municipality || 'Kathmandu'}', ${w.base_rate_per_sqft}, ${w.available_sqft})" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
+              <button onclick="openBookingModal(${w.id}, '${escapeHtml(w.title).replace(/'/g, "\\'")}', '${escapeHtml(w.municipality || 'Kathmandu').replace(/'/g, "\\'")}', ${Number(w.monthly_rate_per_sqft ?? w.base_rate_per_sqft ?? 45)}, ${w.available_sqft})" class="px-4 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
                 <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Contract Space
               </button>
             </div>
@@ -2128,25 +2212,34 @@
       if (col) col.classList.toggle('hidden', val !== 'OTHER');
     }
 
-    function calcDirectTariff() {
+    async function calcDirectTariff() {
       const vcat = document.getElementById('directVehCat')?.value || 'mini_truck';
       const dist = Math.max(parseFloat(document.getElementById('directDistKm')?.value) || 12.0, 1.0);
+
+      const renderFare = (agreed, margin) => {
+        const baseEl = document.getElementById('directBaseTariff');
+        const feeEl = document.getElementById('directPlatformFee');
+        const vatEl = document.getElementById('directVat');
+        const totalEl = document.getElementById('directTotalFare');
+        if (baseEl) baseEl.textContent = 'Rs. ' + Math.round(agreed).toLocaleString('en-IN');
+        if (feeEl) feeEl.textContent = 'Rs. ' + Math.round(margin).toLocaleString('en-IN');
+        if (vatEl) vatEl.textContent = 'Rs. 0';
+        if (totalEl) totalEl.textContent = 'Rs. ' + Math.round(agreed).toLocaleString('en-IN');
+      };
+
       const rates = VEHICLE_RATES[vcat] || [1800.0, 95.0];
-      const baseFreight = Math.round(rates[0] + (dist * rates[1]));
-      const platformFee = Math.round(baseFreight * 0.10);
-      const subtotal = baseFreight + platformFee;
-      const vat = Math.round(subtotal * 0.13);
-      const total = subtotal + vat;
+      const fallbackBase = Math.round(rates[0] + (dist * rates[1]));
+      renderFare(fallbackBase, Math.round(fallbackBase * 0.10));
 
-      const baseEl = document.getElementById('directBaseTariff');
-      const feeEl = document.getElementById('directPlatformFee');
-      const vatEl = document.getElementById('directVat');
-      const totalEl = document.getElementById('directTotalFare');
-
-      if (baseEl) baseEl.textContent = 'Rs. ' + baseFreight.toLocaleString('en-IN');
-      if (feeEl) feeEl.textContent = 'Rs. ' + platformFee.toLocaleString('en-IN');
-      if (vatEl) vatEl.textContent = 'Rs. ' + vat.toLocaleString('en-IN');
-      if (totalEl) totalEl.textContent = 'Rs. ' + total.toLocaleString('en-IN');
+      try {
+        const res = await fetch(`/api/fleet/calculate-fare?vehicle_category=${encodeURIComponent(vcat)}&distance_km=${dist}&cargo_weight_kg=1000`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.benchmark_fare_npr) {
+            renderFare(data.benchmark_fare_npr, data.platform_revenue_npr || Math.round(data.benchmark_fare_npr * 0.10));
+          }
+        }
+      } catch (_) {}
     }
 
     async function handleDirectHaulSubmit(e) {
@@ -2338,8 +2431,8 @@
                 </div>
                 <div class="text-right shrink-0">
                   <span class="text-[10px] text-slate-400 uppercase font-mono">Agreed / Offered Fare</span>
-                  <p class="text-sm font-black text-navy font-mono">Rs. ${Number(o.total_fare_npr).toLocaleString('en-IN')}</p>
-                  <span class="text-[10px] text-emerald-600 font-medium block">Inc. 13% IRD VAT</span>
+                  <p class="text-sm font-black text-navy font-mono">Rs. ${Number(o.agreed_fare_npr || o.total_fare_npr).toLocaleString('en-IN')}</p>
+                  <span class="text-[10px] text-emerald-600 font-medium block">Matched Net Trip Fare • Zero VAT</span>
                   <div class="mt-2 flex flex-wrap justify-end gap-1.5">
                     ${(o.status === 'IN_TRANSIT' || o.status === 'ASSIGNED' || o.status === 'PICKUP_IN_PROGRESS') ? `
                       <button onclick="openLiveTrackingModal(${o.id})" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs">
@@ -2609,6 +2702,8 @@
     // -------------------------------------------------------------
     async function loadClientInventory() {
       const tbody = document.getElementById('clientInventoryTbody');
+      const mvBody = document.getElementById('clientStockMovementsTbody');
+      const leaseBar = document.getElementById('invLeaseWindowsBar');
       try {
         const res = await fetch('/api/warehouses/my-inventory', { headers: getAuthHeaders() });
         if (!res.ok) return;
@@ -2624,30 +2719,142 @@
         document.getElementById('invUtilPctLabel').textContent = `${pct}% Occupied`;
         document.getElementById('invUtilBar').style.width = `${pct}%`;
 
+        const bookings = data.active_bookings || [];
+        if (leaseBar) {
+          leaseBar.innerHTML = bookings.map(b => `
+            <div class="p-3.5 rounded-xl border ${b.is_gate_frozen ? 'border-red-300 bg-red-50' : (b.is_expired ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50')} flex items-center justify-between gap-2 text-xs">
+              <div>
+                <p class="font-bold text-navy">${escapeHtml(b.warehouse_title)} (#${b.booking_id})</p>
+                <p class="text-[11px] text-slate-500 font-mono">Lease Ends: ${b.lease_end_date || 'Flexible'} ${b.days_remaining !== null ? `(${b.days_remaining >= 0 ? b.days_remaining + 'd left' : 'EXPIRED'})` : ''}</p>
+              </div>
+              ${!b.is_gate_frozen ? `
+                <button type="button" onclick="openStockDispatchModal(null, ${b.booking_id}, 0, 'All SKUs — ' + '${escapeHtml(b.warehouse_title).replace(/'/g, "\\'")}', true)" class="px-2.5 py-1.5 rounded-lg bg-navy hover:bg-slate-800 text-white text-[11px] font-bold shrink-0">
+                  Clear All Stock
+                </button>
+              ` : '<span class="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold">GATE FROZEN</span>'}
+            </div>
+          `).join('');
+        }
+
         const items = data.items || [];
         if (items.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400 font-sans">No inventory batches logged yet. Click "+ Log Inward Stock Batch" above.</td></tr>';
-          return;
+        } else {
+          tbody.innerHTML = items.map(it => {
+            const u = (it.sample_units && it.sample_units[0]) ? it.sample_units[0] : {};
+            const avail = Number(it.available_quantity ?? it.total_quantity ?? 0);
+            const rsv = Number(it.reserved_quantity || 0);
+            const disp = Number(it.dispatched_quantity || 0);
+            const verified = it.verification_status === 'VERIFIED_IN_STORAGE';
+            return `
+              <tr class="hover:bg-slate-50 transition">
+                <td class="p-3.5 font-bold text-navy">${escapeHtml(it.sku_code)}</td>
+                <td class="p-3.5 font-sans font-semibold text-slate-800">${escapeHtml(it.item_name)}<span class="block text-[10px] text-slate-400 font-mono">${escapeHtml(it.unit_type)}</span></td>
+                <td class="p-3.5 font-sans text-slate-600">
+                  ${escapeHtml(it.warehouse_title)}
+                  <span class="block mt-0.5 text-[10px] font-bold ${verified ? 'text-emerald-700' : 'text-amber-700'}">${verified ? 'Incharge Verified ✓' : 'Pending Dock Verification'}</span>
+                </td>
+                <td class="p-3.5">
+                  <span class="font-black text-emerald-700">${avail} Avail</span>
+                  <span class="block text-[10px] text-slate-500">Reserved: ${rsv} &bull; Cleared: ${disp}</span>
+                </td>
+                <td class="p-3.5">
+                  <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-bold">${escapeHtml(u.qr_hash || 'ISO-QR-VERIFIED')}</span>
+                  <span class="block text-[10px] text-slate-400 mt-0.5">${escapeHtml(it.bay_rack_location || u.bay_location || 'Zone A')}</span>
+                </td>
+                <td class="p-3.5 text-right">
+                  ${avail > 0 ? `
+                    <button type="button" onclick="openStockDispatchModal(${it.id}, ${it.booking_id || 'null'}, ${avail}, '${escapeHtml(it.item_name).replace(/'/g, "\\'")}', false)" class="px-2.5 py-1.5 rounded-lg bg-amber hover:bg-amber-400 text-navy font-bold text-[11px] shadow-xs">
+                      Dispatch / Clear
+                    </button>
+                  ` : '<span class="text-[10px] text-slate-400 font-sans">Cleared (0)</span>'}
+                </td>
+              </tr>
+            `;
+          }).join('');
         }
 
-        tbody.innerHTML = items.map(it => {
-          const u = (it.sample_units && it.sample_units[0]) ? it.sample_units[0] : {};
-          return `
-            <tr class="hover:bg-slate-50 transition">
-              <td class="p-3.5 font-bold text-navy">${escapeHtml(it.sku_code)}</td>
-              <td class="p-3.5 font-sans font-semibold text-slate-800">${escapeHtml(it.item_name)}</td>
-              <td class="p-3.5 font-sans text-slate-600">${escapeHtml(it.warehouse_title)}</td>
-              <td class="p-3.5">${escapeHtml(it.unit_type)}</td>
-              <td class="p-3.5 font-black text-emerald-700">${Number(it.total_quantity).toLocaleString('en-IN')}</td>
-              <td class="p-3.5">
-                <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-bold">${escapeHtml(u.qr_hash || 'ISO-QR-VERIFIED')}</span>
-                <span class="block text-[10px] text-slate-400 mt-0.5">${escapeHtml(u.bay_location || 'Zone A')}</span>
-              </td>
+        const mvs = data.movements || [];
+        if (mvBody) {
+          mvBody.innerHTML = mvs.length ? mvs.map(m => `
+            <tr>
+              <td class="p-3 text-slate-500">${escapeHtml(m.created_at)}</td>
+              <td class="p-3 font-bold text-navy">${escapeHtml(m.sku_code)}</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.quantity_delta >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}">${escapeHtml(m.movement_type)}</span></td>
+              <td class="p-3 font-bold ${m.quantity_delta >= 0 ? 'text-emerald-700' : 'text-rose-700'}">${m.quantity_delta >= 0 ? '+' + m.quantity_delta : m.quantity_delta}</td>
+              <td class="p-3 font-bold text-navy">${m.balance_after}</td>
+              <td class="p-3 font-sans text-slate-600">${escapeHtml(m.remarks || '')}</td>
             </tr>
-          `;
-        }).join('');
+          `).join('') : '<tr><td colspan="6" class="p-5 text-center text-slate-400 font-sans">No movements logged yet.</td></tr>';
+        }
       } catch (e) {
         console.error(e);
+      }
+    }
+
+    function openStockDispatchModal(itemId, bookingId, availQty, label, isClearAll) {
+      document.getElementById('stkDispItemId').value = itemId || '';
+      document.getElementById('stkDispBookingId').value = bookingId || '';
+      document.getElementById('stkDispAllFlag').value = isClearAll ? 'true' : 'false';
+      document.getElementById('stkDispModalTitle').textContent = isClearAll ? 'Clear All Remaining Stock' : `Dispatch Stock — ${label}`;
+      document.getElementById('stkDispAvailLabel').textContent = availQty;
+      const qtyRow = document.getElementById('stkDispQtyRow');
+      const qtyInput = document.getElementById('stkDispQty');
+      if (isClearAll) {
+        qtyRow.classList.add('hidden');
+        qtyInput.required = false;
+      } else {
+        qtyRow.classList.remove('hidden');
+        qtyInput.required = true;
+        qtyInput.max = availQty;
+        qtyInput.value = availQty;
+      }
+      toggleStkDispFreightFields();
+      document.getElementById('stockDispatchModal').showModal();
+      lucide.createIcons();
+    }
+
+    function toggleStkDispFreightFields() {
+      const mode = document.getElementById('stkDispMode')?.value || 'SELF_PICKUP';
+      document.getElementById('stkDispSelfBox')?.classList.toggle('hidden', mode !== 'SELF_PICKUP');
+      document.getElementById('stkDispFreightBox')?.classList.toggle('hidden', mode !== 'KTM_FREIGHT');
+    }
+
+    async function handleStockDispatchSubmit(e) {
+      e.preventDefault();
+      const itemId = document.getElementById('stkDispItemId').value;
+      const bookingId = document.getElementById('stkDispBookingId').value;
+      const dispatchAll = document.getElementById('stkDispAllFlag').value === 'true';
+      const mode = document.getElementById('stkDispMode').value;
+      const payload = {
+        stock_item_id: itemId ? parseInt(itemId, 10) : null,
+        booking_id: bookingId ? parseInt(bookingId, 10) : null,
+        dispatch_all: dispatchAll,
+        quantity: dispatchAll ? null : (parseInt(document.getElementById('stkDispQty').value, 10) || 1),
+        dispatch_mode: mode,
+        vehicle_plate: document.getElementById('stkDispPlate').value.trim() || 'SELF-PICKUP',
+        driver_name: document.getElementById('stkDispDriver').value.trim() || 'Authorized Carrier',
+        destination_address: document.getElementById('stkDispDest').value.trim() || null,
+        required_vehicle_category: document.getElementById('stkDispVehCat').value,
+        estimated_distance_km: parseFloat(document.getElementById('stkDispKm').value) || 10.0
+      };
+      try {
+        const res = await fetch('/api/warehouses/my-inventory/dispatch', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message);
+          document.getElementById('stockDispatchModal').close();
+          loadClientInventory();
+          loadClientOrders();
+        } else {
+          showToast(formatToastMessage(data.detail), true);
+        }
+      } catch (err) {
+        showToast('Dispatch error: ' + err.message, true);
       }
     }
 

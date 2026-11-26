@@ -19,17 +19,21 @@ from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseRequest, WarehousePhoto, User, UserRole, KycStatus,
     BookingStatus, SpaceType, AreaUnit, TaxInvoice, PaymentStatus,
-    StockItem, InventoryUnit, InventoryUnitType, ClientSavedAddress, LienNotificationLog,
-    WarehouseChangeRequest, WarehouseActivityLog, IncidentReport
+    StockItem, StockMovementLog, InventoryUnit, InventoryUnitType, GatePass,
+    ClientSavedAddress, LienNotificationLog, WarehouseChangeRequest,
+    WarehouseActivityLog, IncidentReport, DispatchOrder, DeliveryStop,
+    VehicleCategory, FreightStatus
 )
 from backend.schemas import (
     WarehouseCreate, MaintenanceHoldRequest, BookingRequestCreate,
-    BookingModifyRequest, StockItemCreate, SavedAddressCreate, OwnerChangeRequestCreate
+    BookingModifyRequest, StockItemCreate, StockDispatchRequest,
+    SavedAddressCreate, OwnerChangeRequestCreate
 )
 from backend.auth_utils import require_user, get_current_user
 from backend.services.unit_converter import to_sqft, from_sqft_to_all, get_warehouse_usable_capacity
 from backend.services.vat_service import generate_ird_tax_invoice
 from backend.services.overdue_monitor import calculate_flexible_storage_cost
+from backend.services.fare_service import calculate_freight_benchmark, get_platform_config
 from backend.services.contract_service import generate_client_storage_contract, generate_master_lease_contract
 from backend.config import settings
 
@@ -411,13 +415,16 @@ def get_public_catalog(
             if clean_area not in loc_str:
                 continue
 
+        client_rate = get_client_rate(w)
         results.append({
             "id": w.id,
             "title": w.title,
             "space_type": w.space_type.value,
             "total_sqft": w.total_sqft,
             "available_sqft": w.available_sqft,
-            "monthly_rate_per_sqft": get_client_rate(w),
+            "monthly_rate_per_sqft": client_rate,
+            "base_rate_per_sqft": client_rate,
+            "ceiling_height_ft": float(w.clear_ceiling_height_ft or 14.0),
             "district": w.district,
             "municipality": w.municipality,
             "neighborhood_landmark": w.neighborhood_landmark,
@@ -425,6 +432,7 @@ def get_public_catalog(
             "longitude": w.longitude,
             "distance_km": distance_km,
             "road_access_ft": w.road_access_ft,
+            "road_access_width_ft": w.road_access_ft,
             "has_three_phase_power": w.has_three_phase_power,
             "has_forklift_ramp": w.has_forklift_ramp,
             "has_cctv": w.has_cctv,
@@ -767,18 +775,41 @@ def get_client_stored_inventory(
     db: Session = Depends(get_db)
 ):
     """
-    Client Stored Inventory & SKU Stock Ledger + Capacity Utilization Gauge.
+    Client Stored Inventory & Double-Entry Movement Ledger:
+    - Links stock balances to active lease windows (`booking_id`, `lease_end_date`)
+    - Tracks `total_quantity` (Available), `reserved_quantity`, and `dispatched_quantity`
+    - Surfaces full `StockMovementLog` audit history
     """
     items = db.query(StockItem).filter(StockItem.client_id == current_user.id).order_by(StockItem.updated_at.desc()).all()
     bookings = db.query(WarehouseRequest).filter(
         WarehouseRequest.client_id == current_user.id,
         WarehouseRequest.is_forfeited == False
-    ).all()
+    ).order_by(WarehouseRequest.id.desc()).all()
+
+    now_naive = datetime.utcnow()
+    active_bookings = []
+    for b in bookings:
+        end_dt = b.lease_end_date.replace(tzinfo=None) if b.lease_end_date else None
+        is_expired = bool(end_dt and end_dt < now_naive)
+        days_left = (end_dt - now_naive).days if end_dt else None
+        active_bookings.append({
+            "booking_id": b.id,
+            "warehouse_id": b.warehouse_id,
+            "warehouse_title": b.warehouse.title if b.warehouse else f"Warehouse #{b.warehouse_id}",
+            "allocated_billed_sqft": b.allocated_billed_sqft,
+            "status": b.status.value if hasattr(b.status, "value") else str(b.status),
+            "lease_start_date": b.lease_start_date.strftime("%Y-%m-%d") if b.lease_start_date else None,
+            "lease_end_date": b.lease_end_date.strftime("%Y-%m-%d") if b.lease_end_date else None,
+            "days_remaining": days_left,
+            "is_expired": is_expired,
+            "is_gate_frozen": bool(b.is_gate_frozen),
+        })
 
     total_leased_sqft = sum(b.allocated_billed_sqft for b in bookings)
-    total_units = sum(i.total_quantity for i in items)
-    # Approximate 12 sq ft footprint per pallet/master carton stack for utilization gauge
-    est_occupied_sqft = min(total_leased_sqft, round(total_units * 8.5, 1)) if total_leased_sqft > 0 else 0.0
+    total_units = sum(int(i.total_quantity or 0) for i in items)
+    total_reserved = sum(int(getattr(i, "reserved_quantity", 0) or 0) for i in items)
+    total_dispatched = sum(int(getattr(i, "dispatched_quantity", 0) or 0) for i in items)
+    est_occupied_sqft = min(total_leased_sqft, round((total_units + total_reserved) * 8.5, 1)) if total_leased_sqft > 0 else 0.0
     utilization_pct = round((est_occupied_sqft / total_leased_sqft) * 100, 1) if total_leased_sqft > 0 else 0.0
 
     ledger = []
@@ -794,17 +825,47 @@ def get_client_stored_inventory(
             }
             for u in (item.units or [])[:10]
         ]
+        avail = int(item.total_quantity or 0)
+        resv = int(getattr(item, "reserved_quantity", 0) or 0)
+        disp = int(getattr(item, "dispatched_quantity", 0) or 0)
         ledger.append({
             "id": item.id,
+            "booking_id": getattr(item, "booking_id", None),
             "sku_code": item.sku_code,
             "item_name": item.item_name,
             "category": item.category,
             "warehouse_id": item.warehouse_id,
             "warehouse_title": item.warehouse.title if item.warehouse else f"Warehouse #{item.warehouse_id}",
             "unit_type": item.unit_type.value if hasattr(item.unit_type, "value") else str(item.unit_type),
-            "total_quantity": item.total_quantity,
+            "total_quantity": avail,
+            "available_quantity": avail,
+            "reserved_quantity": resv,
+            "dispatched_quantity": disp,
+            "verification_status": getattr(item, "verification_status", "PENDING_DOCK_VERIFICATION"),
+            "bay_rack_location": getattr(item, "bay_rack_location", "Zone A / Bay-1"),
             "inward_date": item.inward_date.strftime("%Y-%m-%d") if item.inward_date else "Today",
             "sample_units": units_list
+        })
+
+    recent_moves = db.query(StockMovementLog).filter(
+        StockMovementLog.client_id == current_user.id
+    ).order_by(StockMovementLog.id.desc()).limit(30).all()
+
+    movements_out = []
+    for m in recent_moves:
+        st = db.query(StockItem).filter(StockItem.id == m.stock_item_id).first()
+        movements_out.append({
+            "id": m.id,
+            "stock_item_id": m.stock_item_id,
+            "sku_code": st.sku_code if st else f"#{m.stock_item_id}",
+            "item_name": st.item_name if st else "Stock Batch",
+            "movement_type": m.movement_type,
+            "quantity_delta": m.quantity_delta,
+            "balance_after": m.balance_after,
+            "gate_pass_id": m.gate_pass_id,
+            "dispatch_order_id": m.dispatch_order_id,
+            "remarks": m.remarks,
+            "created_at": m.created_at.strftime("%Y-%m-%d %H:%M") if m.created_at else ""
         })
 
     return {
@@ -813,9 +874,13 @@ def get_client_stored_inventory(
             "estimated_occupied_sqft": est_occupied_sqft,
             "utilization_percent": utilization_pct,
             "total_skus": len(ledger),
-            "total_stored_units": total_units
+            "total_stored_units": total_units,
+            "total_reserved_units": total_reserved,
+            "total_dispatched_units": total_dispatched
         },
-        "items": ledger
+        "active_bookings": active_bookings,
+        "items": ledger,
+        "movements": movements_out
     }
 
 @router.post("/my-inventory")
@@ -824,27 +889,62 @@ def log_client_inventory_stock(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db)
 ):
-    """Registers stored SKUs/pallets/cartons with ISO/IEC 18004 QR hashes under client's ledger."""
+    """
+    Registers stored SKUs/pallets/cartons with ISO/IEC 18004 QR hashes under client's ledger,
+    validating that any linked lease is active, non-forfeited, and within its lease period.
+    """
+    now_naive = datetime.utcnow()
+    linked_booking = None
+    if payload.booking_id:
+        linked_booking = db.query(WarehouseRequest).filter(
+            WarehouseRequest.id == payload.booking_id,
+            WarehouseRequest.client_id == current_user.id
+        ).first()
+        if not linked_booking:
+            raise HTTPException(status_code=404, detail="Selected lease booking not found.")
+    else:
+        linked_booking = db.query(WarehouseRequest).filter(
+            WarehouseRequest.client_id == current_user.id,
+            WarehouseRequest.warehouse_id == payload.warehouse_id,
+            WarehouseRequest.is_forfeited == False
+        ).order_by(WarehouseRequest.id.desc()).first()
+
+    if linked_booking:
+        if linked_booking.is_forfeited or linked_booking.is_gate_frozen:
+            raise HTTPException(status_code=403, detail="Cannot add stock to a frozen or forfeited lease. Settle arrears first.")
+        if linked_booking.lease_end_date and linked_booking.lease_end_date.replace(tzinfo=None) < now_naive:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Lease #{linked_booking.id} expired on {linked_booking.lease_end_date.strftime('%Y-%m-%d')}. Renew/extend your lease before adding new inward stock."
+            )
+
     sku = (payload.sku_code or f"SKU-{random.randint(10000, 99999)}").strip().upper()
     existing = db.query(StockItem).filter(StockItem.sku_code == sku).first()
     if existing:
-        existing.total_quantity += payload.quantity
+        existing.total_quantity = int(existing.total_quantity or 0) + payload.quantity
+        if linked_booking and not existing.booking_id:
+            existing.booking_id = linked_booking.id
+        existing.verification_status = "PENDING_DOCK_VERIFICATION"
         item = existing
     else:
         item = StockItem(
             client_id=current_user.id,
             warehouse_id=payload.warehouse_id,
+            booking_id=linked_booking.id if linked_booking else None,
             sku_code=sku,
             item_name=payload.item_name.strip(),
             category=payload.category or "General Merchandise",
             unit_type=payload.unit_type,
-            total_quantity=payload.quantity
+            total_quantity=payload.quantity,
+            reserved_quantity=0,
+            dispatched_quantity=0,
+            verification_status="PENDING_DOCK_VERIFICATION",
+            bay_rack_location=payload.bay_rack_location or "Zone A / Bay-1"
         )
         db.add(item)
         db.commit()
         db.refresh(item)
 
-    # Create traceable ISO QR unit record representing this batch
     serial = f"{sku}-{random.randint(1000, 9999)}"
     qr_hash = hashlib.sha256(f"{serial}:{current_user.id}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:16].upper()
     unit = InventoryUnit(
@@ -857,13 +957,184 @@ def log_client_inventory_stock(
         bay_rack_location=payload.bay_rack_location or "Zone A / Bay-1"
     )
     db.add(unit)
+    db.add(StockMovementLog(
+        stock_item_id=item.id,
+        booking_id=item.booking_id,
+        warehouse_id=item.warehouse_id,
+        client_id=current_user.id,
+        actor_user_id=current_user.id,
+        movement_type="INWARD_LOGGED",
+        quantity_delta=payload.quantity,
+        balance_after=int(item.total_quantity or 0),
+        remarks=f"Client logged inward batch of {payload.quantity} {item.unit_type.value}(s) pending Incharge dock count."
+    ))
     db.commit()
 
     return {
-        "message": f"Added {payload.quantity} units of '{item.item_name}' (ISO QR: {unit.qr_code_hash}) to your stock ledger.",
+        "message": f"Added {payload.quantity} units of '{item.item_name}' (ISO QR: {unit.qr_code_hash}) — queued for Incharge dock verification.",
         "stock_item_id": item.id,
         "sku_code": item.sku_code,
-        "qr_code_hash": unit.qr_code_hash
+        "qr_code_hash": unit.qr_code_hash,
+        "available_quantity": item.total_quantity
+    }
+
+
+@router.post("/my-inventory/dispatch")
+def dispatch_or_clear_client_stock(
+    payload: StockDispatchRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Supports Partial Stock Outward Dispatch OR Full Balance Clearance (Clear All Remaining Stock):
+    - Enforces Lien Gate Freeze Lock (`is_gate_frozen == False`)
+    - Deducts `total_quantity` into `reserved_quantity` so two trucks cannot double-book the same cartons
+    - Issues an OUTWARD GatePass and optionally creates a Zero-VAT KTM-WDC Freight Pickup/Dispatch order
+    """
+    targets = []
+    if payload.stock_item_id:
+        item = db.query(StockItem).filter(
+            StockItem.id == payload.stock_item_id,
+            StockItem.client_id == current_user.id
+        ).first()
+        if not item:
+            raise HTTPException(status_code=404, detail="Stock SKU not found.")
+        req_qty = int(item.total_quantity or 0) if payload.dispatch_all else int(payload.quantity or 0)
+        if req_qty <= 0 or req_qty > int(item.total_quantity or 0):
+            raise HTTPException(status_code=400, detail=f"Requested quantity ({req_qty}) exceeds available balance ({item.total_quantity}).")
+        targets.append((item, req_qty))
+    else:
+        q = db.query(StockItem).filter(
+            StockItem.client_id == current_user.id,
+            StockItem.total_quantity > 0
+        )
+        if payload.booking_id:
+            q = q.filter(StockItem.booking_id == payload.booking_id)
+        if payload.warehouse_id:
+            q = q.filter(StockItem.warehouse_id == payload.warehouse_id)
+        all_items = q.all()
+        if not all_items:
+            raise HTTPException(status_code=400, detail="No remaining stock found to clear.")
+        targets = [(i, int(i.total_quantity or 0)) for i in all_items]
+
+    # Gate freeze check across all affected warehouses/bookings
+    wh_ids = {i.warehouse_id for i, _ in targets}
+    frozen = db.query(WarehouseRequest).filter(
+        WarehouseRequest.client_id == current_user.id,
+        WarehouseRequest.warehouse_id.in_(list(wh_ids)),
+        WarehouseRequest.is_gate_frozen == True
+    ).first()
+    if frozen:
+        raise HTTPException(
+            status_code=403,
+            detail=f"GATE FROZEN (LIEN LOCK): Outbound dispatch blocked for Lease #{frozen.id}. Clear overdue arrears first."
+        )
+
+    primary_wh_id = targets[0][0].warehouse_id
+    primary_booking_id = targets[0][0].booking_id
+    wh_obj = db.query(Warehouse).filter(Warehouse.id == primary_wh_id).first()
+
+    total_moved = sum(q for _, q in targets)
+    manifest_summary = ", ".join(f"{q}x {i.sku_code} ({i.item_name})" for i, q in targets[:5])
+    if len(targets) > 5:
+        manifest_summary += f" +{len(targets) - 5} more SKUs"
+
+    mode = (payload.dispatch_mode or "SELF_PICKUP").upper()
+    dispatch_order_id = None
+    dispatch_order_num = None
+    if mode == "KTM_FREIGHT":
+        if not payload.destination_address:
+            raise HTTPException(status_code=400, detail="Delivery destination address is required for KTM-WDC freight dispatch.")
+        dist_km = max(float(payload.estimated_distance_km or 10.0), 1.0)
+        bench = calculate_freight_benchmark(db, payload.required_vehicle_category or "mini_truck", dist_km, max(100.0, total_moved * 25.0))
+        offered = float(payload.client_offered_fare_npr or bench["benchmark_fare_npr"])
+        cfg = get_platform_config(db)
+        margin_amt = round(offered * ((cfg.platform_margin_percent or 10.0) / 100.0), 2)
+        v_map = {
+            "two_wheeler": VehicleCategory.TWO_WHEELER,
+            "three_wheeler": VehicleCategory.THREE_WHEELER,
+            "mini_truck": VehicleCategory.MINI_TRUCK,
+            "medium_pickup": VehicleCategory.MEDIUM_PICKUP,
+            "six_wheeler": VehicleCategory.SIX_WHEELER,
+            "ten_wheeler": VehicleCategory.TEN_WHEELER,
+            "container_trailer": VehicleCategory.CONTAINER_TRAILER,
+        }
+        vcat = v_map.get((payload.required_vehicle_category or "mini_truck").lower(), VehicleCategory.MINI_TRUCK)
+        order = DispatchOrder(
+            client_id=current_user.id,
+            cargo_description=f"Warehouse Outward Stock: {manifest_summary}"[:250],
+            required_vehicle_category=vcat,
+            pickup_address=f"{wh_obj.title}, {wh_obj.municipality or 'Kathmandu'}" if wh_obj else "KTM-WDC Warehouse",
+            pickup_lat=float(wh_obj.latitude or 27.7172) if wh_obj else 27.7172,
+            pickup_lng=float(wh_obj.longitude or 85.3240) if wh_obj else 85.3240,
+            total_distance_km=dist_km,
+            benchmark_fare_npr=bench["benchmark_fare_npr"],
+            client_offered_fare_npr=offered,
+            cargo_weight_kg=max(250.0, float(total_moved * 25.0)),
+            base_freight_tariff=offered,
+            kwdc_margin_amount=margin_amt,
+            vat_13_percent=0.0,
+            total_fare_npr=offered,
+            status=FreightStatus.REQUESTED
+        )
+        db.add(order)
+        db.commit()
+        db.refresh(order)
+        db.add(DeliveryStop(
+            dispatch_order_id=order.id,
+            stop_sequence=1,
+            consignee_name=payload.consignee_name or current_user.full_name,
+            consignee_phone=payload.consignee_phone or current_user.phone_number,
+            destination_address=payload.destination_address.strip(),
+            dest_lat=27.7000,
+            dest_lng=85.3000,
+            is_completed=False
+        ))
+        dispatch_order_id = order.id
+        dispatch_order_num = f"FRT-2083-{order.id:04d}"
+
+    gate_pass = GatePass(
+        warehouse_id=primary_wh_id,
+        client_id=current_user.id,
+        stock_item_id=targets[0][0].id if len(targets) == 1 else None,
+        booking_id=primary_booking_id,
+        pass_type="OUTWARD",
+        vehicle_plate=(payload.vehicle_plate or ("KTM-FREIGHT" if mode == "KTM_FREIGHT" else "CLIENT-PICKUP")).strip(),
+        driver_name=(payload.driver_name or ("Pending Driver" if mode == "KTM_FREIGHT" else "Client Authorized")).strip(),
+        unit_type=targets[0][0].unit_type,
+        scanned_units_count=total_moved,
+        remarks=f"{'FULL CLEARANCE' if payload.dispatch_all else 'PARTIAL OUTWARD'}: {manifest_summary}" + (f" | {payload.remarks}" if payload.remarks else "")
+    )
+    db.add(gate_pass)
+    db.commit()
+    db.refresh(gate_pass)
+
+    mv_type = "FULL_CLEARANCE" if (payload.dispatch_all or all(q == i.total_quantity for i, q in targets)) else "OUTWARD_RESERVED"
+    for item, qty in targets:
+        item.total_quantity = max(0, int(item.total_quantity or 0) - qty)
+        item.reserved_quantity = int(getattr(item, "reserved_quantity", 0) or 0) + qty
+        db.add(StockMovementLog(
+            stock_item_id=item.id,
+            booking_id=item.booking_id,
+            warehouse_id=item.warehouse_id,
+            client_id=current_user.id,
+            actor_user_id=current_user.id,
+            movement_type=mv_type,
+            quantity_delta=-qty,
+            balance_after=item.total_quantity,
+            gate_pass_id=gate_pass.id,
+            dispatch_order_id=dispatch_order_id,
+            remarks=f"Outward clearance ({mode}): {qty} reserved pending gate exit ({gate_pass.pass_type} GP-2083-{gate_pass.id:04d})."
+        ))
+    db.commit()
+
+    return {
+        "message": f"Reserved {total_moved} units for outward clearance (Gate Pass GP-2083-{gate_pass.id:04d})" + (f" & created Freight Order {dispatch_order_num}." if dispatch_order_num else "."),
+        "gate_pass_id": gate_pass.id,
+        "pass_token": f"GP-2083-{gate_pass.id:04d}",
+        "dispatch_order_id": dispatch_order_id,
+        "dispatch_order_number": dispatch_order_num,
+        "units_reserved": total_moved
     }
 
 @router.get("/saved-addresses")

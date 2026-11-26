@@ -20,7 +20,7 @@ from backend.database import get_db
 from backend.models import (
     Vehicle, Driver, DispatchOrder, DeliveryStop, User, UserRole,
     VehicleCategory, FreightStatus, TaxInvoice, PaymentStatus, KycStatus,
-    FreightCounterOffer, PlatformConfig
+    FreightCounterOffer, PlatformConfig, DriverDismissedOrder
 )
 from backend.schemas import (
     VehicleCreate, DriverCreate, ClientDispatchOrderCreate,
@@ -417,8 +417,10 @@ def get_dispatch_orders(
                     }
                     break
 
-        benchmark_val = o.benchmark_fare_npr or o.base_freight_tariff
-        client_offered_val = o.client_offered_fare_npr or o.total_fare_npr
+        benchmark_val = round(float(o.benchmark_fare_npr or o.base_freight_tariff or 0.0), 2)
+        agreed_fare = round(float(o.base_freight_tariff or o.client_offered_fare_npr or o.total_fare_npr or 0.0), 2)
+        margin_val = round(float(o.kwdc_margin_amount or 0.0), 2)
+        net_retained = round(max(0.0, agreed_fare - margin_val), 2)
 
         results.append({
             "id": o.id,
@@ -430,11 +432,18 @@ def get_dispatch_orders(
             "total_distance_km": o.total_distance_km,
             "cargo_weight_kg": getattr(o, 'cargo_weight_kg', 1000.0) or 1000.0,
             "benchmark_fare_npr": benchmark_val,
-            "client_offered_fare_npr": client_offered_val,
-            "gross_fare_npr": o.total_fare_npr,
-            "kwdc_margin_npr": o.kwdc_margin_amount,
-            "net_fleet_earnings_npr": round(o.total_fare_npr - o.kwdc_margin_amount, 2),
+            "client_offered_fare_npr": agreed_fare,
+            "agreed_fare_npr": agreed_fare,
+            "gross_fare_npr": agreed_fare,
+            "vat_13_percent_npr": 0.0,
+            "kwdc_margin_npr": margin_val,
+            "net_fleet_earnings_npr": net_retained,
+            "commission_settled": bool(getattr(o, "commission_settled", False)),
             "status": o.status.value if hasattr(o.status, 'value') else str(o.status),
+            "driver_name": o.driver.full_name if o.driver else None,
+            "vehicle_plate": o.vehicle.license_plate if o.vehicle else None,
+            "delivery_otp": getattr(o, "delivery_otp", None),
+            "reassignment_reason": getattr(o, "reassignment_reason", None),
             "counter_offers_count": counter_count,
             "my_counter_offer": my_offer,
             "created_at": o.created_at.strftime("%I:%M %p, %b %d") if o.created_at else "Active",
@@ -475,6 +484,11 @@ def accept_dispatch_order(
     order = db.query(DispatchOrder).filter(DispatchOrder.id == order_id).first()
     if not order:
         return {"message": f"Dispatch order #{order_id} assigned to your fleet partner account.", "status": "assigned"}
+    if order.status != FreightStatus.REQUESTED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"This dispatch job is already in '{order.status.value}' status and cannot be claimed again."
+        )
 
     # Auto-resolve vehicle & driver for Independent Owner if not passed
     veh_id = vehicle_id
@@ -670,15 +684,15 @@ def accept_counter_offer(
 
     cfg = get_platform_config(db)
     margin_pct = float(cfg.platform_margin_percent or 10.0)
-    vat_pct = float(cfg.vat_rate_percent or 13.0)
 
     agreed_fare = float(offer.offered_fare_npr)
     kwdc_margin = round(agreed_fare * (margin_pct / 100.0), 2)
-    vat_amt = round((agreed_fare + kwdc_margin) * (vat_pct / 100.0), 2)
-    total_fare = round(agreed_fare + vat_amt, 2)
+    vat_amt = 0.0
+    total_fare = round(agreed_fare, 2)
 
-    # Lock order details
+    # Lock order details (Zero Freight VAT — unified Trip Fare shown to Client, Fleet & Driver)
     order.base_freight_tariff = agreed_fare
+    order.client_offered_fare_npr = agreed_fare
     order.kwdc_margin_amount = kwdc_margin
     order.vat_13_percent = vat_amt
     order.total_fare_npr = total_fare
@@ -922,39 +936,27 @@ def driver_login(
     }
 
 
-@router.get("/driver/active-trip")
-def get_driver_active_trip(
-    current_driver: Driver = Depends(require_driver),
-    db: Session = Depends(get_db)
-):
-    """
-    Returns the currently assigned operational trip for the field driver.
-    """
-    order = db.query(DispatchOrder).filter(
-        (DispatchOrder.driver_id == current_driver.id) |
-        (DispatchOrder.vehicle_id == current_driver.assigned_vehicle_id),
-        DispatchOrder.status.in_([FreightStatus.ASSIGNED, FreightStatus.PICKUP_IN_PROGRESS, FreightStatus.IN_TRANSIT])
-    ).order_by(DispatchOrder.id.desc()).first()
+def _get_driver_mode(driver: Driver) -> str:
+    partner = getattr(driver, "fleet_partner", None)
+    op = getattr(partner, "fleet_operator_type", None) if partner else None
+    return "INDEPENDENT_OWNER" if op == "INDEPENDENT_OWNER" else "COMMERCIAL_3PL"
 
-    if not order:
-        return {"has_active_trip": False, "trip": None, "active_trip": None}
 
-    # Ensure a delivery OTP is assigned
-    if not getattr(order, 'delivery_otp', None):
-        order.delivery_otp = f"{random.randint(1000, 9999)}"
-        db.commit()
-
+def _serialize_driver_trip(order: DispatchOrder, driver: Driver) -> dict:
     stop = order.stops[0] if order.stops else None
-    veh = order.vehicle or current_driver.assigned_vehicle
-
+    veh = order.vehicle or driver.assigned_vehicle
     reassign_msg = None
-    if getattr(order, 'reassigned_from_vehicle_id', None):
+    if getattr(order, "reassigned_from_vehicle_id", None):
         reassign_msg = f"Rescue load reassigned ({order.reassignment_reason or 'Breakdown'})"
-
-    trip_data = {
+    agreed_fare = round(float(order.base_freight_tariff or order.client_offered_fare_npr or order.total_fare_npr or 0.0), 2)
+    commission = round(float(order.kwdc_margin_amount or 0.0), 2)
+    net_retained = round(max(0.0, agreed_fare - commission), 2)
+    return {
+        "id": order.id,
         "order_id": order.id,
         "order_number": f"FRT-2083-{order.id:04d}",
         "cargo_description": order.cargo_description,
+        "required_vehicle_category": order.required_vehicle_category.value if hasattr(order.required_vehicle_category, "value") else str(order.required_vehicle_category),
         "status": order.status.value,
         "pickup_address": order.pickup_address,
         "pickup_lat": order.pickup_lat,
@@ -965,20 +967,250 @@ def get_driver_active_trip(
         "consignee_name": stop.consignee_name if stop else "Consignee",
         "consignee_phone": stop.consignee_phone if stop else "-",
         "total_distance_km": order.total_distance_km,
+        "cargo_weight_kg": getattr(order, "cargo_weight_kg", 1000.0) or 1000.0,
+        "agreed_fare_npr": agreed_fare,
+        "kwdc_commission_npr": commission,
+        "net_retained_npr": net_retained,
         "delivery_otp": order.delivery_otp,
-        "gate_pass_qr": f"GP-FRT-ORD{order.id}-DRV{current_driver.id}-VEH{veh.id if veh else 0}",
+        "gate_pass_qr": f"GP-FRT-ORD{order.id}-DRV{driver.id}-VEH{veh.id if veh else 0}",
         "vehicle": {
             "plate": veh.license_plate if veh else "Unassigned",
-            "model": veh.model_name if veh else "-"
+            "model": veh.model_name if veh else "-",
+            "category": veh.category.value if (veh and hasattr(veh.category, "value")) else None,
         },
-        "reassignment_notice": reassign_msg
+        "reassignment_notice": reassign_msg,
     }
+
+
+@router.get("/driver/active-trip")
+def get_driver_active_trip(
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns active/assigned trips for the authenticated field driver along with their
+    operator classification (INDEPENDENT_OWNER vs COMMERCIAL_3PL) and unified Trip Fare.
+    """
+    driver_mode = _get_driver_mode(current_driver)
+    veh = current_driver.assigned_vehicle
+    q_filter = (DispatchOrder.driver_id == current_driver.id)
+    if current_driver.assigned_vehicle_id:
+        q_filter = q_filter | (DispatchOrder.vehicle_id == current_driver.assigned_vehicle_id)
+
+    assigned_orders = db.query(DispatchOrder).filter(
+        q_filter,
+        DispatchOrder.status.in_([FreightStatus.ASSIGNED, FreightStatus.PICKUP_IN_PROGRESS, FreightStatus.IN_TRANSIT])
+    ).order_by(DispatchOrder.id.desc()).all()
+
+    if not assigned_orders:
+        return {
+            "has_active_trip": False,
+            "driver_mode": driver_mode,
+            "vehicle_category": veh.category.value if (veh and hasattr(veh.category, "value")) else None,
+            "trip": None,
+            "active_trip": None,
+            "assigned_queue": []
+        }
+
+    dirty = False
+    for o in assigned_orders:
+        if not getattr(o, 'delivery_otp', None):
+            o.delivery_otp = f"{random.randint(1000, 9999)}"
+            dirty = True
+    if dirty:
+        db.commit()
+
+    # Prefer currently IN_TRANSIT trip if present, else latest ASSIGNED
+    primary = next((o for o in assigned_orders if o.status == FreightStatus.IN_TRANSIT), assigned_orders[0])
+    trip_data = _serialize_driver_trip(primary, current_driver)
+    queue = [_serialize_driver_trip(o, current_driver) for o in assigned_orders]
 
     return {
         "has_active_trip": True,
+        "driver_mode": driver_mode,
+        "vehicle_category": veh.category.value if (veh and hasattr(veh.category, "value")) else None,
         "trip": trip_data,
-        "active_trip": trip_data
+        "active_trip": trip_data,
+        "assigned_queue": queue
     }
+
+
+@router.get("/driver/available-jobs")
+def get_driver_available_jobs(
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    """
+    Dual Driver Logic:
+    - INDEPENDENT_OWNER: Sees open REQUESTED orders matching their assigned vehicle category
+      (excluding orders they declined), and can Accept / Counter-Offer / Decline.
+    - COMMERCIAL_3PL: Does NOT see marketplace bidding jobs; executes runs assigned by their Logistics Manager.
+    """
+    driver_mode = _get_driver_mode(current_driver)
+    veh = current_driver.assigned_vehicle
+    veh_cat = veh.category.value if (veh and hasattr(veh.category, "value")) else None
+
+    if driver_mode != "INDEPENDENT_OWNER":
+        return {
+            "driver_mode": driver_mode,
+            "can_bid": False,
+            "vehicle_category": veh_cat,
+            "jobs": [],
+            "message": "Logistics-associated driver mode: your Fleet Manager assigns trips to your cab."
+        }
+
+    dismissed_ids = {
+        row.order_id
+        for row in db.query(DriverDismissedOrder).filter(
+            DriverDismissedOrder.driver_id == current_driver.id
+        ).all()
+    }
+
+    q = db.query(DispatchOrder).filter(DispatchOrder.status == FreightStatus.REQUESTED)
+    if veh and veh.category:
+        q = q.filter(DispatchOrder.required_vehicle_category == veh.category)
+    open_orders = q.order_by(DispatchOrder.id.desc()).all()
+
+    jobs = []
+    for o in open_orders:
+        if o.id in dismissed_ids:
+            continue
+        if veh and veh.payload_capacity_kg and float(o.cargo_weight_kg or 0) > float(veh.payload_capacity_kg) * 1.15:
+            continue
+        stop = o.stops[0] if o.stops else None
+        agreed_fare = round(float(o.base_freight_tariff or o.client_offered_fare_npr or o.total_fare_npr or 0.0), 2)
+        commission = round(float(o.kwdc_margin_amount or 0.0), 2)
+        my_offer = db.query(FreightCounterOffer).filter(
+            FreightCounterOffer.order_id == o.id,
+            FreightCounterOffer.fleet_partner_id == current_driver.fleet_partner_id,
+            FreightCounterOffer.status == "PENDING"
+        ).first()
+        jobs.append({
+            "id": o.id,
+            "order_id": o.id,
+            "order_number": f"FRT-2083-{o.id:04d}",
+            "cargo_description": o.cargo_description,
+            "required_vehicle_category": o.required_vehicle_category.value if hasattr(o.required_vehicle_category, "value") else str(o.required_vehicle_category),
+            "pickup_address": o.pickup_address,
+            "delivery_address": stop.destination_address if stop else "Destination",
+            "total_distance_km": o.total_distance_km,
+            "cargo_weight_kg": float(o.cargo_weight_kg or 1000.0),
+            "agreed_fare_npr": agreed_fare,
+            "client_offered_fare_npr": agreed_fare,
+            "benchmark_fare_npr": round(float(o.benchmark_fare_npr or agreed_fare), 2),
+            "kwdc_commission_npr": commission,
+            "net_retained_npr": round(max(0.0, agreed_fare - commission), 2),
+            "my_counter_offer": {
+                "offer_id": my_offer.id,
+                "offered_fare_npr": my_offer.offered_fare_npr,
+                "status": my_offer.status
+            } if my_offer else None
+        })
+
+    return {
+        "driver_mode": driver_mode,
+        "can_bid": True,
+        "vehicle_category": veh_cat,
+        "jobs": jobs
+    }
+
+
+def _require_independent_driver(driver: Driver):
+    if _get_driver_mode(driver) != "INDEPENDENT_OWNER":
+        raise HTTPException(
+            status_code=403,
+            detail="Logistics-associated drivers cannot claim or bid on marketplace orders independently. Only jobs assigned by your Fleet Manager appear here."
+        )
+
+
+@router.post("/driver/jobs/{order_id}/accept")
+def independent_driver_accept_job(
+    order_id: int,
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    _require_independent_driver(current_driver)
+    order = db.query(DispatchOrder).filter(DispatchOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Dispatch order not found.")
+    if order.status != FreightStatus.REQUESTED:
+        raise HTTPException(status_code=400, detail=f"Job already {order.status.value}.")
+
+    order.fleet_partner_id = current_driver.fleet_partner_id
+    order.driver_id = current_driver.id
+    order.vehicle_id = current_driver.assigned_vehicle_id
+    order.status = FreightStatus.ASSIGNED
+    if not getattr(order, "delivery_otp", None):
+        order.delivery_otp = f"{random.randint(1000, 9999)}"
+    db.commit()
+    return {
+        "message": f"Trip FRT-2083-{order.id:04d} accepted at Rs. {float(order.base_freight_tariff or order.total_fare_npr):,.0f}!",
+        "order_id": order.id,
+        "status": order.status.value
+    }
+
+
+@router.post("/driver/jobs/{order_id}/counter-offer")
+def independent_driver_counter_offer(
+    order_id: int,
+    payload: CounterOfferCreate,
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    _require_independent_driver(current_driver)
+    order = db.query(DispatchOrder).filter(DispatchOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Dispatch order not found.")
+    if order.status != FreightStatus.REQUESTED:
+        raise HTTPException(status_code=400, detail=f"Order is {order.status.value} and no longer open.")
+
+    existing = db.query(FreightCounterOffer).filter(
+        FreightCounterOffer.order_id == order_id,
+        FreightCounterOffer.fleet_partner_id == current_driver.fleet_partner_id,
+        FreightCounterOffer.status == "PENDING"
+    ).first()
+    if existing:
+        existing.offered_fare_npr = payload.offered_fare_npr
+        existing.counter_note = payload.counter_note
+        existing.driver_id = current_driver.id
+        existing.vehicle_id = current_driver.assigned_vehicle_id
+        existing.created_at = datetime.utcnow()
+        offer = existing
+    else:
+        offer = FreightCounterOffer(
+            order_id=order_id,
+            fleet_partner_id=current_driver.fleet_partner_id,
+            driver_id=current_driver.id,
+            vehicle_id=current_driver.assigned_vehicle_id,
+            offered_fare_npr=payload.offered_fare_npr,
+            counter_note=payload.counter_note,
+            status="PENDING"
+        )
+        db.add(offer)
+    db.commit()
+    db.refresh(offer)
+    return {
+        "message": f"Bid of Rs. {offer.offered_fare_npr:,.0f} sent to client!",
+        "offer_id": offer.id,
+        "offered_fare_npr": offer.offered_fare_npr
+    }
+
+
+@router.post("/driver/jobs/{order_id}/decline")
+def independent_driver_decline_job(
+    order_id: int,
+    current_driver: Driver = Depends(require_driver),
+    db: Session = Depends(get_db)
+):
+    _require_independent_driver(current_driver)
+    exists = db.query(DriverDismissedOrder).filter(
+        DriverDismissedOrder.driver_id == current_driver.id,
+        DriverDismissedOrder.order_id == order_id
+    ).first()
+    if not exists:
+        db.add(DriverDismissedOrder(driver_id=current_driver.id, order_id=order_id))
+        db.commit()
+    return {"message": "Dispatch order declined and hidden from your feed.", "order_id": order_id}
 
 
 @router.post("/driver/trips/{order_id}/start")
@@ -1079,39 +1311,74 @@ def get_fleet_earnings(
     db: Session = Depends(get_db)
 ):
     """
-    Returns fleet partner earnings breakdown, net trip settlements, and 10% KWDC margin deductions.
+    Returns unified Zero-VAT Trip Earnings and Platform Commission Payable (Due to KTM-WDC):
+    - Fleet/Driver collects the Agreed Trip Fare directly
+    - Platform Commission (kwdc_margin_amount) is accrued as Payable Due to KTM-WDC until settled
     """
     orders = db.query(DispatchOrder).filter(
         DispatchOrder.fleet_partner_id == current_user.id
-    ).all()
+    ).order_by(DispatchOrder.id.desc()).all()
 
-    total_gross = round(sum(float(o.total_fare_npr or 0.0) for o in orders), 2)
-    total_margin = round(sum(float(o.kwdc_margin_amount or 0.0) for o in orders), 2)
-    net_earnings = round(total_gross - total_margin, 2)
+    total_gross = round(sum(float(o.base_freight_tariff or o.total_fare_npr or 0.0) for o in orders), 2)
+    total_commission = round(sum(float(o.kwdc_margin_amount or 0.0) for o in orders), 2)
+    commission_settled_amt = round(sum(float(o.kwdc_margin_amount or 0.0) for o in orders if getattr(o, "commission_settled", False)), 2)
+    commission_due_amt = round(max(0.0, total_commission - commission_settled_amt), 2)
+    net_retained = round(max(0.0, total_gross - total_commission), 2)
     completed_trips = sum(1 for o in orders if o.status == FreightStatus.DELIVERED)
 
     settlements = []
-    if orders:
+    for o in orders:
+        fare = round(float(o.base_freight_tariff or o.total_fare_npr or 0.0), 2)
+        fee = round(float(o.kwdc_margin_amount or 0.0), 2)
+        is_paid = bool(getattr(o, "commission_settled", False))
         settlements.append({
-            "id": 1,
-            "period": f"Active Ledger ({len(orders)} Dispatch{'es' if len(orders) != 1 else ''})",
-            "trips": len(orders),
-            "gross_fare": total_gross,
-            "platform_fee": total_margin,
-            "net_payout": net_earnings,
-            "status": "SETTLED" if completed_trips == len(orders) else "PROCESSING",
-            "payout_method": "ConnectIPS / Bank Wire"
+            "id": o.id,
+            "order_number": f"FRT-2083-{o.id:04d}",
+            "period": f"FRT-2083-{o.id:04d} ({o.status.value})",
+            "trips": 1,
+            "gross_fare": fare,
+            "platform_fee": fee,
+            "net_payout": round(max(0.0, fare - fee), 2),
+            "commission_settled": is_paid,
+            "status": "SETTLED" if is_paid else ("DUE TO KTM-WDC" if o.status == FreightStatus.DELIVERED else "IN PROGRESS"),
+            "payout_method": "Direct COD / ConnectIPS -> KTM-WDC Commission"
         })
 
     return {
         "total_gross_npr": total_gross,
-        "kwdc_platform_fee_npr": total_margin,
-        "net_fleet_earnings_npr": net_earnings,
+        "kwdc_platform_fee_npr": total_commission,
+        "commission_due_to_kwdc_npr": commission_due_amt,
+        "commission_settled_npr": commission_settled_amt,
+        "net_fleet_earnings_npr": net_retained,
         "completed_trips_count": completed_trips,
-        "pending_settlement_npr": round(net_earnings * 0.4, 2) if orders else 0.0,
-        "disbursed_payout_npr": round(net_earnings * 0.6, 2) if orders else 0.0,
+        "pending_settlement_npr": commission_due_amt,
+        "disbursed_payout_npr": net_retained,
         "settlements": settlements
     }
+
+
+@router.post("/commission/settle")
+def settle_kwdc_commission_dues(
+    order_id: Optional[int] = None,
+    current_user: User = Depends(require_fleet_partner),
+    db: Session = Depends(get_db)
+):
+    """Marks Platform Commission Payable for one order (or all due trips) as settled to KTM-WDC."""
+    q = db.query(DispatchOrder).filter(DispatchOrder.fleet_partner_id == current_user.id)
+    if order_id:
+        q = q.filter(DispatchOrder.id == order_id)
+    targets = q.all()
+    if not targets:
+        raise HTTPException(status_code=404, detail="No dispatch orders found to settle.")
+    now = datetime.now(timezone.utc)
+    count = 0
+    for o in targets:
+        if not getattr(o, "commission_settled", False):
+            o.commission_settled = True
+            o.commission_settled_at = now
+            count += 1
+    db.commit()
+    return {"message": f"Recorded KTM-WDC platform commission settlement across {count} trip(s).", "settled_count": count}
 
 
 VEHICLE_BASE_RATES = {
@@ -1188,12 +1455,10 @@ def create_client_dispatch_order(
     client_offered = float(payload.client_offered_fare_npr) if (payload.client_offered_fare_npr and payload.client_offered_fare_npr > 0) else benchmark_fare
 
     margin_pct = benchmark_calc["platform_margin_percent"]
-    cfg = get_platform_config(db)
-    vat_pct = float(cfg.vat_rate_percent or 13.0)
 
     margin_amt = round(client_offered * (margin_pct / 100.0), 2)
-    vat_amt = round((client_offered + margin_amt) * (vat_pct / 100.0), 2)
-    total_fare = round(client_offered + vat_amt, 2)
+    vat_amt = 0.0
+    total_fare = round(client_offered, 2)
 
     new_order = DispatchOrder(
         client_id=current_user.id,
@@ -1305,11 +1570,12 @@ def get_client_dispatch_orders(
             "total_distance_km": o.total_distance_km,
             "cargo_weight_kg": getattr(o, 'cargo_weight_kg', 1000.0) or 1000.0,
             "benchmark_fare_npr": o.benchmark_fare_npr or o.base_freight_tariff,
-            "client_offered_fare_npr": o.client_offered_fare_npr or o.total_fare_npr,
+            "client_offered_fare_npr": round(float(o.base_freight_tariff or o.client_offered_fare_npr or o.total_fare_npr or 0.0), 2),
+            "agreed_fare_npr": round(float(o.base_freight_tariff or o.client_offered_fare_npr or o.total_fare_npr or 0.0), 2),
             "base_freight_tariff": o.base_freight_tariff,
             "kwdc_margin_amount": o.kwdc_margin_amount,
-            "vat_13_percent": o.vat_13_percent,
-            "total_fare_npr": o.total_fare_npr,
+            "vat_13_percent": 0.0,
+            "total_fare_npr": round(float(o.base_freight_tariff or o.client_offered_fare_npr or o.total_fare_npr or 0.0), 2),
             "status": o.status.value,
             "driver_name": driver_name,
             "driver_phone": driver_phone,

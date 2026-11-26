@@ -123,6 +123,21 @@
     <!-- Cockpit Main Scroll Area -->
     <main class="flex-1 p-4 space-y-4 overflow-y-auto">
 
+      <!-- Mode Pill -->
+      <div id="driverModeBanner" class="bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs">
+        <span class="font-bold text-amber-300" id="driverModeLabel">Driver Mode</span>
+        <span class="font-mono text-[11px] text-slate-400" id="driverVehCatBadge">Loading...</span>
+      </div>
+
+      <!-- Independent Owner-Driver Available Jobs Load Board -->
+      <div id="independentLoadBoardCard" class="hidden space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-black uppercase tracking-wider text-amber-400">Available Matching Loads</h3>
+          <button onclick="loadDriverCockpit()" class="text-[11px] font-bold text-slate-300 hover:text-white underline">Refresh</button>
+        </div>
+        <div id="driverAvailableJobsList" class="space-y-3"></div>
+      </div>
+
       <!-- Standby Notice (When no trip is assigned) -->
       <div id="standbyCard" class="hidden bg-slate-800/80 border border-slate-700 rounded-3xl p-6 text-center shadow-lg space-y-4">
         <div class="w-14 h-14 rounded-2xl bg-slate-700 text-slate-400 grid place-items-center mx-auto">
@@ -130,12 +145,12 @@
         </div>
         <div>
           <h3 class="font-bold text-base text-white" data-i18n="standby_title">On Standby Duty</h3>
-          <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto" data-i18n="standby_sub">
+          <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto" id="standbySubText" data-i18n="standby_sub">
             No active freight trip assigned right now. Your fleet dispatcher will allocate your next corridor dispatch shortly.
           </p>
         </div>
         <div>
-          <button onclick="loadActiveTrip()" class="px-5 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs shadow flex items-center gap-2 mx-auto transition">
+          <button onclick="loadDriverCockpit()" class="px-5 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs shadow flex items-center gap-2 mx-auto transition">
             <i data-lucide="refresh-cw" class="w-4 h-4 text-amber-400"></i> <span data-i18n="btn_check_dispatch">Check for New Dispatch</span>
           </button>
         </div>
@@ -158,6 +173,10 @@
           <div>
             <h3 class="text-lg font-black text-white" id="tripCargo">5,000 KG Basmati Rice Cargo</h3>
             <p class="text-xs text-slate-400 mt-0.5" id="tripCorridorDistance">Corridor Distance: 18.5 KM</p>
+            <div class="mt-2 p-2.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-between">
+              <span class="text-[11px] font-bold text-emerald-300 uppercase">Agreed Trip Fare (COD):</span>
+              <span class="text-base font-black text-emerald-400 font-mono" id="tripAgreedFare">Rs. 0</span>
+            </div>
           </div>
 
           <!-- Emergency Reassignment Notice if applicable -->
@@ -517,37 +536,64 @@
         }
         const data = await res.json();
         const trip = data.trip || data.active_trip;
+        const mode = data.driver_mode || 'COMMERCIAL_3PL';
+        const isIndependent = (mode === 'INDEPENDENT_OWNER');
+
+        const modeLbl = document.getElementById('driverModeLabel');
+        const catBadge = document.getElementById('driverVehCatBadge');
+        if (modeLbl) modeLbl.textContent = isIndependent ? 'Independent Owner-Driver (Bid / Accept Enabled)' : 'Logistics Fleet Driver (Assigned Runs)';
+        if (catBadge) catBadge.textContent = data.vehicle_category ? `Class: ${data.vehicle_category.replace(/_/g, ' ')}` : 'Cab Active';
 
         const standbyEl = document.getElementById('standbyCard');
         const activeEl = document.getElementById('activeTripCard');
+        const loadBoardEl = document.getElementById('independentLoadBoardCard');
+
+        if (isIndependent && !trip) {
+          await loadDriverAvailableJobs();
+        } else if (loadBoardEl) {
+          loadBoardEl.classList.add('hidden');
+        }
 
         if (!trip) {
           activeTripData = null;
           standbyEl.classList.remove('hidden');
           activeEl.classList.add('hidden');
+          const subTxt = document.getElementById('standbySubText');
+          if (subTxt) {
+            subTxt.textContent = isIndependent
+              ? 'No active trip locked right now. Accept or bid on matching loads above.'
+              : 'No active freight trip assigned right now. Your logistics senior will allocate your next dispatch.';
+          }
           if (gpsStreamInterval) clearInterval(gpsStreamInterval);
           return;
         }
 
         activeTripData = trip;
+        if (!activeTripData.id && activeTripData.order_id) activeTripData.id = activeTripData.order_id;
         standbyEl.classList.add('hidden');
         activeEl.classList.remove('hidden');
 
-        // Populate Trip Info
+        // Populate Trip Info & COD Agreed Fare
         document.getElementById('tripOrderNumber').textContent = trip.order_number;
         document.getElementById('tripCargo').textContent = trip.cargo_description;
-        document.getElementById('tripCorridorDistance').textContent = `Corridor Distance: ${trip.total_distance_km || 15} KM`;
+        document.getElementById('tripCorridorDistance').textContent = `Corridor Distance: ${trip.total_distance_km || 15} KM • ${Number(trip.cargo_weight_kg || 1000).toLocaleString('en-IN')} KG`;
+        const fareEl = document.getElementById('tripAgreedFare');
+        if (fareEl) {
+          const fare = Number(trip.agreed_fare_npr || 0);
+          fareEl.textContent = `Rs. ${fare.toLocaleString('en-IN')}` + (isIndependent ? ` (Net: Rs. ${Number(trip.net_retained_npr || fare).toLocaleString('en-IN')})` : '');
+        }
 
-        // Status Badge
+        // Status Badge (uppercase safe)
+        const stUpper = String(trip.status || '').toUpperCase();
         const badge = document.getElementById('tripStatusBadge');
-        if (trip.status === 'in_transit') {
+        if (stUpper === 'IN_TRANSIT') {
           badge.textContent = 'IN TRANSIT';
           badge.className = 'px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-sky-500/20 text-sky-400 border border-sky-500/30';
           document.getElementById('btnStartTrip').classList.add('hidden');
           document.getElementById('inTransitActions').classList.remove('hidden');
           startGpsTracking();
         } else {
-          badge.textContent = 'ASSIGNED';
+          badge.textContent = stUpper || 'ASSIGNED';
           badge.className = 'px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30';
           document.getElementById('btnStartTrip').classList.remove('hidden');
           document.getElementById('inTransitActions').classList.add('hidden');
@@ -588,6 +634,73 @@
       } catch (err) {
         console.error("loadActiveTrip error:", err);
       }
+    }
+
+    function loadDriverCockpit() { return loadActiveTrip(); }
+
+    async function loadDriverAvailableJobs() {
+      const box = document.getElementById('independentLoadBoardCard');
+      const list = document.getElementById('driverAvailableJobsList');
+      if (!box || !list) return;
+      try {
+        const res = await fetch('/api/fleet/driver/available-jobs', { headers: getDriverHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.can_bid) {
+          box.classList.add('hidden');
+          return;
+        }
+        box.classList.remove('hidden');
+        const jobs = data.jobs || [];
+        if (jobs.length === 0) {
+          list.innerHTML = '<div class="p-4 rounded-2xl bg-slate-800/70 border border-slate-700 text-xs text-slate-400 text-center">No open matching dispatch requests right now.</div>';
+          return;
+        }
+        list.innerHTML = jobs.map(j => `
+          <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-2.5 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-bold text-amber-400">${j.order_number}</span>
+              <span class="font-mono font-black text-emerald-400">Trip Fare: Rs. ${Number(j.agreed_fare_npr).toLocaleString('en-IN')}</span>
+            </div>
+            <p class="font-bold text-white">${j.cargo_description}</p>
+            <p class="text-[11px] text-slate-400">${j.pickup_address} &rarr; ${j.delivery_address} (${j.total_distance_km} KM)</p>
+            <p class="text-[10px] text-slate-400 font-mono">Net Retained after 10% Commission: Rs. ${Number(j.net_retained_npr).toLocaleString('en-IN')}</p>
+            <div class="grid grid-cols-3 gap-2 pt-1">
+              <button onclick="driverAcceptJob(${j.id})" class="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Accept</button>
+              <button onclick="driverBidJob(${j.id}, ${j.agreed_fare_npr})" class="py-2 rounded-xl bg-amber text-navy font-black">Raise Fare</button>
+              <button onclick="driverDeclineJob(${j.id})" class="py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold">Decline</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('loadDriverAvailableJobs error:', err);
+      }
+    }
+
+    async function driverAcceptJob(orderId) {
+      const res = await fetch(`/api/fleet/driver/jobs/${orderId}/accept`, { method: 'POST', headers: getDriverHeaders() });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); loadActiveTrip(); }
+      else showToast(data.detail || 'Failed to accept trip.', true);
+    }
+
+    async function driverBidJob(orderId, currentFare) {
+      const offerStr = prompt('Enter your proposed fare (NPR):', currentFare);
+      if (!offerStr) return;
+      const fare = parseFloat(offerStr);
+      if (!(fare > 0)) return;
+      const res = await fetch(`/api/fleet/driver/jobs/${orderId}/counter-offer`, {
+        method: 'POST', headers: getDriverHeaders(),
+        body: JSON.stringify({ offered_fare_npr: fare, counter_note: 'Driver app direct bid' })
+      });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); loadDriverAvailableJobs(); }
+      else showToast(data.detail || 'Bid failed.', true);
+    }
+
+    async function driverDeclineJob(orderId) {
+      const res = await fetch(`/api/fleet/driver/jobs/${orderId}/decline`, { method: 'POST', headers: getDriverHeaders() });
+      if (res.ok) { showToast('Job declined.'); loadDriverAvailableJobs(); }
     }
 
     // -------------------------------------------------------------

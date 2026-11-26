@@ -176,6 +176,7 @@ class BookingModifyRequest(BaseModel):
 
 class StockItemCreate(BaseModel):
     warehouse_id: int
+    booking_id: Optional[int] = None
     sku_code: Optional[str] = None
     item_name: str
     category: Optional[str] = "General Merchandise"
@@ -183,6 +184,28 @@ class StockItemCreate(BaseModel):
     quantity: int = Field(..., gt=0)
     gross_weight_kg: Optional[float] = 25.0
     bay_rack_location: Optional[str] = "Zone A / Bay-1"
+
+class StockDispatchRequest(BaseModel):
+    stock_item_id: Optional[int] = None
+    booking_id: Optional[int] = None
+    warehouse_id: Optional[int] = None
+    dispatch_all: bool = False
+    quantity: Optional[int] = None
+    dispatch_mode: str = "SELF_PICKUP" # SELF_PICKUP or KTM_FREIGHT
+    vehicle_plate: Optional[str] = "SELF-PICKUP"
+    driver_name: Optional[str] = "Authorized Carrier"
+    destination_address: Optional[str] = None
+    consignee_name: Optional[str] = None
+    consignee_phone: Optional[str] = None
+    required_vehicle_category: Optional[str] = "mini_truck"
+    estimated_distance_km: Optional[float] = 10.0
+    client_offered_fare_npr: Optional[float] = None
+    remarks: Optional[str] = None
+
+class InchargeStockVerifyRequest(BaseModel):
+    bay_rack_location: Optional[str] = None
+    verified_quantity: Optional[int] = None
+    notes: Optional[str] = None
 
 class SavedAddressCreate(BaseModel):
     label: str
@@ -211,6 +234,8 @@ class IncidentReportCreate(BaseModel):
 class GatePassCreate(BaseModel):
     warehouse_id: int
     client_id: Optional[int] = None
+    stock_item_id: Optional[int] = None
+    booking_id: Optional[int] = None
     movement_type: Optional[str] = "inbound"
     pass_type: Optional[str] = "inbound"
     vehicle_plate: str

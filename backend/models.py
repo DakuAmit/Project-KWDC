@@ -473,6 +473,8 @@ class DispatchOrder(Base):
     reassigned_from_vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
     reassigned_from_driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=True)
     reassignment_reason = Column(String(500), nullable=True)
+    commission_settled = Column(Boolean, default=False)
+    commission_settled_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     client = relationship("User", foreign_keys=[client_id], back_populates="dispatch_orders_as_client")
@@ -525,6 +527,16 @@ class FreightCounterOffer(Base):
     vehicle = relationship("Vehicle", foreign_keys=[vehicle_id])
 
 
+class DriverDismissedOrder(Base):
+    """Tracks open dispatch orders explicitly declined by an Independent Owner-Driver."""
+    __tablename__ = "driver_dismissed_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey("dispatch_orders.id"), nullable=False, index=True)
+    dismissed_at = Column(DateTime, default=datetime.utcnow)
+
+
 # ---------------------------------------------------------------------------
 # Module 4: Inventory & ISO/IEC 18004 QR (Carton, Pallet, Container)
 # ---------------------------------------------------------------------------
@@ -534,17 +546,42 @@ class StockItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    booking_id = Column(Integer, ForeignKey("warehouse_requests.id"), nullable=True)
     
     sku_code = Column(String(100), unique=True, index=True, nullable=False)
     item_name = Column(String(255), nullable=False)
     category = Column(String(100), default="General Merchandise")
     unit_type = Column(Enum(InventoryUnitType), default=InventoryUnitType.CARTOON, nullable=False)
-    total_quantity = Column(Integer, default=0)
+    total_quantity = Column(Integer, default=0)        # Current available units on hand
+    reserved_quantity = Column(Integer, default=0)     # Units reserved on pending outward passes/dispatches
+    dispatched_quantity = Column(Integer, default=0)   # Cumulative dispatched units cleared outward
+    verification_status = Column(String(40), default="PENDING_DOCK_VERIFICATION")
+    bay_rack_location = Column(String(100), default="Zone A / Bay-1")
     inward_date = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     warehouse = relationship("Warehouse", back_populates="stock_items")
     units = relationship("InventoryUnit", back_populates="stock_item", cascade="all, delete-orphan")
+
+
+class StockMovementLog(Base):
+    """Double-entry stock ledger auditing every partial inward, reservation, outward clearance, and verification."""
+    __tablename__ = "stock_movement_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_item_id = Column(Integer, ForeignKey("stock_items.id"), nullable=False, index=True)
+    booking_id = Column(Integer, ForeignKey("warehouse_requests.id"), nullable=True)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    movement_type = Column(String(40), nullable=False) # INWARD_LOGGED, INWARD_VERIFIED, OUTWARD_RESERVED, OUTWARD_DISPATCHED, FULL_CLEARANCE
+    quantity_delta = Column(Integer, nullable=False)
+    balance_after = Column(Integer, nullable=False)
+    gate_pass_id = Column(Integer, ForeignKey("gate_passes.id"), nullable=True)
+    dispatch_order_id = Column(Integer, ForeignKey("dispatch_orders.id"), nullable=True)
+    remarks = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class InventoryUnit(Base):
@@ -574,6 +611,8 @@ class GatePass(Base):
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     incharge_id = Column(Integer, ForeignKey("users.id"), nullable=True) # Inspected/Authorized by Incharge
+    stock_item_id = Column(Integer, ForeignKey("stock_items.id"), nullable=True)
+    booking_id = Column(Integer, ForeignKey("warehouse_requests.id"), nullable=True)
     pass_type = Column(String(20), nullable=False) # INWARD, OUTWARD
     vehicle_plate = Column(String(50), nullable=False)
     driver_name = Column(String(255), nullable=False)

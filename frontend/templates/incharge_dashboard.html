@@ -66,6 +66,11 @@
           <span id="badgeGateCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
         </button>
 
+        <button type="button" onclick="switchTab('stock')" id="nav-stock" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
+          <span class="flex items-center gap-3"><i data-lucide="boxes" class="w-4 h-4 text-purple-400"></i> <span>Client Stock Dock</span></span>
+          <span id="badgeStockQueueCount" class="text-[11px] font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">0</span>
+        </button>
+
         <button type="button" onclick="switchTab('logs')" id="nav-logs" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
           <i data-lucide="clipboard-list" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_logs">Shift Inspection Logs</span>
         </button>
@@ -182,6 +187,36 @@
                 </thead>
                 <tbody id="gatePassTableBody" class="divide-y divide-slate-100">
                   <tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">Loading gate clearance passes...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 2B: Client Stock Verification & Bay Queue -->
+        <section id="view-stock" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-navy text-base">Client Stored Inventory &amp; Dock Clearance Queue</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Verify physical inward batches, assign rack bays, and clear reserved outward dispatches.</p>
+              </div>
+              <button onclick="loadInchargeStockQueue()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-navy">Refresh</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200 text-[11px]">
+                  <tr>
+                    <th class="px-5 py-3">SKU &amp; Item</th>
+                    <th class="px-5 py-3">Warehouse</th>
+                    <th class="px-5 py-3">On-Hand / Reserved</th>
+                    <th class="px-5 py-3">Bay / Rack</th>
+                    <th class="px-5 py-3">Status</th>
+                    <th class="px-5 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="inchargeStockQueueBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Loading stock dock queue...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -509,6 +544,7 @@
       }
 
       if (tabId === 'gatepass') loadGatePasses();
+      else if (tabId === 'stock') loadInchargeStockQueue();
       else if (tabId === 'logs') loadInchargeLogs();
       lucide.createIcons();
     }
@@ -517,13 +553,7 @@
       try {
         const res = await fetch('/api/incharge/assigned-warehouses', { headers: getAuthHeaders() });
         const data = res.ok ? await res.json() : [];
-        if (data.length === 0) {
-          const catRes = await fetch('/api/warehouses/catalog');
-          const catData = await catRes.json();
-          renderFacilities(catData.slice(0, 3));
-        } else {
-          renderFacilities(data);
-        }
+        renderFacilities(Array.isArray(data) ? data : []);
       } catch (err) {
         console.log('Incharge notice:', err);
       }
@@ -533,6 +563,11 @@
       const grid = document.getElementById('assignedFacilitiesGrid');
       document.getElementById('badgeFacilitiesCount').textContent = list.length;
       if (list.length > 0) defaultWarehouseId = list[0].id || list[0].warehouse_id || 1;
+
+      if (list.length === 0) {
+        grid.innerHTML = `<div class="col-span-full bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-500">No warehouses have been assigned to your Incharge account yet. Ask SuperAdmin to assign you from <strong>Property Audits</strong> or <strong>Incharge Staff (Ops)</strong>.</div>`;
+        return;
+      }
 
       grid.innerHTML = list.map(w => `
         <article class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
@@ -555,6 +590,49 @@
         </article>
       `).join('');
       lucide.createIcons();
+    }
+
+    async function loadInchargeStockQueue() {
+      const tbody = document.getElementById('inchargeStockQueueBody');
+      if (!tbody) return;
+      try {
+        const res = await fetch('/api/incharge/stock-queue', { headers: getAuthHeaders() });
+        const data = res.ok ? await res.json() : [];
+        const b = document.getElementById('badgeStockQueueCount');
+        if (b) b.textContent = data.length;
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No client stock batches queued for your assigned facilities yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(s => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-5 py-3"><p class="font-bold text-navy font-mono">${s.sku_code}</p><p class="text-[11px] text-slate-600">${s.item_name}</p></td>
+            <td class="px-5 py-3 text-slate-700">${s.warehouse_title}</td>
+            <td class="px-5 py-3 font-mono"><strong>${s.total_quantity}</strong> avail &bull; <span class="text-amber-700">${s.reserved_quantity} rsv</span></td>
+            <td class="px-5 py-3 font-mono text-slate-600">${s.bay_rack_location}</td>
+            <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${s.reserved_quantity > 0 ? 'bg-amber-100 text-amber-900' : (s.verification_status === 'VERIFIED_IN_STORAGE' ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800')}">${s.reserved_quantity > 0 ? 'OUTWARD RESERVED' : s.verification_status}</span></td>
+            <td class="px-5 py-3 text-right">
+              <button onclick="verifyInchargeStock(${s.id}, '${s.bay_rack_location}', ${s.reserved_quantity})" class="px-3 py-1.5 rounded-lg bg-navy hover:bg-slate-800 text-white font-bold text-[11px]">
+                ${s.reserved_quantity > 0 ? 'Clear Outward' : 'Verify & Assign Bay'}
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-red-500">${err.message}</td></tr>`;
+      }
+    }
+
+    async function verifyInchargeStock(stockId, currentBay, reservedQty) {
+      const bay = reservedQty > 0 ? currentBay : prompt('Confirm / assign Bay & Rack location:', currentBay || 'Zone A / Bay-1');
+      if (bay === null) return;
+      const res = await fetch(`/api/incharge/stock/${stockId}/verify`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ bay_rack_location: bay || currentBay })
+      });
+      const data = await res.json();
+      if (res.ok) { showToast(data.message); loadInchargeStockQueue(); }
+      else showToast(data.detail || 'Verification failed.', true);
     }
 
     async function loadGatePasses() {
@@ -595,7 +673,7 @@
     async function loadInchargeLogs() {
       const tbody = document.getElementById('inchargeLogsTableBody');
       try {
-        const res = await fetch('/api/admin/incharge-logs', { headers: getAuthHeaders() });
+        const res = await fetch('/api/incharge/my-logs', { headers: getAuthHeaders() });
         const data = res.ok ? await res.json() : [];
 
         if (data.length === 0) {
@@ -696,8 +774,27 @@
 
     async function handleIncidentSubmit(e) {
       e.preventDefault();
-      showToast('Incident logged and flagged for Admin review.');
-      document.getElementById('incidentModal').close();
+      const rawSev = document.getElementById('incSeverity').value;
+      const sev = rawSev === 'OTHER' ? (document.getElementById('incSeverityOther')?.value?.trim() || 'MODERATE') : rawSev;
+      const res = await fetch('/api/incharge/incident-report', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          warehouse_id: defaultWarehouseId,
+          severity: sev,
+          title: document.getElementById('incTitle').value.trim(),
+          observation_notes: document.getElementById('incNotes').value.trim(),
+          police_alert_dispatched: sev.toUpperCase() === 'CRITICAL'
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'Incident logged and flagged for Admin review.');
+        document.getElementById('incidentModal').close();
+        document.getElementById('incidentForm').reset();
+      } else {
+        showToast(data.detail || 'Failed to log incident.', true);
+      }
     }
 
     function triggerPoliceAlert() {

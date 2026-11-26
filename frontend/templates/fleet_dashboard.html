@@ -330,19 +330,24 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="earning_total_freight">Total Freight Billed</span>
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="earning_total_freight">Total Trip Earnings</span>
               <h3 class="text-2xl font-black text-navy mt-1" id="earnGrossTotal">Rs. 0</h3>
-              <p class="text-[11px] text-slate-400 mt-1" data-i18n="earning_gross_sub">Billed across completed deliveries</p>
+              <p class="text-[11px] text-slate-400 mt-1" data-i18n="earning_gross_sub">Agreed trip fares collected directly (Zero Freight VAT)</p>
             </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <span class="text-xs font-semibold text-amber-600 uppercase tracking-wider" data-i18n="earning_platform_fee">KWDC Logistics Margin (10%)</span>
+            <div class="bg-white p-5 rounded-2xl border border-amber-200 bg-amber-50/40 shadow-sm">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-semibold text-amber-700 uppercase tracking-wider" data-i18n="earning_platform_fee">Platform Commission Payable (Due to KTM-WDC)</span>
+              </div>
               <h3 class="text-2xl font-black text-amber-600 mt-1" id="earnPlatformTotal">Rs. 0</h3>
-              <p class="text-[11px] text-slate-400 mt-1" data-i18n="earning_margin_sub">Platform brokerage & telemetry</p>
+              <div class="mt-1 flex items-center justify-between gap-2">
+                <p class="text-[11px] text-slate-500" data-i18n="earning_margin_sub">Due to settle later (Settled: <strong id="earnCommissionSettled">Rs. 0</strong>)</p>
+                <button type="button" onclick="settleKwdcCommissionAll()" class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-600 hover:bg-amber-700 text-white">Mark Paid</button>
+              </div>
             </div>
             <div class="bg-white p-5 rounded-2xl border border-emerald-200 bg-emerald-50/50 shadow-sm">
-              <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider" data-i18n="earning_net_payout">Net Fleet Settlement</span>
+              <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider" data-i18n="earning_net_payout">Net Retained Earnings</span>
               <h3 class="text-2xl font-black text-emerald-700 mt-1" id="earnNetTotal">Rs. 0</h3>
-              <p class="text-[11px] text-emerald-600 mt-1" data-i18n="earning_payout_sub">ConnectIPS direct bank transfer</p>
+              <p class="text-[11px] text-emerald-600 mt-1" data-i18n="earning_payout_sub">Take-home profit after KTM-WDC commission</p>
             </div>
           </div>
 
@@ -1439,7 +1444,10 @@
           return;
         }
 
-        list.innerHTML = jobs.map(j => `
+        list.innerHTML = jobs.map(j => {
+          const st = String(j.status || '').toUpperCase();
+          const tripFare = Number(j.agreed_fare_npr || j.client_offered_fare_npr || j.gross_fare_npr || 0);
+          return `
           <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
             <div>
               <div class="flex items-start justify-between gap-3 mb-2">
@@ -1447,8 +1455,8 @@
                   <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">${escapeHtml(j.order_number)}</span>
                   <h4 class="font-bold text-navy text-sm mt-1.5">${escapeHtml(j.cargo_description)}</h4>
                 </div>
-                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${j.status === 'delivered' ? 'bg-emerald-100 text-emerald-800' : (j.status === 'in_transit' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800')} uppercase font-mono">
-                  ${j.status.replace('_', ' ')}
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${st === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : (st === 'IN_TRANSIT' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800')} uppercase font-mono">
+                  ${st.replace(/_/g, ' ')}
                 </span>
               </div>
 
@@ -1480,36 +1488,36 @@
 
               <!-- Driver & Vehicle Details -->
               <div class="mt-2.5 p-2 rounded-lg bg-slate-50 border border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-600">
-                <span>Cab: <strong class="text-navy">${escapeHtml(j.vehicle_plate || 'Assigned')}</strong></span>
-                <span>Driver: <strong class="text-navy">${escapeHtml(j.driver_name || 'Assigned Driver')}</strong></span>
+                <span>Cab: <strong class="text-navy">${escapeHtml(j.vehicle_plate || (st === 'REQUESTED' ? 'Open Marketplace' : 'Assigned'))}</strong></span>
+                <span>Driver: <strong class="text-navy">${escapeHtml(j.driver_name || (st === 'REQUESTED' ? 'Available for Crew' : 'Assigned Driver'))}</strong></span>
                 ${j.delivery_otp ? `<span class="bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-bold">Consignee OTP: ${escapeHtml(j.delivery_otp)}</span>` : ''}
               </div>
             </div>
 
             <div class="mt-4 pt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
               <div>
-                <span class="text-[10px] text-slate-400 font-mono">Client Offer / Net Settlement:</span>
+                <span class="text-[10px] text-slate-400 font-mono">Agreed Trip Fare (No VAT) / Net Retained:</span>
                 <p class="text-base font-black text-emerald-700 font-mono">
-                  Rs. ${Number(j.client_offered_fare_npr || j.gross_fare_npr).toLocaleString('en-IN')}
-                  <span class="text-xs text-slate-400 font-normal font-sans">(Net: Rs. ${Number(j.net_fleet_earnings_npr).toLocaleString('en-IN')})</span>
+                  Rs. ${tripFare.toLocaleString('en-IN')}
+                  <span class="text-xs text-slate-500 font-normal font-sans">(Due to KTM-WDC: Rs. ${Number(j.kwdc_margin_npr || 0).toLocaleString('en-IN')} &bull; Net: Rs. ${Number(j.net_fleet_earnings_npr || 0).toLocaleString('en-IN')})</span>
                 </p>
                 ${j.benchmark_fare_npr ? `<span class="text-[10px] text-slate-400 font-mono">Benchmark: Rs. ${Number(j.benchmark_fare_npr).toLocaleString('en-IN')}</span>` : ''}
               </div>
 
               <div class="flex flex-wrap items-center gap-2">
-                ${j.status === 'requested' ? `
+                ${st === 'REQUESTED' ? `
                   ${j.my_counter_offer ? `
                     <span class="px-2.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-700 border border-amber-300 font-mono text-xs font-bold flex items-center gap-1">
                       <i data-lucide="clock" class="w-3.5 h-3.5"></i> Offered: Rs. ${Number(j.my_counter_offer.offered_fare_npr).toLocaleString('en-IN')} (${escapeHtml(j.my_counter_offer.status)})
                     </span>
                   ` : ''}
                   <button onclick="acceptFreightJob(${j.id})" class="px-3.5 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
-                    <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Accept at Rs. ${Number(j.client_offered_fare_npr || j.gross_fare_npr).toLocaleString('en-IN')}
+                    <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400"></i> Accept at Rs. ${tripFare.toLocaleString('en-IN')}
                   </button>
-                  <button onclick="openCounterOfferModal(${j.id}, '${escapeHtml(j.order_number)}', ${j.client_offered_fare_npr || j.gross_fare_npr}, ${j.benchmark_fare_npr || j.gross_fare_npr})" class="px-3.5 py-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-black text-xs shadow-sm transition flex items-center gap-1.5">
+                  <button onclick="openCounterOfferModal(${j.id}, '${escapeHtml(j.order_number)}', ${tripFare}, ${j.benchmark_fare_npr || tripFare})" class="px-3.5 py-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-black text-xs shadow-sm transition flex items-center gap-1.5">
                     <i data-lucide="handshake" class="w-3.5 h-3.5"></i> ${j.my_counter_offer ? 'Revise Offer' : 'Counter-Offer'}
                   </button>
-                ` : (j.status === 'in_transit' || j.status === 'assigned' ? `
+                ` : ((st === 'IN_TRANSIT' || st === 'ASSIGNED' || st === 'PICKUP_IN_PROGRESS') ? `
                   <button onclick="openBreakdownModal(${j.id}, '${escapeHtml(j.order_number)}', '${escapeHtml(j.pickup_address)}', '${escapeHtml(j.delivery_address)}')" class="px-3 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs shadow-sm transition flex items-center gap-1.5" title="Vehicle Breakdown Emergency Reassignment">
                     <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-red-600"></i> Breakdown / Reassign
                   </button>
@@ -1524,7 +1532,8 @@
               </div>
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
 
         lucide.createIcons();
       } catch (err) {
@@ -1754,11 +1763,14 @@
         if (res.ok) data = await res.json();
 
         const gross = Number(data.total_gross_npr ?? 0);
-        const margin = Number(data.kwdc_platform_fee_npr ?? 0);
+        const due = Number(data.commission_due_to_kwdc_npr ?? data.kwdc_platform_fee_npr ?? 0);
+        const settled = Number(data.commission_settled_npr ?? 0);
         const net = Number(data.net_fleet_earnings_npr ?? 0);
 
         document.getElementById('earnGrossTotal').textContent = 'Rs. ' + gross.toLocaleString('en-IN');
-        document.getElementById('earnPlatformTotal').textContent = 'Rs. ' + margin.toLocaleString('en-IN');
+        document.getElementById('earnPlatformTotal').textContent = 'Rs. ' + due.toLocaleString('en-IN');
+        const settledEl = document.getElementById('earnCommissionSettled');
+        if (settledEl) settledEl.textContent = 'Rs. ' + settled.toLocaleString('en-IN');
         document.getElementById('earnNetTotal').textContent = 'Rs. ' + net.toLocaleString('en-IN');
         document.getElementById('hudEarnings').textContent = 'Rs. ' + net.toLocaleString('en-IN');
 
@@ -1785,6 +1797,22 @@
         `).join('');
       } catch (err) {
         console.error(err);
+      }
+    }
+
+    async function settleKwdcCommissionAll() {
+      if (!confirm('Mark all pending KTM-WDC platform commission dues as settled?')) return;
+      try {
+        const res = await fetch('/api/fleet/commission/settle', { method: 'POST', headers: getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Commission settlement recorded.');
+          loadFleetEarnings();
+        } else {
+          showToast(formatToastMessage(data.detail), true);
+        }
+      } catch (err) {
+        showToast('Error recording commission settlement.', true);
       }
     }
 
