@@ -290,6 +290,163 @@ def test_cloud_storage_uploads_and_supabase_mock():
             db.close()
 
 
+def _create_pending_user(email: str, name: str, phone: str, role: str):
+    db = SessionLocal()
+    try:
+        u = models.User(
+            full_name=name,
+            email=email.lower(),
+            phone_number=phone,
+            hashed_password=get_password_hash("Password@123"),
+            role=models.UserRole(role),
+            is_verified=True,
+            is_active=True,
+            kyc_status=models.KycStatus.PENDING_SUBMISSION,
+        )
+        db.add(u)
+        db.commit()
+        db.refresh(u)
+        uid = u.id
+    finally:
+        db.close()
+    r = client.post("/api/auth/login", json={"email": email.lower(), "password": "Password@123"})
+    assert r.status_code == 200, r.text
+    return uid, {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+def test_individual_driver_kyc_bluebook_and_job_gate():
+    rnd = random.randint(10000, 99999)
+    ind_id, ind_h = _create_pending_user(f"ind_kyc_{rnd}@kwdc.com.np", "Solo Trucker", f"98491{rnd}", "fleet_partner")
+    cli_id, cli_h = _create_verified_user(f"ind_cli_{rnd}@kwdc.com.np", "Cargo Shipper", f"98591{rnd}", "commercial_client")
+    adm_r = client.post("/api/auth/login", json={"email": "admin@kwdc.com.np", "password": "Admin@123"})
+    adm_h = {"Authorization": f"Bearer {adm_r.json()['access_token']}"}
+    order_id = None
+
+    try:
+        # Client creates an open mini_truck dispatch order
+        o_res = client.post(
+            "/api/fleet/dispatch-orders",
+            headers=cli_h,
+            json={
+                "dispatch_mode": "DIRECT_HAUL",
+                "pickup_address": "Kalanki",
+                "pickup_contact_name": "Shipper",
+                "pickup_contact_phone": "9801112233",
+                "destination_address": "Koteshwor",
+                "consignee_name": "Receiver",
+                "consignee_phone": "9802223344",
+                "total_distance_km": 10.0,
+                "cargo_description": f"KYC Gated Order #{rnd}",
+                "required_vehicle_category": "mini_truck",
+                "cargo_weight_kg": 900.0,
+            },
+        )
+        assert o_res.status_code == 200, o_res.text
+        order_id = o_res.json()["order_id"]
+
+        # Switch to INDEPENDENT_OWNER
+        op = client.post("/api/fleet/operator-type", headers=ind_h, json={"operator_type": "INDEPENDENT_OWNER"})
+        assert op.status_code == 200
+
+        # Cannot view dispatch-orders while KYC unverified
+        blocked_board = client.get("/api/fleet/dispatch-orders", headers=ind_h)
+        assert blocked_board.status_code == 403
+
+        # Cannot submit self-driver KYC without Vehicle + Bluebook
+        missing_veh = client.post(
+            "/api/fleet/drivers",
+            headers=ind_h,
+            json={
+                "full_name": "Solo Trucker",
+                "phone_number": f"98491{rnd}",
+                "license_number": f"DL-{rnd}",
+                "citizenship_no": f"CTZ-{rnd}",
+                "id_doc_front_url": "/api/uploads/media/1",
+                "id_doc_back_url": "/api/uploads/media/2",
+                "license_photo_front_url": "/api/uploads/media/3",
+                "is_self_driver": True,
+                "login_pin": "5566",
+            },
+        )
+        assert missing_veh.status_code == 400
+
+        # Submit complete KYC: Driving License + Citizenship + Vehicle Details + Bluebook
+        full_kyc = client.post(
+            "/api/fleet/drivers",
+            headers=ind_h,
+            json={
+                "full_name": "Solo Trucker",
+                "phone_number": f"98491{rnd}",
+                "license_number": f"DL-{rnd}",
+                "citizenship_no": f"CTZ-{rnd}",
+                "id_doc_front_url": "/api/uploads/media/1",
+                "id_doc_back_url": "/api/uploads/media/2",
+                "license_photo_front_url": "/api/uploads/media/3",
+                "is_self_driver": True,
+                "login_pin": "5566",
+                "vehicle_category": "mini_truck",
+                "vehicle_model_name": "Tata Ace Gold",
+                "vehicle_license_plate": f"BA-2-KHA-{rnd}",
+                "bluebook_number": f"BB-{rnd}",
+                "bluebook_photo_url": "/api/uploads/media/4",
+                "payload_capacity_kg": 1500.0,
+            },
+        )
+        assert full_kyc.status_code == 200, full_kyc.text
+        assert full_kyc.json()["kyc_status"] == "UNDER_REVIEW"
+
+        # Log into Driver Cab App -> available-jobs MUST remain locked until SuperAdmin verifies KYC
+        d_login = client.post("/api/fleet/driver/login", json={"phone_number": f"98491{rnd}", "pin": "5566"})
+        assert d_login.status_code == 200, d_login.text
+        d_h = {"Authorization": f"Bearer {d_login.json()['access_token']}"}
+
+        locked_jobs = client.get("/api/fleet/driver/available-jobs", headers=d_h)
+        assert locked_jobs.status_code == 200
+        assert locked_jobs.json()["can_bid"] is False
+        assert locked_jobs.json()["kyc_required"] is True
+        assert locked_jobs.json()["jobs"] == []
+        assert client.post(f"/api/fleet/driver/jobs/{order_id}/accept", headers=d_h).status_code == 403
+
+        # SuperAdmin reviews full dossier (License + Vehicle + Bluebook) and Approves KYC
+        dossier = client.get(f"/api/admin/users/{ind_id}/kyc", headers=adm_h)
+        assert dossier.status_code == 200, dossier.text
+        dj = dossier.json()
+        assert len(dj["vehicles"]) == 1 and dj["vehicles"][0]["bluebook_photo_url"] == "/api/uploads/media/4"
+        assert len(dj["drivers"]) == 1 and dj["drivers"][0]["license_photo_front_url"] == "/api/uploads/media/3"
+
+        ver = client.post(
+            f"/api/admin/users/{ind_id}/kyc-verify",
+            headers=adm_h,
+            json={"kyc_status": "VERIFIED", "admin_notes": "License & Bluebook verified"},
+        )
+        assert ver.status_code == 200
+
+        # Now BOTH Fleet Dispatch Board & Driver Cab Available Jobs UNLOCK
+        ok_board = client.get("/api/fleet/dispatch-orders", headers=ind_h)
+        assert ok_board.status_code == 200
+        assert any(o["id"] == order_id for o in ok_board.json())
+
+        unlocked_jobs = client.get("/api/fleet/driver/available-jobs", headers=d_h)
+        assert unlocked_jobs.status_code == 200
+        assert unlocked_jobs.json()["can_bid"] is True
+        assert any(j["id"] == order_id for j in unlocked_jobs.json()["jobs"])
+    finally:
+        db = SessionLocal()
+        try:
+            if order_id:
+                db.query(models.DeliveryStop).filter(models.DeliveryStop.dispatch_order_id == order_id).delete()
+                db.query(models.DispatchOrder).filter(models.DispatchOrder.id == order_id).delete()
+            db.query(models.Driver).filter(models.Driver.fleet_partner_id == ind_id).delete()
+            db.query(models.Vehicle).filter(models.Vehicle.fleet_partner_id == ind_id).delete()
+            db.query(models.UserKycProfile).filter(models.UserKycProfile.user_id == ind_id).delete()
+            db.query(models.User).filter(models.User.id.in_([ind_id, cli_id])).delete(synchronize_session=False)
+            db.commit()
+        finally:
+            db.close()
+
+
 if __name__ == "__main__":
     test_cloud_storage_uploads_and_supabase_mock()
     print("[PASS] Cloud Storage (Photo, Video, KYC PDF, Packing List) & Twilio SMS tests")
+    test_individual_driver_kyc_bluebook_and_job_gate()
+    print("[PASS] Individual Driver KYC (License + Vehicle + Bluebook) & Job Visibility Gate tests")

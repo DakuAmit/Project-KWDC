@@ -385,21 +385,23 @@
                   <div>
                     <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_front">Citizenship Front (Photo / PDF) *</label>
                     <div class="flex gap-1.5">
-                      <input type="text" id="ownerCtzFront" required placeholder="https://... or upload below" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                      <input type="text" id="ownerCtzFront" required placeholder="https://... or upload below" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white" oninput="renderOwnerFilePreview('ownerCtzFront')">
                       <label class="px-3 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
                         Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleOwnerDocUpload(this, 'ownerCtzFront', 'KYC_DOCUMENT')">
                       </label>
                     </div>
+                    <div id="ownerCtzFront_preview" class="mt-1.5"></div>
                   </div>
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_back">Citizenship Back (Photo / PDF) *</label>
                   <div class="flex gap-1.5">
-                    <input type="text" id="ownerCtzBack" required placeholder="https://... or upload below" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                    <input type="text" id="ownerCtzBack" required placeholder="https://... or upload below" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white" oninput="renderOwnerFilePreview('ownerCtzBack')">
                     <label class="px-3 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
                       Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleOwnerDocUpload(this, 'ownerCtzBack', 'KYC_DOCUMENT')">
                     </label>
                   </div>
+                  <div id="ownerCtzBack_preview" class="mt-1.5"></div>
                 </div>
               </div>
 
@@ -458,11 +460,12 @@
                 <div>
                   <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_bank_proof">Cheque Leaf / Account Statement Proof (Photo / PDF) *</label>
                   <div class="flex gap-1.5">
-                    <input type="text" id="ownerBankProof" required placeholder="e.g. CHQ-LEAF-PROOF-2083 or upload" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                    <input type="text" id="ownerBankProof" required placeholder="e.g. CHQ-LEAF-PROOF-2083 or upload" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white" oninput="renderOwnerFilePreview('ownerBankProof')">
                     <label class="px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
                       Upload Proof <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleOwnerDocUpload(this, 'ownerBankProof', 'KYC_DOCUMENT')">
                     </label>
                   </div>
+                  <div id="ownerBankProof_preview" class="mt-1.5"></div>
                   <p class="text-[10px] text-slate-400 mt-1">Upload crossed cheque photo or bank statement PDF directly to Cloud Storage.</p>
                 </div>
               </div>
@@ -1223,13 +1226,13 @@
         if (data.profile) {
           const p = data.profile;
           if (p.citizenship_number) document.getElementById('ownerCtzNo').value = p.citizenship_number;
-          if (p.citizenship_front_url) document.getElementById('ownerCtzFront').value = p.citizenship_front_url;
-          if (p.citizenship_back_url) document.getElementById('ownerCtzBack').value = p.citizenship_back_url;
+          if (p.citizenship_front_url) { document.getElementById('ownerCtzFront').value = p.citizenship_front_url; renderOwnerFilePreview('ownerCtzFront'); }
+          if (p.citizenship_back_url) { document.getElementById('ownerCtzBack').value = p.citizenship_back_url; renderOwnerFilePreview('ownerCtzBack'); }
           if (p.bank_name) document.getElementById('ownerBankName').value = p.bank_name;
           if (p.bank_account_name) document.getElementById('ownerAccountName').value = p.bank_account_name;
           if (p.bank_account_number) document.getElementById('ownerAccountNo').value = p.bank_account_number;
           if (p.bank_branch) document.getElementById('ownerBranch').value = p.bank_branch;
-          if (p.bank_proof_doc_url) document.getElementById('ownerBankProof').value = p.bank_proof_doc_url;
+          if (p.bank_proof_doc_url) { document.getElementById('ownerBankProof').value = p.bank_proof_doc_url; renderOwnerFilePreview('ownerBankProof'); }
 
           if (kycStatus === 'VERIFIED') {
             const btn = document.getElementById('btnSubmitOwnerKyc');
@@ -1825,6 +1828,15 @@
       return data.url;
     }
 
+    function renderOwnerFilePreview(inputId) {
+      const box = document.getElementById(inputId + '_preview');
+      const val = (document.getElementById(inputId)?.value || '').trim();
+      if (!box) return;
+      if (!val || (!val.startsWith('/') && !/^https?:\/\//i.test(val))) { box.innerHTML = ''; return; }
+      const s = escapeHtml(val);
+      box.innerHTML = `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200"><img src="${s}" onerror="this.style.display='none'" class="w-16 h-12 object-cover rounded-lg border bg-white"><a href="${s}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-sky-700 underline truncate">View Uploaded Document ↗</a></div>`;
+    }
+
     async function handleOwnerDocUpload(inputEl, targetInputId, category) {
       const file = inputEl.files && inputEl.files[0];
       if (!file) return;
@@ -1832,6 +1844,7 @@
       try {
         const url = await uploadKwdcFile(file, category);
         document.getElementById(targetInputId).value = url;
+        renderOwnerFilePreview(targetInputId);
         showToast(`Uploaded ${file.name} to Cloud Storage!`);
       } catch (err) {
         showToast(err.message || 'Upload failed', true);

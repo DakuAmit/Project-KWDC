@@ -63,7 +63,7 @@ def test_feedback_fixes():
     assert earn_res["completed_trips_count"] == 0
     assert earn_res["settlements"] == []
 
-    # Submit complete Independent Driver KYC (multi-category, Citizenship Front/Back, Standby optional, PIN)
+    # Submit complete Independent Driver KYC (Driving License + Citizenship Front/Back + Vehicle + Bluebook + PIN)
     drv_res = client.post("/api/fleet/drivers", headers=ind_hdrs, json={
         "full_name": "Pawan Test Driver",
         "phone_number": f"+977-9864{rand_id}",
@@ -78,6 +78,12 @@ def test_feedback_fixes():
         "id_doc_back_url": "https://example.com/ctz-back.jpg",
         "license_photo_front_url": "https://example.com/lic-front.jpg",
         "license_photo_back_url": "https://example.com/lic-back.jpg",
+        "vehicle_category": "MINI_TRUCK",
+        "vehicle_model_name": "Tata Ace Gold",
+        "vehicle_license_plate": f"Ba 2 Cha {rand_id}",
+        "bluebook_number": f"BB-IND-{rand_id}",
+        "bluebook_photo_url": "https://example.com/bluebook.jpg",
+        "payload_capacity_kg": 1500,
         "blood_group": "O+",
         "emergency_contact_name": "Suman Pandey",
         "emergency_contact_phone": "+977-9841000999",
@@ -112,7 +118,7 @@ def test_feedback_fixes():
     assert standby_res.json()["is_standby"] is True
     assert standby_res.json()["id_document_type"] == "NID"
 
-    # 2. Verify Real Client Dispatch Order appears cleanly on Fleet Board (not fake 3 template jobs)
+    # 2. Verify Real Client Dispatch Order appears cleanly on Fleet Board after KYC verification (blocked with 403 while unverified)
     client_hdrs = create_user(f"cli_fb_{rand_id}@kwdc.com.np", "Client Co", f"+977-9855{rand_id}", "commercial_client", verified_kyc=True)
     ord_res = client.post("/api/fleet/dispatch-orders", headers=client_hdrs, json={
         "dispatch_mode": "DIRECT_HAUL",
@@ -128,6 +134,15 @@ def test_feedback_fixes():
         "cargo_weight_kg": 1200.0
     })
     assert ord_res.status_code == 200, ord_res.text
+    blocked_jobs = client.get("/api/fleet/dispatch-orders", headers=ind_hdrs)
+    assert blocked_jobs.status_code == 403, f"Unverified independent driver must not view jobs: {blocked_jobs.text}"
+
+    # Admin verifies Individual Driver KYC -> dispatch board unlocks
+    admin_hdrs = create_user(f"adm_fb_{rand_id}@kwdc.com.np", "Admin FB", f"+977-9801{rand_id}", "superadmin", verified_kyc=True)
+    ind_uid = client.get("/api/auth/me", headers=ind_hdrs).json()["id"]
+    ver_res = client.post(f"/api/admin/users/{ind_uid}/kyc-verify", headers=admin_hdrs, json={"kyc_status": "VERIFIED", "admin_notes": "License & Bluebook OK"})
+    assert ver_res.status_code == 200, ver_res.text
+
     jobs = client.get("/api/fleet/dispatch-orders", headers=ind_hdrs).json()
     assert not any(j.get("order_number") == "FRT-2083-0012" for j in jobs), "Fake template jobs must not appear!"
     assert any(f"Real Feedback Test Cargo #{rand_id}" in j.get("cargo_description", "") for j in jobs)

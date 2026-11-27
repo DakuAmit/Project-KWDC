@@ -679,7 +679,12 @@
         if (!res.ok) return;
         const data = await res.json();
         if (!data.can_bid) {
-          box.classList.add('hidden');
+          if (data.kyc_required) {
+            box.classList.remove('hidden');
+            list.innerHTML = `<div class="p-4 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-xs text-amber-200 font-semibold">${data.message || 'KYC Verification Required before viewing available jobs.'}</div>`;
+          } else {
+            box.classList.add('hidden');
+          }
           return;
         }
         box.classList.remove('hidden');

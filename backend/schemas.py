@@ -267,6 +267,7 @@ class VehicleCreate(BaseModel):
     model_name: str
     license_plate: str
     bluebook_number: str
+    bluebook_photo_url: Optional[str] = None
     payload_capacity_kg: float
     volume_capacity_cft: float = 0.0
 
@@ -293,6 +294,13 @@ class DriverCreate(BaseModel):
     is_self_driver: Optional[bool] = False
     assigned_vehicle_id: Optional[int] = None
     login_pin: Optional[str] = "1234"
+    # Optional inline vehicle + Bluebook details for Individual Driver KYC
+    vehicle_category: Optional[str] = None
+    vehicle_model_name: Optional[str] = None
+    vehicle_license_plate: Optional[str] = None
+    bluebook_number: Optional[str] = None
+    bluebook_photo_url: Optional[str] = None
+    payload_capacity_kg: Optional[float] = None
 
     @model_validator(mode="after")
     def normalize_driver_fields(self):

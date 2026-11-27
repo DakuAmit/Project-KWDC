@@ -20,7 +20,7 @@ from backend.database import get_db
 from backend.models import (
     Vehicle, Driver, DispatchOrder, DeliveryStop, User, UserRole,
     VehicleCategory, FreightStatus, TaxInvoice, PaymentStatus, KycStatus,
-    FreightCounterOffer, PlatformConfig, DriverDismissedOrder
+    FreightCounterOffer, PlatformConfig, DriverDismissedOrder, UserKycProfile
 )
 from backend.schemas import (
     VehicleCreate, DriverCreate, ClientDispatchOrderCreate,
@@ -89,15 +89,16 @@ def register_vehicle(
         model_name=payload.model_name,
         license_plate=payload.license_plate,
         bluebook_number=payload.bluebook_number,
+        bluebook_photo_url=(payload.bluebook_photo_url or "").strip() or None,
         payload_capacity_kg=payload.payload_capacity_kg,
         volume_capacity_cft=payload.volume_capacity_cft,
-        is_verified=True,
+        is_verified=(current_user.kyc_status == KycStatus.VERIFIED),
         is_available=True
     )
     db.add(vehicle)
     db.commit()
     db.refresh(vehicle)
-    return {"message": "Vehicle registered with verified Bluebook.", "vehicle_id": vehicle.id}
+    return {"message": "Vehicle & Bluebook registered.", "vehicle_id": vehicle.id, "bluebook_photo_url": vehicle.bluebook_photo_url}
 
 @router.get("/operator-profile")
 def get_operator_profile(
@@ -182,6 +183,7 @@ def get_my_fleet(
                 "model_name": v.model_name,
                 "license_plate": v.license_plate,
                 "bluebook_number": v.bluebook_number,
+                "bluebook_photo_url": getattr(v, 'bluebook_photo_url', None),
                 "payload_capacity_kg": v.payload_capacity_kg,
                 "is_available": v.is_available,
                 "current_lat": v.current_lat,
@@ -260,9 +262,54 @@ def register_driver(
     if lic_conflict and (not existing_self or lic_conflict.id != existing_self.id):
         raise HTTPException(status_code=400, detail="A driver with this driving license number is already registered.")
 
+    # Handle inline Vehicle + Bluebook registration for Individual Drivers
+    assigned_veh_id = payload.assigned_vehicle_id
+    inline_plate = (payload.vehicle_license_plate or "").strip()
+    inline_bluebook = (payload.bluebook_number or "").strip()
+    if inline_plate and inline_bluebook:
+        existing_veh = db.query(Vehicle).filter(Vehicle.license_plate == inline_plate).first()
+        if existing_veh and existing_veh.fleet_partner_id != current_user.id:
+            raise HTTPException(status_code=400, detail="Vehicle with this license plate is already registered.")
+        if existing_veh:
+            existing_veh.bluebook_number = inline_bluebook
+            if payload.bluebook_photo_url:
+                existing_veh.bluebook_photo_url = payload.bluebook_photo_url.strip()
+            if payload.vehicle_model_name:
+                existing_veh.model_name = payload.vehicle_model_name.strip()
+            assigned_veh_id = existing_veh.id
+        else:
+            veh_cat = normalize_vehicle_category(payload.vehicle_category or VehicleCategory.MINI_TRUCK)
+            new_veh = Vehicle(
+                fleet_partner_id=current_user.id,
+                category=veh_cat,
+                model_name=(payload.vehicle_model_name or "Commercial Vehicle").strip(),
+                license_plate=inline_plate,
+                bluebook_number=inline_bluebook,
+                bluebook_photo_url=(payload.bluebook_photo_url or "").strip() or None,
+                payload_capacity_kg=float(payload.payload_capacity_kg or 1500.0),
+                is_verified=(current_user.kyc_status == KycStatus.VERIFIED),
+                is_available=True,
+            )
+            db.add(new_veh)
+            db.commit()
+            db.refresh(new_veh)
+            assigned_veh_id = new_veh.id
+
+    is_ind_mode = (getattr(current_user, "fleet_operator_type", None) == "INDEPENDENT_OWNER") or bool(payload.is_self_driver)
+    if is_ind_mode and current_user.kyc_status != KycStatus.VERIFIED:
+        has_veh = assigned_veh_id or (db.query(Vehicle).filter(Vehicle.fleet_partner_id == current_user.id).count() > 0)
+        if not has_veh:
+            raise HTTPException(
+                status_code=400,
+                detail="Individual Driver KYC requires Driving License, Vehicle details (plate/model/category), and Nepal Bluebook number/document."
+            )
+
+    owner_is_verified = (current_user.kyc_status == KycStatus.VERIFIED)
+    target_kyc_status = KycStatus.VERIFIED if owner_is_verified else KycStatus.UNDER_REVIEW
+
     if existing_self:
         driver = existing_self
-        driver.assigned_vehicle_id = payload.assigned_vehicle_id
+        driver.assigned_vehicle_id = assigned_veh_id
         driver.full_name = payload.full_name.strip()
         driver.license_number = lic_num
         driver.license_category = cat_str
@@ -280,14 +327,14 @@ def register_driver(
         driver.has_clean_traffic_record = payload.has_clean_traffic_record if payload.has_clean_traffic_record is not None else True
         driver.is_standby = standby_flag
         driver.login_pin = pin_val
-        driver.kyc_status = KycStatus.VERIFIED
+        driver.kyc_status = target_kyc_status
         driver.is_active = True
         db.commit()
         db.refresh(driver)
     else:
         driver = Driver(
             fleet_partner_id=current_user.id,
-            assigned_vehicle_id=payload.assigned_vehicle_id,
+            assigned_vehicle_id=assigned_veh_id,
             full_name=payload.full_name.strip(),
             phone_number=payload.phone_number.strip(),
             license_number=lic_num,
@@ -306,12 +353,28 @@ def register_driver(
             has_clean_traffic_record=payload.has_clean_traffic_record if payload.has_clean_traffic_record is not None else True,
             is_standby=standby_flag,
             login_pin=pin_val,
-            kyc_status=KycStatus.VERIFIED,
+            kyc_status=target_kyc_status,
             is_active=True
         )
         db.add(driver)
         db.commit()
         db.refresh(driver)
+
+    if is_ind_mode and not owner_is_verified:
+        profile = db.query(UserKycProfile).filter(UserKycProfile.user_id == current_user.id).first()
+        if not profile:
+            profile = UserKycProfile(user_id=current_user.id, role=current_user.role.value, kyc_status=KycStatus.UNDER_REVIEW)
+            db.add(profile)
+        profile.citizenship_number = id_num
+        profile.citizenship_front_url = id_front
+        profile.citizenship_back_url = id_back
+        profile.fleet_operator_reg_no = f"LIC:{lic_num}" + (f" | PLATE:{inline_plate}" if inline_plate else "")
+        if inline_bluebook:
+            profile.fleet_operator_pan_vat = f"BB:{inline_bluebook}"
+        profile.fleet_operator_doc_url = payload.bluebook_photo_url or lic_front
+        profile.kyc_status = KycStatus.UNDER_REVIEW
+        current_user.kyc_status = KycStatus.UNDER_REVIEW
+        db.commit()
 
     return {
         "message": f"Driver '{driver.full_name}' KYC saved and PIN {driver.login_pin} activated.",
@@ -394,8 +457,15 @@ def get_dispatch_orders(
 ):
     """
     Returns active and available freight dispatch orders for fleet partners.
-    Includes warehouse cargo dispatches across Kathmandu Valley corridors.
+    Individual Drivers (INDEPENDENT_OWNER) cannot view open available jobs until KYC
+    (Driving License + Vehicle + Bluebook) is verified by SuperAdmin.
     """
+    if getattr(current_user, "fleet_operator_type", None) == "INDEPENDENT_OWNER" and current_user.kyc_status != KycStatus.VERIFIED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="KYC Verification Required: Individual Drivers must submit Driving License, Citizenship/NID, Vehicle details & Bluebook and receive SuperAdmin approval before viewing available jobs."
+        )
+
     orders = db.query(DispatchOrder).filter(
         (DispatchOrder.fleet_partner_id == current_user.id) |
         (DispatchOrder.status == FreightStatus.REQUESTED)
@@ -1058,7 +1128,7 @@ def get_driver_available_jobs(
     """
     Dual Driver Logic:
     - INDEPENDENT_OWNER: Sees open REQUESTED orders matching their assigned vehicle category
-      (excluding orders they declined), and can Accept / Counter-Offer / Decline.
+      ONLY after SuperAdmin verifies KYC (Driving License + ID + Vehicle + Bluebook).
     - COMMERCIAL_3PL: Does NOT see marketplace bidding jobs; executes runs assigned by their Logistics Manager.
     """
     driver_mode = _get_driver_mode(current_driver)
@@ -1072,6 +1142,20 @@ def get_driver_available_jobs(
             "vehicle_category": veh_cat,
             "jobs": [],
             "message": "Logistics-associated driver mode: your Fleet Manager assigns trips to your cab."
+        }
+
+    owner_user = current_driver.fleet_partner
+    owner_verified = bool(owner_user and owner_user.kyc_status == KycStatus.VERIFIED)
+    drv_verified = (current_driver.kyc_status == KycStatus.VERIFIED)
+    if not (owner_verified and drv_verified):
+        return {
+            "driver_mode": driver_mode,
+            "can_bid": False,
+            "kyc_required": True,
+            "kyc_status": owner_user.kyc_status.value if owner_user else "PENDING_SUBMISSION",
+            "vehicle_category": veh_cat,
+            "jobs": [],
+            "message": "Available jobs locked: Complete Driving License, ID & Vehicle Bluebook KYC and wait for SuperAdmin verification."
         }
 
     dismissed_ids = {
@@ -1135,6 +1219,12 @@ def _require_independent_driver(driver: Driver):
         raise HTTPException(
             status_code=403,
             detail="Logistics-associated drivers cannot claim or bid on marketplace orders independently. Only jobs assigned by your Fleet Manager appear here."
+        )
+    owner_verified = bool(driver.fleet_partner and driver.fleet_partner.kyc_status == KycStatus.VERIFIED)
+    if not (owner_verified and driver.kyc_status == KycStatus.VERIFIED):
+        raise HTTPException(
+            status_code=403,
+            detail="KYC Verification Required: Individual Driver KYC (Driving License + Vehicle + Bluebook) must be verified by SuperAdmin first."
         )
 
 

@@ -459,6 +459,14 @@
           <input type="number" id="vehPayload" required min="100" value="5000" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
         </div>
       </div>
+      <div>
+        <label class="block text-xs font-bold text-navy mb-1">Bluebook Document (Photo / PDF)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="vehBluebookPhoto" placeholder="https://... or upload Bluebook scan" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono" oninput="renderFleetFilePreview('vehBluebookPhoto')">
+          <label class="px-3 py-2 rounded-xl bg-navy text-white text-xs font-bold cursor-pointer shrink-0">Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'vehBluebookPhoto')"></label>
+        </div>
+        <div id="vehBluebookPhoto_preview" class="mt-1.5"></div>
+      </div>
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
         <button type="button" onclick="document.getElementById('vehicleModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs" data-i18n="btn_cancel">Cancel</button>
         <button type="submit" class="px-4 py-2 rounded-xl bg-navy text-white font-bold text-xs shadow flex items-center gap-1.5">
@@ -573,16 +581,18 @@
           <div>
             <label id="drvDocFrontLabel" class="block text-[10px] font-bold text-slate-600 mb-1">Citizenship Front Side (Photo / PDF) *</label>
             <div class="flex gap-1">
-              <input type="text" id="drvIdFrontPhoto" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+              <input type="text" id="drvIdFrontPhoto" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white" oninput="renderFleetFilePreview('drvIdFrontPhoto')">
               <label class="px-2 py-1.5 rounded-lg bg-navy text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvIdFrontPhoto')"></label>
             </div>
+            <div id="drvIdFrontPhoto_preview" class="mt-1"></div>
           </div>
           <div>
             <label id="drvDocBackLabel" class="block text-[10px] font-bold text-slate-600 mb-1">Citizenship Back Side (Photo / PDF) *</label>
             <div class="flex gap-1">
-              <input type="text" id="drvIdBackPhoto" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+              <input type="text" id="drvIdBackPhoto" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white" oninput="renderFleetFilePreview('drvIdBackPhoto')">
               <label class="px-2 py-1.5 rounded-lg bg-navy text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvIdBackPhoto')"></label>
             </div>
+            <div id="drvIdBackPhoto_preview" class="mt-1"></div>
           </div>
         </div>
       </div>
@@ -594,17 +604,61 @@
           <div>
             <label class="block text-[10px] text-slate-500 mb-0.5">License Front (Photo / PDF) *</label>
             <div class="flex gap-1">
-              <input type="text" id="drvLicensePhotoFront" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+              <input type="text" id="drvLicensePhotoFront" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono" oninput="renderFleetFilePreview('drvLicensePhotoFront')">
               <label class="px-2 py-1.5 rounded-lg bg-navy text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvLicensePhotoFront')"></label>
             </div>
+            <div id="drvLicensePhotoFront_preview" class="mt-1"></div>
           </div>
           <div>
             <label class="block text-[10px] text-slate-500 mb-0.5">License Back (Photo / PDF)</label>
             <div class="flex gap-1">
-              <input type="text" id="drvLicensePhotoBack" placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+              <input type="text" id="drvLicensePhotoBack" placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono" oninput="renderFleetFilePreview('drvLicensePhotoBack')">
               <label class="px-2 py-1.5 rounded-lg bg-navy text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvLicensePhotoBack')"></label>
             </div>
+            <div id="drvLicensePhotoBack_preview" class="mt-1"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Inline Vehicle & Bluebook Section (Mandatory for Individual Drivers) -->
+      <div id="indVehicleSection" class="p-3 bg-indigo-50/70 rounded-xl border border-indigo-200 space-y-2.5">
+        <span class="font-bold text-indigo-950 block text-[11px] uppercase tracking-wider">Vehicle Details &amp; Nepal Bluebook (Mandatory for Individual Driver KYC)</span>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-navy mb-0.5">Vehicle Category</label>
+            <select id="drvIndVehCategory" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs">
+              <option value="mini_truck">Mini Truck / Pickup</option>
+              <option value="heavy_truck">Heavy Truck</option>
+              <option value="container_trailer">Container Trailer</option>
+              <option value="two_wheeler">2-Wheeler Courier</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-navy mb-0.5">Vehicle Model &amp; Year</label>
+            <input type="text" id="drvIndVehModel" placeholder="e.g. Tata Ace HT / Bolero" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-navy mb-0.5">Number Plate *</label>
+            <input type="text" id="drvIndVehPlate" placeholder="Ba 2 Cha 4411" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white uppercase">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-navy mb-0.5">Bluebook Number *</label>
+            <input type="text" id="drvIndBluebookNo" placeholder="BB-KTM-8821" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-navy mb-0.5">Payload (KG)</label>
+            <input type="number" id="drvIndPayload" value="1500" min="20" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-navy mb-0.5">Bluebook Scan / Photo (PDF / Image) *</label>
+          <div class="flex gap-1">
+            <input type="text" id="drvIndBluebookPhoto" placeholder="https://... or upload Bluebook" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white" oninput="renderFleetFilePreview('drvIndBluebookPhoto')">
+            <label class="px-2 py-1.5 rounded-lg bg-indigo-700 text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvIndBluebookPhoto')"></label>
+          </div>
+          <div id="drvIndBluebookPhoto_preview" class="mt-1"></div>
         </div>
       </div>
 
@@ -1473,6 +1527,19 @@
         const res = await fetch('/api/fleet/dispatch-orders', { headers: getAuthHeaders() });
         if (handleApiAuthError(res)) return;
         const list = document.getElementById('dispatchJobsList');
+        if (res.status === 403) {
+          const err = await res.json().catch(() => ({}));
+          document.getElementById('badgeJobCount').textContent = '0';
+          document.getElementById('hudActiveJobs').textContent = '0';
+          list.innerHTML = `
+            <div class="p-6 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 space-y-2.5 text-xs">
+              <p class="font-bold text-sm">🔒 Available Jobs Locked — KYC Verification Pending</p>
+              <p>${escapeHtml(err.detail || 'Submit Driving License, Citizenship/NID, Vehicle Details & Bluebook for SuperAdmin verification to unlock Available Jobs.')}</p>
+              <button type="button" onclick="openDriverModal(true)" class="px-4 py-2 rounded-xl bg-navy text-white font-bold">Submit / Update Individual Driver + Bluebook KYC</button>
+            </div>
+          `;
+          return;
+        }
         let jobs = [];
         if (res.ok) jobs = await res.json();
 
@@ -1742,6 +1809,7 @@
                 <div class="mt-2 font-mono text-[11px] text-slate-500">
                   <p>Bluebook: <strong>${escapeHtml(v.bluebook_number)}</strong></p>
                   <p>Payload: <strong>${v.payload_capacity_kg} KG</strong></p>
+                  ${v.bluebook_photo_url ? `<a href="${escapeHtml(v.bluebook_photo_url)}" target="_blank" class="inline-block mt-1 text-sky-700 font-bold underline">View Bluebook ↗</a>` : ''}
                 </div>
               </div>
               <div class="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
@@ -1896,6 +1964,15 @@
       }
     }
 
+    function renderFleetFilePreview(inputId) {
+      const box = document.getElementById(inputId + '_preview');
+      const val = (document.getElementById(inputId)?.value || '').trim();
+      if (!box) return;
+      if (!val || (!val.startsWith('/') && !/^https?:\/\//i.test(val))) { box.innerHTML = ''; return; }
+      const s = escapeHtml(val);
+      box.innerHTML = `<div class="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200"><img src="${s}" onerror="this.style.display='none'" class="w-10 h-8 object-cover rounded border"><a href="${s}" target="_blank" class="text-[10px] font-bold text-sky-700 underline truncate">Open Uploaded File ↗</a></div>`;
+    }
+
     async function uploadFleetKycFile(inputEl, targetInputId) {
       const file = inputEl.files && inputEl.files[0];
       if (!file) return;
@@ -1910,6 +1987,7 @@
         const d = await res.json();
         if (!res.ok) throw new Error(d.detail || 'Upload failed');
         document.getElementById(targetInputId).value = d.url;
+        renderFleetFilePreview(targetInputId);
         showToast(`Uploaded ${file.name} to Cloud Storage!`);
       } catch (err) {
         showToast(err.message || 'Upload failed', true);
@@ -2005,6 +2083,7 @@
         model_name: document.getElementById('vehModel').value,
         license_plate: document.getElementById('vehPlate').value,
         bluebook_number: document.getElementById('vehBluebook').value,
+        bluebook_photo_url: document.getElementById('vehBluebookPhoto')?.value?.trim() || undefined,
         payload_capacity_kg: parseFloat(document.getElementById('vehPayload').value)
       };
 
@@ -2083,6 +2162,9 @@
       const effectiveBlood = (rawBlood === 'OTHER') ? (document.getElementById('drvBloodGroupOther')?.value?.trim() || 'Unknown') : rawBlood;
       const isSelf = document.getElementById('drvIsSelfDriver')?.value === 'true';
       const isStandby = Boolean(document.getElementById('drvIsStandby')?.checked);
+      const indPlate = document.getElementById('drvIndVehPlate')?.value?.trim() || '';
+      const indBluebook = document.getElementById('drvIndBluebookNo')?.value?.trim() || '';
+      const indBluebookPhoto = document.getElementById('drvIndBluebookPhoto')?.value?.trim() || '';
 
       const payload = {
         full_name: fullName,
@@ -2106,7 +2188,13 @@
         has_clean_traffic_record: true,
         is_standby: isStandby,
         is_self_driver: isSelf,
-        assigned_vehicle_id: vehId ? parseInt(vehId) : undefined
+        assigned_vehicle_id: vehId ? parseInt(vehId) : undefined,
+        vehicle_category: document.getElementById('drvIndVehCategory')?.value || undefined,
+        vehicle_model_name: document.getElementById('drvIndVehModel')?.value?.trim() || undefined,
+        vehicle_license_plate: indPlate || undefined,
+        bluebook_number: indBluebook || undefined,
+        bluebook_photo_url: indBluebookPhoto || undefined,
+        payload_capacity_kg: parseFloat(document.getElementById('drvIndPayload')?.value || '1500')
       };
 
       try {

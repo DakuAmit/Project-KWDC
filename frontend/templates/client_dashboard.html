@@ -1161,11 +1161,12 @@
       <div>
         <label class="block font-bold text-navy mb-1">Commercial Invoice / Packing List (PDF, XLSX, Photo)</label>
         <div class="flex gap-1.5">
-          <input type="text" id="insInvoiceDocUrl" placeholder="https://... or upload invoice/packing list" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono">
+          <input type="text" id="insInvoiceDocUrl" placeholder="https://... or upload invoice/packing list" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono" oninput="renderClientFilePreview('insInvoiceDocUrl')">
           <label class="px-3 py-2 rounded-lg bg-navy hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
             Upload Doc <input type="file" accept="image/*,.pdf,.csv,.xls,.xlsx,.doc,.docx" class="hidden" onchange="handleClientCloudUpload(this, 'insInvoiceDocUrl', 'INVOICE_PACKING_LIST')">
           </label>
         </div>
+        <div id="insInvoiceDocUrl_preview" class="mt-1.5"></div>
       </div>
 
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
@@ -1288,11 +1289,12 @@
       <div>
         <label class="block font-bold text-navy mb-1">Packing List / Invoice Attachment (PDF / XLSX / CSV / Photo)</label>
         <div class="flex gap-1.5">
-          <input type="text" id="stkPackingListUrl" placeholder="https://... or upload packing list" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <input type="text" id="stkPackingListUrl" placeholder="https://... or upload packing list" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono" oninput="renderClientFilePreview('stkPackingListUrl')">
           <label class="px-3 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
             Upload <input type="file" accept="image/*,.pdf,.csv,.xls,.xlsx,.doc,.docx" class="hidden" onchange="handleClientCloudUpload(this, 'stkPackingListUrl', 'INVOICE_PACKING_LIST')">
           </label>
         </div>
+        <div id="stkPackingListUrl_preview" class="mt-1.5"></div>
       </div>
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
         <button type="button" onclick="document.getElementById('stockEntryModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold">Cancel</button>
@@ -1553,20 +1555,22 @@
       <div>
         <label class="block font-bold text-navy mb-1">Company Reg. Certificate (PDF / Photo / Doc Ref)</label>
         <div class="flex gap-1.5">
-          <input type="text" id="kycRegDoc" placeholder="https://... or upload PDF/image" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <input type="text" id="kycRegDoc" placeholder="https://... or upload PDF/image" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono" oninput="renderClientFilePreview('kycRegDoc')">
           <label class="px-3 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
             Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleClientCloudUpload(this, 'kycRegDoc', 'KYC_DOCUMENT')">
           </label>
         </div>
+        <div id="kycRegDoc_preview" class="mt-1.5"></div>
       </div>
       <div>
         <label class="block font-bold text-navy mb-1">PAN / VAT Certificate (PDF / Photo / Doc Ref)</label>
         <div class="flex gap-1.5">
-          <input type="text" id="kycPanDoc" placeholder="https://... or upload PDF/image" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <input type="text" id="kycPanDoc" placeholder="https://... or upload PDF/image" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono" oninput="renderClientFilePreview('kycPanDoc')">
           <label class="px-3 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
             Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleClientCloudUpload(this, 'kycPanDoc', 'KYC_DOCUMENT')">
           </label>
         </div>
+        <div id="kycPanDoc_preview" class="mt-1.5"></div>
       </div>
       <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
         <button type="button" onclick="document.getElementById('kycModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold">Cancel</button>
@@ -3248,6 +3252,8 @@
             document.getElementById('kycSigName').value = data.profile.authorized_signatory_name || '';
             document.getElementById('kycRegDoc').value = data.profile.company_reg_doc_url || '';
             document.getElementById('kycPanDoc').value = data.profile.company_pan_doc_url || '';
+            renderClientFilePreview('kycRegDoc');
+            renderClientFilePreview('kycPanDoc');
           }
         }
       } catch (e) {}
@@ -3331,6 +3337,15 @@
       document.getElementById('insEstTotal').textContent = 'Rs. ' + total.toLocaleString('en-IN');
     }
 
+    function renderClientFilePreview(inputId) {
+      const box = document.getElementById(inputId + '_preview');
+      const val = (document.getElementById(inputId)?.value || '').trim();
+      if (!box) return;
+      if (!val || (!val.startsWith('/') && !/^https?:\/\//i.test(val))) { box.innerHTML = ''; return; }
+      const s = escapeHtml(val);
+      box.innerHTML = `<div class="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200"><img src="${s}" onerror="this.style.display='none'" class="w-12 h-9 object-cover rounded border"><a href="${s}" target="_blank" class="text-[11px] font-bold text-sky-700 underline truncate">Open Uploaded Document ↗</a></div>`;
+    }
+
     async function handleClientCloudUpload(inputEl, targetInputId, category) {
       const file = inputEl.files && inputEl.files[0];
       if (!file) return;
@@ -3372,6 +3387,7 @@
               if (confRes.ok) {
                 const conf = await confRes.json();
                 document.getElementById(targetInputId).value = conf.url;
+                renderClientFilePreview(targetInputId);
                 showToast(`Uploaded ${file.name} to Cloud Storage!`);
                 return;
               }
@@ -3385,6 +3401,7 @@
         const d = await res.json();
         if (!res.ok) throw new Error(d.detail || 'Upload failed');
         document.getElementById(targetInputId).value = d.url;
+        renderClientFilePreview(targetInputId);
         showToast(`Uploaded ${file.name} successfully!`);
       } catch (err) {
         showToast(err.message || 'Upload error', true);

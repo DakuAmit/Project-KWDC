@@ -2840,23 +2840,63 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
             </div>
           `;
         } else if (role === 'fleet_partner') {
+          const vehHtml = (data.vehicles && data.vehicles.length) ? `
+            <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+              <h5 class="font-bold text-navy text-xs uppercase tracking-wider flex items-center gap-2">
+                <i data-lucide="file-badge" class="w-4 h-4 text-amber-600"></i> Registered Vehicles &amp; Bluebooks (${data.vehicles.length})
+              </h5>
+              ${data.vehicles.map(v => `
+                <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+                  <div class="flex flex-wrap justify-between gap-2 text-xs font-mono">
+                    <strong>${escapeHtml(v.license_plate)} (${escapeHtml(v.model_name)})</strong>
+                    <span class="text-emerald-700 font-bold">Bluebook: ${escapeHtml(v.bluebook_number)}</span>
+                  </div>
+                  ${renderKycDocCard('Bluebook Document', v.bluebook_photo_url, 'text-emerald-700')}
+                </div>
+              `).join('')}
+            </div>
+          ` : '';
+
+          const drvHtml = (data.drivers && data.drivers.length) ? `
+            <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+              <h5 class="font-bold text-navy text-xs uppercase tracking-wider flex items-center gap-2">
+                <i data-lucide="id-card" class="w-4 h-4 text-indigo-600"></i> Driver License &amp; Identity Proofs (${data.drivers.length})
+              </h5>
+              ${data.drivers.map(d => `
+                <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+                  <div class="flex flex-wrap justify-between gap-2 text-xs">
+                    <strong>${escapeHtml(d.full_name)} (${escapeHtml(d.phone_number)})</strong>
+                    <span class="font-mono text-indigo-700 font-bold">License: ${escapeHtml(d.license_number)} &bull; ${escapeHtml(d.citizenship_no || '')}</span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    ${renderKycDocCard('Driving License Front', d.license_photo_front_url, 'text-indigo-700')}
+                    ${renderKycDocCard('Citizenship / NID Front', d.id_doc_front_url, 'text-sky-700')}
+                    ${renderKycDocCard('Citizenship / NID Back', d.id_doc_back_url, 'text-sky-700')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : '';
+
           html = `
             <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
               <h5 class="font-bold text-navy text-xs uppercase tracking-wider flex items-center gap-2">
-                <i data-lucide="truck" class="w-4 h-4 text-sky-600"></i> Fleet Operator &amp; Transport License
+                <i data-lucide="truck" class="w-4 h-4 text-sky-600"></i> Fleet Operator / Individual Driver KYC
               </h5>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span class="text-slate-400 text-[10px] block">Fleet Operator Reg No</span>
+                  <span class="text-slate-400 text-[10px] block">License / Reg No</span>
                   <strong class="font-mono text-navy text-xs">${escapeHtml(p.fleet_operator_reg_no || 'Not Provided')}</strong>
                 </div>
                 <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span class="text-slate-400 text-[10px] block">Operator PAN/VAT</span>
+                  <span class="text-slate-400 text-[10px] block">PAN / Bluebook Ref</span>
                   <strong class="font-mono text-navy text-xs">${escapeHtml(p.fleet_operator_pan_vat || 'Not Provided')}</strong>
                 </div>
               </div>
-              ${renderKycDocCard('Transport Authority Operating Permit', p.fleet_operator_doc_url, 'text-sky-700')}
+              ${renderKycDocCard('Transport Permit / Primary Bluebook Proof', p.fleet_operator_doc_url, 'text-sky-700')}
             </div>
+            ${vehHtml}
+            ${drvHtml}
           `;
         } else {
           html = `

@@ -907,14 +907,47 @@ def get_user_kyc_dossier(
         raise HTTPException(status_code=404, detail="User not found.")
 
     profile = db.query(UserKycProfile).filter(UserKycProfile.user_id == u.id).first()
+    fleet_vehicles = []
+    fleet_drivers = []
+    if u.role == UserRole.FLEET_PARTNER:
+        for v in db.query(Vehicle).filter(Vehicle.fleet_partner_id == u.id).all():
+            fleet_vehicles.append({
+                "id": v.id,
+                "category": v.category.value if hasattr(v.category, "value") else str(v.category),
+                "model_name": v.model_name,
+                "license_plate": v.license_plate,
+                "bluebook_number": v.bluebook_number,
+                "bluebook_photo_url": getattr(v, "bluebook_photo_url", None),
+                "payload_capacity_kg": v.payload_capacity_kg,
+                "is_verified": bool(v.is_verified),
+            })
+        for d in db.query(Driver).filter(Driver.fleet_partner_id == u.id).all():
+            fleet_drivers.append({
+                "id": d.id,
+                "full_name": d.full_name,
+                "phone_number": d.phone_number,
+                "license_number": d.license_number,
+                "license_category": d.license_category,
+                "id_document_type": getattr(d, "id_document_type", "CITIZENSHIP"),
+                "citizenship_no": d.citizenship_no,
+                "license_photo_front_url": getattr(d, "license_photo_front_url", None) or getattr(d, "license_photo_url", None),
+                "license_photo_back_url": getattr(d, "license_photo_back_url", None),
+                "id_doc_front_url": getattr(d, "id_doc_front_url", None) or getattr(d, "citizenship_photo_url", None),
+                "id_doc_back_url": getattr(d, "id_doc_back_url", None),
+                "kyc_status": d.kyc_status.value if hasattr(d.kyc_status, "value") else str(d.kyc_status),
+            })
+
     return {
         "user_id": u.id,
         "full_name": u.full_name,
         "email": u.email,
         "phone_number": u.phone_number,
         "role": u.role.value,
+        "fleet_operator_type": getattr(u, "fleet_operator_type", None),
         "kyc_status": u.kyc_status.value,
         "is_verified": u.is_verified,
+        "vehicles": fleet_vehicles,
+        "drivers": fleet_drivers,
         "profile": {
             # Property Owner: strictly Citizenship and Bank Account proof
             "citizenship_number": profile.citizenship_number if profile else None,
@@ -965,6 +998,11 @@ def set_user_kyc_status(
             profile.verified_at = now
             if payload.admin_notes:
                 profile.admin_review_notes = payload.admin_notes
+        if u.role == UserRole.FLEET_PARTNER:
+            for d in db.query(Driver).filter(Driver.fleet_partner_id == u.id).all():
+                d.kyc_status = KycStatus.VERIFIED
+            for v in db.query(Vehicle).filter(Vehicle.fleet_partner_id == u.id).all():
+                v.is_verified = True
     elif status_upper == "REJECTED":
         u.kyc_status = KycStatus.REJECTED
         u.is_verified = False
@@ -972,6 +1010,11 @@ def set_user_kyc_status(
             profile.kyc_status = KycStatus.REJECTED
             if payload.admin_notes:
                 profile.admin_review_notes = payload.admin_notes
+        if u.role == UserRole.FLEET_PARTNER:
+            for d in db.query(Driver).filter(Driver.fleet_partner_id == u.id).all():
+                d.kyc_status = KycStatus.REJECTED
+            for v in db.query(Vehicle).filter(Vehicle.fleet_partner_id == u.id).all():
+                v.is_verified = False
     else:
         u.kyc_status = KycStatus.UNDER_REVIEW
         if profile:

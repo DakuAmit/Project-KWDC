@@ -233,8 +233,9 @@
         <label class="block font-bold text-navy mb-1">Upload Machine Photo (or URL)</label>
         <div class="flex gap-2 items-center">
           <input type="file" id="eqPhotoFile" accept="image/*" onchange="uploadEqPhoto()" class="w-1/2 text-[11px]">
-          <input type="text" id="eqPhotoUrl" placeholder="/api/uploads/media/..." class="w-1/2 px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-[11px]">
+          <input type="text" id="eqPhotoUrl" placeholder="/api/uploads/media/..." class="w-1/2 px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-[11px]" oninput="const el=document.getElementById('eqPhotoPreview'); if(el){ const v=this.value.trim(); el.innerHTML = (v.startsWith('/')||/^https?:/i.test(v)) ? `<img src='${v}' class='w-16 h-12 object-cover rounded border'><a href='${v}' target='_blank' class='text-[11px] font-bold text-sky-700 underline'>Open Photo ↗</a>` : ''; }">
         </div>
+        <div id="eqPhotoPreview" class="mt-1.5 flex items-center gap-2"></div>
       </div>
 
       <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
@@ -303,7 +304,9 @@
         });
         const data = await res.json();
         if (res.ok && data.url) {
-          document.getElementById('eqPhotoUrl').value = data.url;
+          const inp = document.getElementById('eqPhotoUrl');
+          inp.value = data.url;
+          inp.dispatchEvent(new Event('input'));
           showToast('Photo uploaded securely!');
         } else {
           showToast(data.detail || 'Upload failed', true);
