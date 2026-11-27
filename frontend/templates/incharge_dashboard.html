@@ -358,6 +358,73 @@
     </form>
   </dialog>
 
+  <!-- 2B. Incharge Inspection Media & Facility Details Modal -->
+  <dialog id="inchargeMediaModal" class="m-auto w-[calc(100%-2rem)] max-w-xl rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-navy/70 backdrop:backdrop-blur-sm">
+    <div class="bg-navy px-6 py-4 text-white flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-bold">On-Site Photos, Video &amp; Physical Details</h3>
+        <p class="text-xs text-slate-400" id="incMediaModalTitle">Assigned Warehouse</p>
+      </div>
+      <button type="button" onclick="document.getElementById('inchargeMediaModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="submitInchargeMediaDetails(event)" class="p-5 space-y-3.5 text-xs">
+      <input type="hidden" id="incMediaWhId" />
+      <div>
+        <label class="block font-bold text-navy mb-1">Upload On-Site Inspection Photos (Multiple JPG / PNG)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="incMediaPhotos" placeholder="https://... (auto-filled when you upload)" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <label class="px-3 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold cursor-pointer shrink-0 flex items-center">
+            Upload Photos <input type="file" accept="image/*" multiple class="hidden" onchange="handleInchargeMediaUpload(this, 'incMediaPhotos', 'WAREHOUSE_PHOTO')">
+          </label>
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Upload Facility Walkthrough Video (MP4 / MOV / WebM)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="incMediaVideos" placeholder="https://... (auto-filled after cloud video upload)" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <label class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer shrink-0 flex items-center">
+            Upload Video <input type="file" accept="video/*" class="hidden" onchange="handleInchargeMediaUpload(this, 'incMediaVideos', 'WAREHOUSE_VIDEO')">
+          </label>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="block font-bold text-navy mb-1">Verified Ceiling Ht (ft)</label>
+          <input type="number" step="0.5" min="0" id="incMediaCeilingFt" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Verified Road Width (ft)</label>
+          <input type="number" step="0.5" min="0" id="incMediaRoadFt" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-navy mb-1">Physical Audit Status</label>
+          <select id="incMediaAuditStatus" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold">
+            <option value="PENDING_INSPECTION">PENDING_INSPECTION</option>
+            <option value="AUDIT_SCHEDULED">AUDIT_SCHEDULED</option>
+            <option value="VERIFIED_PASSED">VERIFIED_PASSED</option>
+            <option value="REPAIRS_REQUIRED">REPAIRS_REQUIRED</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 cursor-pointer"><input type="checkbox" id="incSpecPower"> 3-Phase Power</label>
+        <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 cursor-pointer"><input type="checkbox" id="incSpecRamp"> Forklift Ramp</label>
+        <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 cursor-pointer"><input type="checkbox" id="incSpecCctv"> CCTV</label>
+        <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 cursor-pointer"><input type="checkbox" id="incSpecCold"> Cold Storage</label>
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Inspection Findings &amp; Physical Details *</label>
+        <textarea id="incMediaNotes" rows="3" placeholder="e.g. Verified 22ft approach road, dry roof sheeting, fire extinguishers active, 3-phase meter checked." class="w-full px-3 py-2 rounded-xl border border-slate-300"></textarea>
+      </div>
+      <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+        <button type="button" onclick="document.getElementById('inchargeMediaModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-700">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow">Save Media &amp; Details</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- 3. Incident Modal -->
   <dialog id="incidentModal" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-navy/70 backdrop:backdrop-blur-sm">
     <div class="bg-navy px-6 py-5 text-white">
@@ -549,11 +616,14 @@
       lucide.createIcons();
     }
 
+    let cachedAssignedFacilities = [];
+
     async function loadAssignedFacilities() {
       try {
         const res = await fetch('/api/incharge/assigned-warehouses', { headers: getAuthHeaders() });
         const data = res.ok ? await res.json() : [];
-        renderFacilities(Array.isArray(data) ? data : []);
+        cachedAssignedFacilities = Array.isArray(data) ? data : [];
+        renderFacilities(cachedAssignedFacilities);
       } catch (err) {
         console.log('Incharge notice:', err);
       }
@@ -569,11 +639,13 @@
         return;
       }
 
-      grid.innerHTML = list.map(w => `
+      grid.innerHTML = list.map(w => {
+        const wid = w.warehouse_id || w.id;
+        return `
         <article class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
           <div>
             <div class="flex items-start justify-between gap-2 mb-2">
-              <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">Operational</span>
+              <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">${w.physical_audit_status || 'Operational'}</span>
               <span class="font-mono text-xs text-slate-500">${w.municipality || 'Kathmandu Valley'}</span>
             </div>
             <h4 class="font-bold text-navy text-base">${w.title}</h4>
@@ -581,15 +653,136 @@
               <div><p class="text-[10px] text-slate-400 uppercase">Total Space</p><p class="font-bold text-navy">${Number(w.total_sqft).toLocaleString('en-IN')} sq ft</p></div>
               <div><p class="text-[10px] text-slate-400 uppercase">Available</p><p class="font-bold text-emerald-700">${Number(w.available_sqft).toLocaleString('en-IN')} sq ft</p></div>
             </div>
+            ${(w.photos?.length || w.video_urls?.length) ? `
+              <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                ${(w.photos || []).slice(0, 4).map(pu => `<a href="${pu}" target="_blank"><img src="${pu}" alt="Facility" class="w-12 h-9 object-cover rounded-lg border border-slate-200"></a>`).join('')}
+                ${(w.video_urls || []).map((vu, idx) => `<a href="${vu}" target="_blank" class="px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold hover:underline">▶ Video ${idx + 1} ↗</a>`).join('')}
+              </div>
+            ` : ''}
+            ${w.physical_audit_notes ? `<p class="mt-2.5 text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-200">${w.physical_audit_notes}</p>` : ''}
           </div>
-          <div class="mt-5 pt-4 border-t border-slate-100 flex gap-2">
-            <button onclick="openGatePassModal()" class="w-full h-10 rounded-xl bg-navy text-white text-xs font-bold hover:bg-slate-800 transition">
+          <div class="mt-5 pt-4 border-t border-slate-100 flex flex-col gap-2">
+            <button onclick="openInchargeMediaModal(${wid})" class="w-full h-9 rounded-xl bg-sky-600 text-white text-xs font-bold hover:bg-sky-700 transition">
+              Add Photos, Video &amp; Details
+            </button>
+            <button onclick="openGatePassModal()" class="w-full h-9 rounded-xl bg-navy text-white text-xs font-bold hover:bg-slate-800 transition">
               Issue Gate Pass
             </button>
           </div>
         </article>
-      `).join('');
+      `;
+      }).join('');
       lucide.createIcons();
+    }
+
+    async function uploadInchargeCloudFile(file, category) {
+      const token = localStorage.getItem('kwdc_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      try {
+        const signRes = await fetch('/api/uploads/signed-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({
+            filename: file.name,
+            content_type: file.type || 'application/octet-stream',
+            category: category || 'WAREHOUSE_PHOTO',
+            file_size_bytes: file.size || 0
+          })
+        });
+        if (signRes.ok) {
+          const s = await signRes.json();
+          if (s.direct_upload && s.upload_url) {
+            const pRes = await fetch(s.upload_url, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+            if (pRes.ok) {
+              const cRes = await fetch('/api/uploads/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeader },
+                body: JSON.stringify({ filename: file.name, content_type: file.type || 'application/octet-stream', category: category || 'WAREHOUSE_PHOTO', storage_path: s.storage_path, cloud_url: s.cloud_url, file_size_bytes: file.size || 0 })
+              });
+              if (cRes.ok) return (await cRes.json()).url;
+            }
+          }
+        }
+      } catch (e) {}
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('category', category || 'WAREHOUSE_PHOTO');
+      const res = await fetch('/api/uploads/file', { method: 'POST', headers: authHeader, body: fd });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Upload failed');
+      return d.url;
+    }
+
+    async function handleInchargeMediaUpload(inputEl, targetId, category) {
+      const files = Array.from(inputEl.files || []);
+      if (!files.length) return;
+      showToast(`Uploading ${files.length} file(s)...`);
+      try {
+        const urls = [];
+        for (const f of files) urls.push(await uploadInchargeCloudFile(f, category));
+        const tgt = document.getElementById(targetId);
+        const existing = tgt.value.split(',').map(s => s.trim()).filter(Boolean);
+        tgt.value = [...existing, ...urls].join(', ');
+        showToast(`${urls.length} file(s) uploaded!`);
+      } catch (err) {
+        showToast(err.message || 'Upload error', true);
+      } finally {
+        inputEl.value = '';
+      }
+    }
+
+    function openInchargeMediaModal(whId) {
+      const w = cachedAssignedFacilities.find(x => (x.warehouse_id || x.id) === whId);
+      document.getElementById('incMediaWhId').value = whId;
+      document.getElementById('incMediaModalTitle').textContent = w ? w.title : `Warehouse #${whId}`;
+      document.getElementById('incMediaPhotos').value = '';
+      document.getElementById('incMediaVideos').value = '';
+      document.getElementById('incMediaCeilingFt').value = w ? (w.clear_ceiling_height_ft ?? 12) : 12;
+      document.getElementById('incMediaRoadFt').value = w ? (w.road_access_ft ?? 20) : 20;
+      document.getElementById('incMediaAuditStatus').value = w?.physical_audit_status || 'AUDIT_SCHEDULED';
+      document.getElementById('incSpecPower').checked = Boolean(w?.has_three_phase_power);
+      document.getElementById('incSpecRamp').checked = Boolean(w?.has_forklift_ramp);
+      document.getElementById('incSpecCctv').checked = Boolean(w?.has_cctv);
+      document.getElementById('incSpecCold').checked = Boolean(w?.has_cold_storage);
+      document.getElementById('incMediaNotes').value = w?.physical_audit_notes || '';
+      document.getElementById('inchargeMediaModal').showModal();
+      lucide.createIcons();
+    }
+
+    async function submitInchargeMediaDetails(e) {
+      e.preventDefault();
+      const whId = document.getElementById('incMediaWhId').value;
+      const photoUrls = (document.getElementById('incMediaPhotos').value || '').split(',').map(s => s.trim()).filter(Boolean);
+      const videoUrls = (document.getElementById('incMediaVideos').value || '').split(',').map(s => s.trim()).filter(Boolean);
+      const payload = {
+        photo_urls: photoUrls,
+        video_urls: videoUrls,
+        clear_ceiling_height_ft: parseFloat(document.getElementById('incMediaCeilingFt').value) || undefined,
+        road_access_ft: parseFloat(document.getElementById('incMediaRoadFt').value) || undefined,
+        physical_audit_status: document.getElementById('incMediaAuditStatus').value,
+        has_three_phase_power: document.getElementById('incSpecPower').checked,
+        has_forklift_ramp: document.getElementById('incSpecRamp').checked,
+        has_cctv: document.getElementById('incSpecCctv').checked,
+        has_cold_storage: document.getElementById('incSpecCold').checked,
+        audit_notes: document.getElementById('incMediaNotes').value.trim() || undefined
+      };
+      try {
+        const res = await fetch(`/api/incharge/warehouses/${whId}/media-details`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        if (res.ok) {
+          showToast(d.message || 'Inspection media & details saved!');
+          document.getElementById('inchargeMediaModal').close();
+          loadAssignedFacilities();
+        } else {
+          showToast(formatToastMessage(d.detail) || 'Update failed.', true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      }
     }
 
     async function loadInchargeStockQueue() {

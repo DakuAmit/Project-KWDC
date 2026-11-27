@@ -791,6 +791,48 @@
     </form>
   </dialog>
 
+  <!-- Modal: Add Facility Photos & Walkthrough Videos -->
+  <dialog id="ownerMediaModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-lg border border-slate-200 backdrop:bg-slate-950/60">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-navy text-white rounded-t-2xl">
+      <div>
+        <h3 class="font-bold text-base">Upload Warehouse Photos &amp; Walkthrough Videos</h3>
+        <p class="text-xs text-slate-400" id="ownerMediaModalTitle">Facility</p>
+      </div>
+      <button onclick="document.getElementById('ownerMediaModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form onsubmit="submitOwnerMediaForm(event)" class="p-5 space-y-4 text-xs">
+      <input type="hidden" id="ownerMediaWhId" />
+      <div>
+        <label class="block font-bold text-navy mb-1">Upload Facility Photos (Multiple JPG / PNG / WebP)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="ownerModalPhotoUrls" placeholder="https://... (auto-filled when you upload)" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <label class="px-3 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white font-bold cursor-pointer shrink-0 flex items-center">
+            Upload Photos <input type="file" accept="image/*" multiple class="hidden" onchange="handleOwnerMultiUpload(this, 'ownerModalPhotoUrls', 'WAREHOUSE_PHOTO')">
+          </label>
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Upload Walkthrough Video (MP4 / MOV / WebM)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="ownerModalVideoUrls" placeholder="https://... (auto-filled after cloud upload)" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <label class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer shrink-0 flex items-center">
+            Upload Video <input type="file" accept="video/*" class="hidden" onchange="handleOwnerMultiUpload(this, 'ownerModalVideoUrls', 'WAREHOUSE_VIDEO')">
+          </label>
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Photo / Video Caption or Notes</label>
+        <input type="text" id="ownerMediaCaption" placeholder="e.g. Updated loading dock shutter & main floor view" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+      </div>
+      <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('ownerMediaModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-700">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow">Save Photos &amp; Video</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Modal: Request Maintenance Hold -->
   <dialog id="maintHoldModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-md border border-slate-200 backdrop:bg-slate-950/60">
     <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-amber-50 text-amber-950 rounded-t-2xl">
@@ -1704,9 +1746,14 @@
               </div>
 
               <div class="mt-4 pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
-                <button onclick="openOwnerContractModal(${w.id})" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition flex items-center gap-1">
-                  <i data-lucide="file-check-2" class="w-3.5 h-3.5"></i> Contract
-                </button>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <button onclick="openOwnerContractModal(${w.id})" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition flex items-center gap-1">
+                    <i data-lucide="file-check-2" class="w-3.5 h-3.5"></i> Contract
+                  </button>
+                  <button onclick="openOwnerMediaModal(${w.id}, '${escapeHtml(w.title).replace(/'/g, "\\'")}')" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition flex items-center gap-1">
+                    <i data-lucide="camera" class="w-3.5 h-3.5"></i> Add Photos / Video
+                  </button>
+                </div>
                 <div class="flex flex-wrap items-center gap-1.5">
                   ${w.is_approved ? `
                     <button onclick="openChangeRequestModal(${w.id}, '${escapeHtml(w.title).replace(/'/g, "\\'")}', ${w.monthly_rate_per_sqft || 45})" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-slate-100 text-navy hover:bg-slate-200 transition flex items-center gap-1">
@@ -1810,6 +1857,45 @@
         showToast(err.message || 'Upload failed', true);
       } finally {
         inputEl.value = '';
+      }
+    }
+
+    function openOwnerMediaModal(whId, whTitle) {
+      document.getElementById('ownerMediaWhId').value = whId;
+      document.getElementById('ownerMediaModalTitle').textContent = whTitle || `Warehouse #${whId}`;
+      document.getElementById('ownerModalPhotoUrls').value = '';
+      document.getElementById('ownerModalVideoUrls').value = '';
+      document.getElementById('ownerMediaCaption').value = '';
+      document.getElementById('ownerMediaModal').showModal();
+      lucide.createIcons();
+    }
+
+    async function submitOwnerMediaForm(e) {
+      e.preventDefault();
+      const whId = document.getElementById('ownerMediaWhId').value;
+      const photoUrls = (document.getElementById('ownerModalPhotoUrls').value || '').split(',').map(s => s.trim()).filter(Boolean);
+      const videoUrls = (document.getElementById('ownerModalVideoUrls').value || '').split(',').map(s => s.trim()).filter(Boolean);
+      const caption = (document.getElementById('ownerMediaCaption').value || '').trim();
+      if (!photoUrls.length && !videoUrls.length) {
+        showToast('Please upload or paste at least one photo or video URL.', true);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/warehouses/${whId}/media`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ photo_urls: photoUrls, video_urls: videoUrls, caption: caption || undefined })
+        });
+        const d = await res.json();
+        if (res.ok) {
+          showToast(d.message || 'Warehouse media added!');
+          document.getElementById('ownerMediaModal').close();
+          loadOwnerWarehouses();
+        } else {
+          showToast(formatToastMessage(d.detail) || 'Failed to add warehouse media.', true);
+        }
+      } catch (err) {
+        showToast('Upload error: ' + err.message, true);
       }
     }
 

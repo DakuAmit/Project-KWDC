@@ -147,6 +147,38 @@ export default function OwnerHomeScreen() {
     }
   }
 
+  async function addMediaToExistingWarehouse(warehouseId, isVideo) {
+    try {
+      let mediaUrl = '';
+      if (isVideo) {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) return Alert.alert('Gallery Needed', 'Allow video access.');
+        const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, quality: 0.7 });
+        const asset = !res.canceled && res.assets?.[0];
+        if (!asset?.uri) return;
+        mediaUrl = await uploadCloudAsset({ uri: asset.uri, filename: asset.fileName || 'warehouse.mp4', mimeType: asset.mimeType || 'video/mp4', category: 'WAREHOUSE_VIDEO' });
+      } else {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) return Alert.alert('Camera Needed', 'Allow camera access.');
+        const shot = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
+        if (shot.canceled || !shot.assets?.[0]?.base64) return;
+        mediaUrl = await uploadBase64Image({ filename: 'warehouse.jpg', base64: shot.assets[0].base64, category: 'WAREHOUSE_PHOTO' });
+      }
+      const saved = await apiRequest(`/api/warehouses/${warehouseId}/media`, {
+        method: 'POST',
+        body: {
+          photo_urls: !isVideo ? [mediaUrl] : [],
+          video_urls: isVideo ? [mediaUrl] : [],
+          caption: holdReason.trim() || 'Uploaded from Mobile Owner App',
+        },
+      });
+      Alert.alert('Media Added!', saved.message || 'Saved to warehouse listing.');
+      refresh();
+    } catch (err) {
+      Alert.alert('Upload Error', err.message);
+    }
+  }
+
   async function submitOwnerKyc() {
     if (!citNo.trim() || !bankAcc.trim()) return Alert.alert('Required', 'Enter Citizenship No & Bank Account Number.');
     try {
@@ -206,6 +238,14 @@ export default function OwnerHomeScreen() {
               <Text style={styles.cardTitle}>{w.title} ({w.is_approved ? 'LIVE' : 'PENDING'})</Text>
               <Text style={styles.meta}>{w.available_sqft}/{w.total_sqft} sq ft • Rs. {w.monthly_rate_per_sqft}/sq ft • Hold: {w.is_on_hold ? 'ON HOLD' : 'ACTIVE'}</Text>
               <View style={[styles.row, { marginTop: 8 }]}>
+                <TouchableOpacity onPress={() => addMediaToExistingWarehouse(w.id, false)} style={[styles.btnDark, { flex: 1, backgroundColor: '#0284c7' }]}>
+                  <Text style={styles.btnLight}>+ Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => addMediaToExistingWarehouse(w.id, true)} style={[styles.btnDark, { flex: 1, backgroundColor: '#4338ca' }]}>
+                  <Text style={styles.btnLight}>+ Video</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.row, { marginTop: 4 }]}>
                 <TouchableOpacity onPress={() => toggleMaintenanceHold(w.id, w.is_on_hold)} style={[styles.btnDark, { flex: 1 }]}>
                   <Text style={styles.btnLight}>{w.is_on_hold ? 'Release Hold' : 'Maintenance Hold'}</Text>
                 </TouchableOpacity>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { apiRequest } from '../api/client';
+import * as ImagePicker from 'expo-image-picker';
+import { apiRequest, uploadBase64Image, uploadCloudAsset } from '../api/client';
 
 export default function InchargeHomeScreen() {
   const [warehouses, setWarehouses] = useState([]);
@@ -19,6 +20,10 @@ export default function InchargeHomeScreen() {
   const [policeAlert, setPoliceAlert] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scannedText, setScannedText] = useState('');
+  const [incAuditNotes, setIncAuditNotes] = useState('');
+  const [incCeilingFt, setIncCeilingFt] = useState('');
+  const [incPhotoUrl, setIncPhotoUrl] = useState('');
+  const [incVideoUrl, setIncVideoUrl] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
 
   async function refresh() {
@@ -127,6 +132,51 @@ export default function InchargeHomeScreen() {
     }
   }
 
+  async function snapInspectionPhoto() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return Alert.alert('Camera Needed', 'Allow camera access.');
+    const shot = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
+    if (!shot.canceled && shot.assets?.[0]?.base64) {
+      const url = await uploadBase64Image({ filename: 'inspection.jpg', base64: shot.assets[0].base64, category: 'WAREHOUSE_PHOTO' });
+      setIncPhotoUrl(url);
+      Alert.alert('Photo Uploaded', 'Inspection photo ready to save.');
+    }
+  }
+
+  async function pickInspectionVideo() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return Alert.alert('Gallery Needed', 'Allow video gallery access.');
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, quality: 0.7 });
+    const asset = !res.canceled && res.assets?.[0];
+    if (asset?.uri) {
+      const url = await uploadCloudAsset({ uri: asset.uri, filename: asset.fileName || 'inspection.mp4', mimeType: asset.mimeType || 'video/mp4', category: 'WAREHOUSE_VIDEO' });
+      setIncVideoUrl(url);
+      Alert.alert('Video Uploaded', 'Walkthrough video ready to save.');
+    }
+  }
+
+  async function submitInspectionMediaAndDetails() {
+    if (!whId) return Alert.alert('Select Facility', 'Select an assigned warehouse first.');
+    try {
+      const res = await apiRequest(`/api/incharge/warehouses/${whId}/media-details`, {
+        method: 'POST',
+        body: {
+          photo_urls: incPhotoUrl ? [incPhotoUrl] : [],
+          video_urls: incVideoUrl ? [incVideoUrl] : [],
+          clear_ceiling_height_ft: incCeilingFt ? parseFloat(incCeilingFt) : undefined,
+          audit_notes: incAuditNotes.trim() || undefined,
+        },
+      });
+      Alert.alert('Saved!', res.message || 'Warehouse inspection media & details updated.');
+      setIncPhotoUrl('');
+      setIncVideoUrl('');
+      setIncAuditNotes('');
+      refresh();
+    } catch (err) {
+      Alert.alert('Update Error', err.message);
+    }
+  }
+
   if (scanning) {
     return (
       <View style={{ flex: 1 }}>
@@ -179,8 +229,22 @@ export default function InchargeHomeScreen() {
             );
           })}
           <View style={styles.card}>
-            <Text style={styles.sec}>Shift Inspection Report</Text>
+            <Text style={styles.sec}>Upload Assigned Site Photo, Video &amp; Details</Text>
             <TextInput value={whId} onChangeText={setWhId} placeholder="Warehouse ID" keyboardType="number-pad" style={styles.input} />
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              <TouchableOpacity onPress={snapInspectionPhoto} style={[styles.tabBtn, { backgroundColor: '#0284c7' }]}>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{incPhotoUrl ? 'Photo ✓' : '+ Inspection Photo'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={pickInspectionVideo} style={[styles.tabBtn, { backgroundColor: '#4338ca' }]}>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{incVideoUrl ? 'Video ✓' : '+ Walkthrough Video'}</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput value={incCeilingFt} onChangeText={setIncCeilingFt} placeholder="Verified Ceiling Height (ft)" keyboardType="numeric" style={styles.input} />
+            <TextInput value={incAuditNotes} onChangeText={setIncAuditNotes} placeholder="On-site inspection notes & specs..." multiline style={styles.input} />
+            <TouchableOpacity onPress={submitInspectionMediaAndDetails} style={[styles.btnDark, { backgroundColor: '#047857', marginBottom: 10 }]}>
+              <Text style={styles.btnLight}>Save Inspection Media &amp; Details</Text>
+            </TouchableOpacity>
+            <Text style={styles.sec}>Shift Inspection Report</Text>
             <TextInput value={activityNote} onChangeText={setActivityNote} placeholder="CCTV, perimeter & humidity check..." multiline style={styles.input} />
             <TouchableOpacity onPress={submitActivityLog} style={styles.btnDark}>
               <Text style={styles.btnLight}>Submit Shift Inspection Log</Text>

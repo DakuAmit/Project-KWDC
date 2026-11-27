@@ -13,9 +13,12 @@ from backend.database import get_db
 from backend.models import (
     Warehouse, WarehouseInchargeAssignment, WarehouseActivityLog,
     IncidentReport, IncidentSeverity, GatePass, User, UserRole, StockItem, StockMovementLog,
-    InventoryUnit, WarehouseRequest
+    InventoryUnit, WarehouseRequest, WarehousePhoto
 )
-from backend.schemas import InchargeReportCreate, IncidentReportCreate, GatePassCreate, InchargeStockVerifyRequest
+from backend.schemas import (
+    InchargeReportCreate, IncidentReportCreate, GatePassCreate,
+    InchargeStockVerifyRequest, WarehouseMediaDetailsUpdate
+)
 from backend.auth_utils import require_user, require_roles
 
 router = APIRouter(prefix="/api/incharge", tags=["Warehouse Incharge"])
@@ -25,27 +28,142 @@ def get_assigned_warehouses(
     current_user: User = Depends(require_roles([UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN])),
     db: Session = Depends(get_db)
 ):
-    """Lists warehouses assigned to this incharge."""
+    """Lists warehouses assigned to this incharge along with inspection details, photos, and walkthrough videos."""
     assignments = db.query(WarehouseInchargeAssignment).filter(
         WarehouseInchargeAssignment.incharge_id == current_user.id,
         WarehouseInchargeAssignment.is_active == True
     ).all()
-    
-    results = []
+    audited_whs = db.query(Warehouse).filter(
+        Warehouse.audited_by_incharge_id == current_user.id
+    ).all()
+
+    wh_by_id = {}
     for a in assignments:
-        w = a.warehouse
+        if a.warehouse:
+            wh_by_id[a.warehouse.id] = a.warehouse
+    for w in audited_whs:
+        wh_by_id[w.id] = w
+
+    results = []
+    for w in wh_by_id.values():
         results.append({
+            "id": w.id,
             "warehouse_id": w.id,
             "title": w.title,
-            "space_type": w.space_type.value,
+            "space_type": w.space_type.value if hasattr(w.space_type, "value") else str(w.space_type),
             "total_sqft": w.total_sqft,
             "available_sqft": w.available_sqft,
             "municipality": w.municipality,
             "district": w.district,
-            "is_on_maintenance_hold": w.is_on_maintenance_hold,
-            "hold_reason_note": w.hold_reason_note
+            "is_on_maintenance_hold": bool(w.is_on_maintenance_hold),
+            "hold_reason_note": w.hold_reason_note,
+            "physical_audit_status": w.physical_audit_status.value if hasattr(w.physical_audit_status, "value") else str(w.physical_audit_status or "PENDING_INSPECTION"),
+            "physical_audit_notes": w.physical_audit_notes,
+            "clear_ceiling_height_ft": float(w.clear_ceiling_height_ft or 0.0),
+            "road_access_ft": float(w.road_access_ft or 0.0),
+            "has_three_phase_power": bool(w.has_three_phase_power),
+            "has_forklift_ramp": bool(w.has_forklift_ramp),
+            "has_cctv": bool(w.has_cctv),
+            "has_cold_storage": bool(w.has_cold_storage),
+            "photos": [p.photo_url for p in (w.photos or []) if p.photo_url],
+            "video_urls": [v.strip() for v in (getattr(w, "video_urls", None) or "").split(",") if v.strip()],
         })
     return results
+
+
+@router.post("/warehouses/{warehouse_id}/media-details")
+def add_incharge_warehouse_media_and_details(
+    warehouse_id: int,
+    payload: WarehouseMediaDetailsUpdate,
+    current_user: User = Depends(require_roles([UserRole.WAREHOUSE_INCHARGE, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """
+    Allows an assigned Warehouse Incharge to upload on-site inspection photos, walkthrough videos,
+    and update verified physical inspection details for their assigned warehouse.
+    """
+    warehouse = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found.")
+
+    if current_user.role != UserRole.SUPERADMIN:
+        has_assignment = db.query(WarehouseInchargeAssignment).filter(
+            WarehouseInchargeAssignment.incharge_id == current_user.id,
+            WarehouseInchargeAssignment.warehouse_id == warehouse_id,
+            WarehouseInchargeAssignment.is_active == True
+        ).first() is not None
+        is_inspector = (warehouse.audited_by_incharge_id == current_user.id)
+        if not has_assignment and not is_inspector:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You are not assigned to this warehouse facility."
+            )
+
+    existing_photos = {p.photo_url for p in (warehouse.photos or []) if p.photo_url}
+    photos_added = 0
+    for p_url in (payload.photo_urls or []):
+        clean = (p_url or "").strip()
+        if clean and clean not in existing_photos:
+            db.add(WarehousePhoto(
+                warehouse_id=warehouse.id,
+                photo_url=clean,
+                caption=(payload.caption or f"Incharge On-Site Inspection ({current_user.full_name})").strip()[:250]
+            ))
+            existing_photos.add(clean)
+            photos_added += 1
+
+    existing_videos = [v.strip() for v in (getattr(warehouse, "video_urls", None) or "").split(",") if v.strip()]
+    videos_added = 0
+    for v_url in (payload.video_urls or []):
+        clean = (v_url or "").strip()
+        if clean and clean not in existing_videos:
+            existing_videos.append(clean)
+            videos_added += 1
+    warehouse.video_urls = ",".join(existing_videos) if existing_videos else None
+
+    if payload.audit_notes is not None and payload.audit_notes.strip():
+        warehouse.physical_audit_notes = payload.audit_notes.strip()
+    if payload.physical_audit_status is not None:
+        warehouse.physical_audit_status = payload.physical_audit_status
+    if payload.clear_ceiling_height_ft is not None:
+        warehouse.clear_ceiling_height_ft = float(payload.clear_ceiling_height_ft)
+    if payload.road_access_ft is not None:
+        warehouse.road_access_ft = float(payload.road_access_ft)
+    if payload.has_three_phase_power is not None:
+        warehouse.has_three_phase_power = bool(payload.has_three_phase_power)
+    if payload.has_forklift_ramp is not None:
+        warehouse.has_forklift_ramp = bool(payload.has_forklift_ramp)
+    if payload.has_cctv is not None:
+        warehouse.has_cctv = bool(payload.has_cctv)
+    if payload.has_cold_storage is not None:
+        warehouse.has_cold_storage = bool(payload.has_cold_storage)
+
+    warehouse.audited_by_incharge_id = warehouse.audited_by_incharge_id or current_user.id
+    warehouse.audited_at = datetime.now(timezone.utc)
+
+    db.add(WarehouseActivityLog(
+        warehouse_id=warehouse.id,
+        incharge_id=current_user.id,
+        log_type="PHYSICAL_MEDIA_UPDATE",
+        summary=f"Incharge added {photos_added} photo(s), {videos_added} video(s) & updated specs",
+        detailed_notes=payload.audit_notes or payload.caption or "On-site physical inspection media and specifications uploaded."
+    ))
+
+    db.commit()
+    db.refresh(warehouse)
+    all_photos = [p.photo_url for p in (warehouse.photos or []) if p.photo_url]
+    return {
+        "message": f"Updated inspection media & details for '{warehouse.title}' ({photos_added} photo(s), {videos_added} video(s)).",
+        "warehouse_id": warehouse.id,
+        "photos_added": photos_added,
+        "videos_added": videos_added,
+        "photos": all_photos,
+        "video_urls": existing_videos,
+        "physical_audit_status": warehouse.physical_audit_status.value if hasattr(warehouse.physical_audit_status, "value") else str(warehouse.physical_audit_status),
+        "physical_audit_notes": warehouse.physical_audit_notes,
+        "clear_ceiling_height_ft": warehouse.clear_ceiling_height_ft,
+        "road_access_ft": warehouse.road_access_ft,
+    }
 
 @router.post("/activity-log")
 def create_activity_log(

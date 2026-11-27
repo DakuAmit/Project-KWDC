@@ -50,6 +50,10 @@ def test_cloud_storage_uploads_and_supabase_mock():
     rnd = random.randint(10000, 99999)
     owner_id, own_h = _create_verified_user(f"cs_own_{rnd}@kwdc.com.np", "Cloud Owner", f"98015{rnd}", "property_owner")
     cli_id, cli_h = _create_verified_user(f"cs_cli_{rnd}@kwdc.com.np", "Cloud Client", f"98025{rnd}", "commercial_client")
+    inc_id, inc_h = _create_verified_user(f"cs_inc_{rnd}@kwdc.com.np", "Site Incharge", f"98035{rnd}", "warehouse_incharge")
+    adm_res = client.post("/api/auth/login", json={"email": "admin@kwdc.com.np", "password": "Admin@123"})
+    assert adm_res.status_code == 200
+    adm_h = {"Authorization": f"Bearer {adm_res.json()['access_token']}"}
     asset_ids = []
     wh_id = None
     stock_id = None
@@ -166,6 +170,59 @@ def test_cloud_storage_uploads_and_supabase_mock():
         mine = [x for x in listings.json() if x["id"] == wh_id][0]
         assert urls["WAREHOUSE_VIDEO"] in mine["video_urls"]
 
+        # 4B. Property Owner appends extra photo & video to existing warehouse
+        own_media = client.post(
+            f"/api/warehouses/{wh_id}/media",
+            headers=own_h,
+            json={
+                "photo_urls": ["/api/uploads/media/extra_owner_photo"],
+                "video_urls": ["/api/uploads/media/extra_owner_video"],
+                "caption": "Updated Loading Bay Angle",
+            },
+        )
+        assert own_media.status_code == 200, own_media.text
+        assert "/api/uploads/media/extra_owner_photo" in own_media.json()["photos"]
+        assert "/api/uploads/media/extra_owner_video" in own_media.json()["video_urls"]
+
+        # 4C. Unassigned Incharge is blocked from adding media/details
+        unassigned_try = client.post(
+            f"/api/incharge/warehouses/{wh_id}/media-details",
+            headers=inc_h,
+            json={"photo_urls": ["/api/uploads/media/bad"], "audit_notes": "Unauthorized"},
+        )
+        assert unassigned_try.status_code == 403
+
+        # 4D. Assign Incharge -> add on-site inspection photos, video & verified physical details
+        assign_res = client.post(
+            f"/api/admin/warehouses/{wh_id}/assign-incharge",
+            headers=adm_h,
+            json={"incharge_id": inc_id},
+        )
+        assert assign_res.status_code == 200, assign_res.text
+
+        assigned_list = client.get("/api/incharge/assigned-warehouses", headers=inc_h)
+        assert assigned_list.status_code == 200
+        assert any(a["warehouse_id"] == wh_id for a in assigned_list.json())
+
+        inc_media = client.post(
+            f"/api/incharge/warehouses/{wh_id}/media-details",
+            headers=inc_h,
+            json={
+                "photo_urls": ["/api/uploads/media/incharge_gate_photo"],
+                "video_urls": ["/api/uploads/media/incharge_walkthrough_video"],
+                "clear_ceiling_height_ft": 16.5,
+                "road_access_ft": 26.0,
+                "has_cctv": True,
+                "physical_audit_status": "VERIFIED_PASSED",
+                "audit_notes": "Verified 16.5ft ceiling, 26ft blacktop road, CCTV & damp-proof floor.",
+            },
+        )
+        assert inc_media.status_code == 200, inc_media.text
+        assert "/api/uploads/media/incharge_gate_photo" in inc_media.json()["photos"]
+        assert "/api/uploads/media/incharge_walkthrough_video" in inc_media.json()["video_urls"]
+        assert inc_media.json()["clear_ceiling_height_ft"] == 16.5
+        assert inc_media.json()["physical_audit_status"] == "VERIFIED_PASSED"
+
         stk_res = client.post(
             "/api/warehouses/my-inventory",
             headers=cli_h,
@@ -221,11 +278,13 @@ def test_cloud_storage_uploads_and_supabase_mock():
                 db.query(models.InventoryUnit).filter(models.InventoryUnit.stock_item_id == stock_id).delete()
                 db.query(models.StockItem).filter(models.StockItem.id == stock_id).delete()
             if wh_id:
+                db.query(models.WarehouseActivityLog).filter(models.WarehouseActivityLog.warehouse_id == wh_id).delete()
+                db.query(models.WarehouseInchargeAssignment).filter(models.WarehouseInchargeAssignment.warehouse_id == wh_id).delete()
                 db.query(models.WarehousePhoto).filter(models.WarehousePhoto.warehouse_id == wh_id).delete()
                 db.query(models.Warehouse).filter(models.Warehouse.id == wh_id).delete()
             if asset_ids:
                 db.query(models.MediaAsset).filter(models.MediaAsset.id.in_(asset_ids)).delete(synchronize_session=False)
-            db.query(models.User).filter(models.User.id.in_([owner_id, cli_id])).delete(synchronize_session=False)
+            db.query(models.User).filter(models.User.id.in_([owner_id, cli_id, inc_id])).delete(synchronize_session=False)
             db.commit()
         finally:
             db.close()

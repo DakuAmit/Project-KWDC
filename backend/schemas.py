@@ -115,6 +115,20 @@ class WarehouseCreate(BaseModel):
     photo_urls: Optional[List[str]] = None
     video_urls: Optional[List[str]] = None
 
+class WarehouseMediaDetailsUpdate(BaseModel):
+    photo_urls: Optional[List[str]] = None
+    video_urls: Optional[List[str]] = None
+    caption: Optional[str] = None
+    audit_notes: Optional[str] = None
+    clear_ceiling_height_ft: Optional[float] = None
+    road_access_ft: Optional[float] = None
+    has_three_phase_power: Optional[bool] = None
+    has_forklift_ramp: Optional[bool] = None
+    has_cctv: Optional[bool] = None
+    has_cold_storage: Optional[bool] = None
+    physical_audit_status: Optional[PhysicalAuditStatus] = None
+
+
 class OwnerChangeRequestCreate(BaseModel):
     request_type: str # DELISTING_15_DAYS, RATE_REVISION
     requested_rate_per_sqft: Optional[float] = None

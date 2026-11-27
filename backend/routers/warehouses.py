@@ -27,9 +27,9 @@ from backend.models import (
 from backend.schemas import (
     WarehouseCreate, MaintenanceHoldRequest, BookingRequestCreate,
     BookingModifyRequest, StockItemCreate, StockDispatchRequest,
-    SavedAddressCreate, OwnerChangeRequestCreate
+    SavedAddressCreate, OwnerChangeRequestCreate, WarehouseMediaDetailsUpdate
 )
-from backend.auth_utils import require_user, get_current_user
+from backend.auth_utils import require_user, get_current_user, require_roles
 from backend.services.unit_converter import to_sqft, from_sqft_to_all, get_warehouse_usable_capacity
 from backend.services.vat_service import generate_ird_tax_invoice
 from backend.services.overdue_monitor import calculate_flexible_storage_cost
@@ -213,6 +213,58 @@ def edit_warehouse_space(
     
     db.commit()
     return {"message": "Pending listing updated successfully."}
+
+
+@router.post("/{warehouse_id}/media")
+def add_owner_warehouse_media(
+    warehouse_id: int,
+    payload: WarehouseMediaDetailsUpdate,
+    current_user: User = Depends(require_roles([UserRole.PROPERTY_OWNER, UserRole.SUPERADMIN])),
+    db: Session = Depends(get_db)
+):
+    """Allows the Property Owner (or SuperAdmin) to append photos, walkthrough videos, and notes to an existing warehouse."""
+    warehouse = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found.")
+    if warehouse.owner_id != current_user.id and current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Unauthorized to add media to another owner's warehouse.")
+
+    existing_photos = {p.photo_url for p in (warehouse.photos or []) if p.photo_url}
+    photos_added = 0
+    for p_url in (payload.photo_urls or []):
+        clean = (p_url or "").strip()
+        if clean and clean not in existing_photos:
+            db.add(WarehousePhoto(
+                warehouse_id=warehouse.id,
+                photo_url=clean,
+                caption=(payload.caption or "Property Owner Photo").strip()[:250]
+            ))
+            existing_photos.add(clean)
+            photos_added += 1
+
+    existing_videos = [v.strip() for v in (getattr(warehouse, "video_urls", None) or "").split(",") if v.strip()]
+    videos_added = 0
+    for v_url in (payload.video_urls or []):
+        clean = (v_url or "").strip()
+        if clean and clean not in existing_videos:
+            existing_videos.append(clean)
+            videos_added += 1
+    warehouse.video_urls = ",".join(existing_videos) if existing_videos else None
+
+    if payload.audit_notes and payload.audit_notes.strip() and not warehouse.is_approved:
+        warehouse.physical_audit_notes = payload.audit_notes.strip()
+
+    db.commit()
+    db.refresh(warehouse)
+    all_photos = [p.photo_url for p in (warehouse.photos or []) if p.photo_url]
+    return {
+        "message": f"Added {photos_added} photo(s) and {videos_added} walkthrough video(s) to '{warehouse.title}'.",
+        "warehouse_id": warehouse.id,
+        "photos_added": photos_added,
+        "videos_added": videos_added,
+        "photos": all_photos,
+        "video_urls": existing_videos,
+    }
 
 @router.post("/{warehouse_id}/request-maintenance-hold")
 def request_maintenance_hold(
