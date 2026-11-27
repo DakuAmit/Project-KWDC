@@ -1791,6 +1791,13 @@
                     <span class="text-slate-400">Mobile:</span>
                     <span>${escapeHtml(d.phone_number)}</span>
                   </div>
+                  ${(d.id_doc_front_url || d.license_photo_front_url) ? `
+                    <div class="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
+                      ${d.id_doc_front_url ? `<a href="${escapeHtml(d.id_doc_front_url)}" target="_blank" class="text-[10px] text-sky-700 font-bold underline">ID Front ↗</a>` : ''}
+                      ${d.id_doc_back_url ? `<a href="${escapeHtml(d.id_doc_back_url)}" target="_blank" class="text-[10px] text-sky-700 font-bold underline">ID Back ↗</a>` : ''}
+                      ${d.license_photo_front_url ? `<a href="${escapeHtml(d.license_photo_front_url)}" target="_blank" class="text-[10px] text-indigo-700 font-bold underline">License Front ↗</a>` : ''}
+                    </div>
+                  ` : ''}
                   ${d.emergency_contact_phone ? `
                     <div class="flex justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-1">
                       <span>Emergency: ${escapeHtml(d.emergency_contact_name || 'Family')}</span>

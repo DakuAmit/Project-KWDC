@@ -2080,6 +2080,13 @@
                 ${w.has_cctv ? '<span class="bg-slate-100 px-2 py-0.5 rounded">CCTV</span>' : ''}
                 ${w.has_raised_dock ? '<span class="bg-slate-100 px-2 py-0.5 rounded">Raised Dock</span>' : ''}
               </div>
+
+              ${(w.photos?.length || w.video_urls?.length) ? `
+                <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                  ${(w.photos || []).slice(0, 3).map(pu => `<a href="${escapeHtml(pu)}" target="_blank"><img src="${escapeHtml(pu)}" alt="Facility" class="w-12 h-9 object-cover rounded-lg border border-slate-200"></a>`).join('')}
+                  ${(w.video_urls || []).map((vu, idx) => `<a href="${escapeHtml(vu)}" target="_blank" class="px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold hover:underline">▶ Video ${idx + 1} ↗</a>`).join('')}
+                </div>
+              ` : ''}
             </div>
 
             <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">

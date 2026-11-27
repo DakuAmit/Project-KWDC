@@ -1686,7 +1686,13 @@
 
                 ${(w.photos && w.photos.length > 0) ? `
                   <div class="mt-2.5 flex gap-1.5 overflow-x-auto">
-                    ${w.photos.map(p => `<img src="${escapeHtml(p.url)}" alt="Facility" class="w-14 h-10 object-cover rounded-lg border border-slate-200 shrink-0">`).join('')}
+                    ${w.photos.map(p => `<a href="${escapeHtml(p.url)}" target="_blank"><img src="${escapeHtml(p.url)}" alt="Facility" class="w-14 h-10 object-cover rounded-lg border border-slate-200 shrink-0"></a>`).join('')}
+                  </div>
+                ` : ''}
+
+                ${(w.video_urls && w.video_urls.length > 0) ? `
+                  <div class="mt-2 flex flex-wrap gap-1.5">
+                    ${w.video_urls.map((vUrl, idx) => `<a href="${escapeHtml(vUrl)}" target="_blank" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold hover:underline">▶ Walkthrough Video ${idx + 1} ↗</a>`).join('')}
                   </div>
                 ` : ''}
 

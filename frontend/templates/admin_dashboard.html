@@ -1677,6 +1677,12 @@
             <td class="px-5 py-3">
               <p class="font-bold text-navy">${escapeHtml(w.title)}</p>
               <p class="text-[11px] text-slate-500">${escapeHtml(w.neighborhood_landmark || 'Kathmandu')}</p>
+              ${(w.photos?.length || w.video_urls?.length) ? `
+                <div class="flex flex-wrap gap-1.5 mt-1">
+                  ${(w.photos || []).map((pu, idx) => `<a href="${escapeHtml(pu)}" target="_blank" class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold hover:underline">Photo ${idx + 1} ↗</a>`).join('')}
+                  ${(w.video_urls || []).map((vu, idx) => `<a href="${escapeHtml(vu)}" target="_blank" class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold hover:underline">Video ${idx + 1} ↗</a>`).join('')}
+                </div>
+              ` : ''}
               ${w.assigned_incharge_name ? `<span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold">Inspector: ${escapeHtml(w.assigned_incharge_name)} (${escapeHtml(w.physical_audit_status || 'IN_PROGRESS')})</span>` : `<span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-semibold">Awaiting Inspector Dispatch</span>`}
             </td>
             <td class="px-5 py-3">
@@ -1779,6 +1785,12 @@
             <td class="px-5 py-3">
               <p class="font-bold text-navy">${escapeHtml(w.title)}</p>
               <p class="text-[11px] text-slate-500">${escapeHtml(w.district)} &bull; ${escapeHtml(w.neighborhood_landmark || '')}</p>
+              ${(w.photos?.length || w.video_urls?.length) ? `
+                <div class="flex flex-wrap gap-1 mt-1">
+                  ${(w.photos || []).map((pu, idx) => `<a href="${escapeHtml(pu)}" target="_blank" class="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold hover:underline">Photo ${idx + 1} ↗</a>`).join('')}
+                  ${(w.video_urls || []).map((vu, idx) => `<a href="${escapeHtml(vu)}" target="_blank" class="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold hover:underline">Video ${idx + 1} ↗</a>`).join('')}
+                </div>
+              ` : ''}
             </td>
             <td class="px-5 py-3">
               <p class="font-medium text-slate-800">${escapeHtml(w.owner_name)}</p>
@@ -2721,6 +2733,32 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
           document.getElementById('kycAdminNotes').value = p.admin_review_notes;
         }
 
+        const renderKycDocCard = (label, rawUrl, accentClass = 'text-sky-700') => {
+          const val = (rawUrl || '').trim();
+          const isLink = val && (val.startsWith('/') || /^https?:\/\//i.test(val));
+          if (!isLink) {
+            return `
+              <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                <span class="text-slate-400 text-[10px] block">${escapeHtml(label)}</span>
+                <span class="font-mono text-xs ${accentClass} font-bold truncate block">${escapeHtml(val || 'Not Provided')}</span>
+              </div>
+            `;
+          }
+          const safeUrl = escapeHtml(val);
+          return `
+            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-slate-500 text-[10px] font-bold uppercase">${escapeHtml(label)}</span>
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="px-2 py-0.5 rounded bg-navy text-white text-[10px] font-bold hover:bg-slate-800 shrink-0">Open File ↗</a>
+              </div>
+              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="block">
+                <img src="${safeUrl}" alt="${escapeHtml(label)}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" class="w-full h-32 object-contain bg-white rounded-lg border border-slate-200">
+                <div class="hidden p-2 bg-white rounded-lg border border-dashed border-slate-300 text-[11px] font-mono ${accentClass} truncate">📄 PDF / Document — Click Open File ↗</div>
+              </a>
+            </div>
+          `;
+        };
+
         let html = '';
         if (role === 'property_owner') {
           html = `
@@ -2734,19 +2772,13 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
               <h5 class="font-bold text-navy text-xs uppercase tracking-wider flex items-center gap-2">
                 <i data-lucide="id-card" class="w-4 h-4 text-sky-600"></i> Nepalese Citizenship Document
               </h5>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span class="text-slate-400 text-[10px] block">Citizenship Number</span>
-                  <strong class="font-mono text-navy text-xs">${escapeHtml(p.citizenship_number || 'Not Provided')}</strong>
-                </div>
-                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span class="text-slate-400 text-[10px] block">Front Side Photo / Doc</span>
-                  <span class="font-mono text-xs text-sky-700 font-bold truncate block">${escapeHtml(p.citizenship_front_url || 'Not Provided')}</span>
-                </div>
-                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span class="text-slate-400 text-[10px] block">Back Side Photo / Doc</span>
-                  <span class="font-mono text-xs text-sky-700 font-bold truncate block">${escapeHtml(p.citizenship_back_url || 'Not Provided')}</span>
-                </div>
+              <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                <span class="text-slate-400 text-[10px] block">Citizenship Number</span>
+                <strong class="font-mono text-navy text-xs">${escapeHtml(p.citizenship_number || 'Not Provided')}</strong>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${renderKycDocCard('Front Side Photo / Doc', p.citizenship_front_url, 'text-sky-700')}
+                ${renderKycDocCard('Back Side Photo / Doc', p.citizenship_back_url, 'text-sky-700')}
               </div>
             </div>
 
@@ -2773,10 +2805,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
                   <strong class="text-navy text-xs">${escapeHtml(p.bank_branch || 'Not Provided')}</strong>
                 </div>
               </div>
-              <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <span class="text-slate-400 text-[10px] block">Cheque Leaf / Account Proof Document</span>
-                <span class="font-mono text-xs text-emerald-700 font-bold">${escapeHtml(p.bank_proof_doc_url || 'Not Provided')}</span>
-              </div>
+              ${renderKycDocCard('Cheque Leaf / Account Proof Document', p.bank_proof_doc_url, 'text-emerald-700')}
             </div>
           `;
         } else if (role === 'commercial_client') {
@@ -2804,18 +2833,9 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
                 </div>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span class="text-slate-400 text-[10px] block">Company Reg Doc</span>
-                  <span class="font-mono text-xs text-sky-700 truncate block">${escapeHtml(p.company_reg_doc_url || 'Not Provided')}</span>
-                </div>
-                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span class="text-slate-400 text-[10px] block">PAN / VAT Certificate</span>
-                  <span class="font-mono text-xs text-sky-700 truncate block">${escapeHtml(p.company_pan_doc_url || 'Not Provided')}</span>
-                </div>
-                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span class="text-slate-400 text-[10px] block">Signatory Proof</span>
-                  <span class="font-mono text-xs text-sky-700 truncate block">${escapeHtml(p.authorized_signatory_doc_url || 'Not Provided')}</span>
-                </div>
+                ${renderKycDocCard('Company Reg Doc', p.company_reg_doc_url, 'text-sky-700')}
+                ${renderKycDocCard('PAN / VAT Certificate', p.company_pan_doc_url, 'text-sky-700')}
+                ${renderKycDocCard('Signatory Proof', p.authorized_signatory_doc_url, 'text-sky-700')}
               </div>
             </div>
           `;
@@ -2835,10 +2855,7 @@ Commences owner cashflow disbursements and reserves contracted continuous sq ft.
                   <strong class="font-mono text-navy text-xs">${escapeHtml(p.fleet_operator_pan_vat || 'Not Provided')}</strong>
                 </div>
               </div>
-              <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <span class="text-slate-400 text-[10px] block">Transport Authority Operating Permit</span>
-                <span class="font-mono text-xs text-sky-700">${escapeHtml(p.fleet_operator_doc_url || 'Not Provided')}</span>
-              </div>
+              ${renderKycDocCard('Transport Authority Operating Permit', p.fleet_operator_doc_url, 'text-sky-700')}
             </div>
           `;
         } else {

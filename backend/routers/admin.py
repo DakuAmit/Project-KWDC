@@ -127,6 +127,8 @@ def get_pending_warehouses(
             "assigned_incharge_id": getattr(w, "audited_by_incharge_id", None),
             "assigned_incharge_name": auditor.full_name if auditor else None,
             "is_on_maintenance_hold": bool(w.is_on_maintenance_hold),
+            "photos": [p.photo_url for p in (w.photos or []) if p.photo_url],
+            "video_urls": [v.strip() for v in (getattr(w, "video_urls", None) or "").split(",") if v.strip()],
             "created_at": w.created_at.strftime("%Y-%m-%d %H:%M") if w.created_at else "Recent"
         })
     return results
@@ -201,6 +203,8 @@ def get_all_admin_warehouses(
             "assigned_incharge_id": auditor.id if auditor else None,
             "assigned_incharge_name": auditor.full_name if auditor else None,
             "status_tags": tags,
+            "photos": [p.photo_url for p in (w.photos or []) if p.photo_url],
+            "video_urls": [v.strip() for v in (getattr(w, "video_urls", None) or "").split(",") if v.strip()],
             "created_at": w.created_at.strftime("%Y-%m-%d %H:%M") if w.created_at else "Recent"
         })
     return results
