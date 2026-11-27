@@ -67,10 +67,11 @@ def is_allowed_content_type(content_type: str, filename: str = "") -> bool:
 
 
 def _supabase_headers(content_type: Optional[str] = None) -> Dict[str, str]:
-    headers = {
-        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
-        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
-    }
+    key = settings.SUPABASE_SERVICE_ROLE_KEY
+    headers: Dict[str, str] = {"apikey": key}
+    # Legacy service_role keys are JWTs (eyJ...) and require Bearer; new sb_secret_ keys must NOT be sent as Bearer JWTs.
+    if key and not key.startswith("sb_secret_"):
+        headers["Authorization"] = f"Bearer {key}"
     if content_type:
         headers["Content-Type"] = content_type
     return headers

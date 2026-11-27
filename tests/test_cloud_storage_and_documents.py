@@ -84,12 +84,15 @@ def test_cloud_storage_uploads_and_supabase_mock():
             assert get_res.content == raw
             assert ctype.split("/")[0] in get_res.headers.get("content-type", "")
 
-        # 3. Signed URL + Confirm Cloud flow with mocked Supabase Storage key
+        # 3. Signed URL + Confirm Cloud flow with mocked Supabase Storage key (including new sb_secret_ format)
         orig_key = settings.SUPABASE_SERVICE_ROLE_KEY
         orig_post = cloud_storage.requests.post
         orig_get = cloud_storage.requests.get
         try:
-            settings.SUPABASE_SERVICE_ROLE_KEY = "test_service_role_key"
+            settings.SUPABASE_SERVICE_ROLE_KEY = "sb_secret_test_key_123"
+            hdrs = cloud_storage._supabase_headers("application/json")
+            assert hdrs.get("apikey") == "sb_secret_test_key_123"
+            assert "Authorization" not in hdrs
 
             class _FakeResp:
                 def __init__(self, code, data=None, text="ok"):
