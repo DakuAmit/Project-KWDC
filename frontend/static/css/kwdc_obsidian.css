@@ -1,0 +1,300 @@
+/* ==========================================================================
+   KTM-WDC Obsidian & Orange Industrial Design System (Figma Parity Theme)
+   Tokens extracted from Figma Executive / Incharge / Fleet / Driver Frames
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
+
+:root {
+  --kwdc-bg: #0b1326;
+  --kwdc-surface-1: #131b2e;
+  --kwdc-surface-2: #171f33;
+  --kwdc-surface-3: #222a3d;
+  --kwdc-border: #2d3449;
+  --kwdc-border-subtle: rgba(45, 52, 73, 0.72);
+  --kwdc-orange: #f97316;
+  --kwdc-orange-soft: #ffb690;
+  --kwdc-orange-ink: #582200;
+  --kwdc-text-primary: #dae2fd;
+  --kwdc-text-muted: #e0c0b1;
+  --kwdc-text-dim: #94a3b8;
+  --kwdc-emerald: #4edea3;
+  --kwdc-emerald-dot: #00b07a;
+  --kwdc-sky: #89ceff;
+  --kwdc-red-bg: rgba(147, 0, 10, 0.8);
+  --kwdc-red-text: #ffb4ab;
+}
+
+html, body.kwdc-dark {
+  background-color: var(--kwdc-bg) !important;
+  color: var(--kwdc-text-primary) !important;
+  font-family: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.kwdc-dark .font-mono,
+body.kwdc-dark code,
+body.kwdc-dark .mono-tag {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Custom Dark Scrollbars */
+body.kwdc-dark ::-webkit-scrollbar { width: 6px; height: 6px; }
+body.kwdc-dark ::-webkit-scrollbar-track { background: var(--kwdc-bg); }
+body.kwdc-dark ::-webkit-scrollbar-thumb { background: var(--kwdc-border); border-radius: 4px; }
+body.kwdc-dark ::-webkit-scrollbar-thumb:hover { background: var(--kwdc-orange); }
+
+/* Sidebar & Top Header Frosted Glass */
+body.kwdc-dark aside {
+  background-color: var(--kwdc-surface-1) !important;
+  border-color: var(--kwdc-border-subtle) !important;
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+body.kwdc-dark aside > div:first-child {
+  background-color: rgba(6, 14, 32, 0.6) !important;
+  border-color: var(--kwdc-border-subtle) !important;
+}
+
+body.kwdc-dark header {
+  background-color: rgba(11, 19, 38, 0.9) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-color: var(--kwdc-border-subtle) !important;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* Sidebar Active & Hover Nav States */
+body.kwdc-dark aside nav button {
+  border-radius: 4px !important;
+  color: var(--kwdc-text-muted);
+}
+body.kwdc-dark aside nav button:hover {
+  background-color: var(--kwdc-surface-2) !important;
+  color: var(--kwdc-text-primary) !important;
+}
+body.kwdc-dark aside nav button.bg-white\/10,
+body.kwdc-dark aside nav button.kwdc-nav-active {
+  background-color: var(--kwdc-orange) !important;
+  color: var(--kwdc-orange-ink) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.28) !important;
+}
+body.kwdc-dark aside nav button.bg-white\/10 span,
+body.kwdc-dark aside nav button.kwdc-nav-active span {
+  color: var(--kwdc-orange-ink) !important;
+}
+
+/* Surfaces & Dynamically Rendered Cards (protects JS template literals cleanly) */
+body.kwdc-dark .bg-white:not(.qr-safe),
+body.kwdc-dark .bg-slate-50,
+body.kwdc-dark .bg-slate-50\/80,
+body.kwdc-dark .bg-slate-100 {
+  background-color: var(--kwdc-surface-2) !important;
+  color: var(--kwdc-text-primary) !important;
+}
+
+body.kwdc-dark .bg-slate-200 {
+  background-color: var(--kwdc-surface-3) !important;
+  color: var(--kwdc-text-primary) !important;
+}
+
+body.kwdc-dark .bg-slate-900:not(dialog):not(.bg-slate-900\/80):not(button),
+body.kwdc-dark .bg-navy:not(button):not(.w-9):not(.w-10):not(.w-12) {
+  background-color: var(--kwdc-surface-1) !important;
+}
+
+/* Subtle Semantic Surface Tints (supports opacity modifiers like /40, /50, /70) */
+body.kwdc-dark [class*="bg-sky-50"],
+body.kwdc-dark [class*="bg-blue-50"],
+body.kwdc-dark [class*="bg-indigo-50"],
+body.kwdc-dark .bg-indigo-100,
+body.kwdc-dark .bg-sky-100 {
+  background-color: rgba(137, 206, 255, 0.09) !important;
+  border-color: rgba(137, 206, 255, 0.25) !important;
+  color: var(--kwdc-sky) !important;
+}
+
+body.kwdc-dark [class*="bg-emerald-50"],
+body.kwdc-dark [class*="bg-green-50"],
+body.kwdc-dark .bg-emerald-100 {
+  background-color: rgba(78, 222, 163, 0.09) !important;
+  border-color: rgba(78, 222, 163, 0.28) !important;
+  color: var(--kwdc-emerald) !important;
+}
+
+body.kwdc-dark [class*="bg-amber-50"],
+body.kwdc-dark [class*="bg-orange-50"],
+body.kwdc-dark .bg-amber-100 {
+  background-color: rgba(249, 115, 22, 0.11) !important;
+  border-color: rgba(249, 115, 22, 0.3) !important;
+  color: var(--kwdc-orange-soft) !important;
+}
+
+body.kwdc-dark [class*="bg-red-50"],
+body.kwdc-dark [class*="bg-rose-50"],
+body.kwdc-dark .bg-red-100 {
+  background-color: rgba(147, 0, 10, 0.26) !important;
+  border-color: rgba(255, 180, 171, 0.32) !important;
+  color: var(--kwdc-red-text) !important;
+}
+
+/* Borders */
+body.kwdc-dark .border-slate-100,
+body.kwdc-dark .border-slate-200,
+body.kwdc-dark .border-slate-200\/80,
+body.kwdc-dark .border-slate-300 {
+  border-color: var(--kwdc-border-subtle) !important;
+}
+body.kwdc-dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+body.kwdc-dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--kwdc-border-subtle) !important;
+}
+
+/* Text Contrast Mapping */
+body.kwdc-dark .text-navy,
+body.kwdc-dark .text-slate-900,
+body.kwdc-dark .text-slate-800 {
+  color: var(--kwdc-text-primary) !important;
+}
+body.kwdc-dark .text-slate-700,
+body.kwdc-dark .text-slate-600 {
+  color: var(--kwdc-text-muted) !important;
+}
+body.kwdc-dark .text-slate-500,
+body.kwdc-dark .text-slate-400 {
+  color: var(--kwdc-text-dim) !important;
+}
+body.kwdc-dark .text-emerald-700,
+body.kwdc-dark .text-emerald-800,
+body.kwdc-dark .text-emerald-900,
+body.kwdc-dark .text-green-700 {
+  color: var(--kwdc-emerald) !important;
+}
+body.kwdc-dark .text-sky-700,
+body.kwdc-dark .text-sky-800,
+body.kwdc-dark .text-blue-700,
+body.kwdc-dark .text-indigo-700,
+body.kwdc-dark .text-indigo-900 {
+  color: var(--kwdc-sky) !important;
+}
+body.kwdc-dark .text-amber-700,
+body.kwdc-dark .text-amber-800,
+body.kwdc-dark .text-amber-900,
+body.kwdc-dark .text-orange-700 {
+  color: var(--kwdc-orange-soft) !important;
+}
+body.kwdc-dark .text-red-700,
+body.kwdc-dark .text-red-800,
+body.kwdc-dark .text-red-900 {
+  color: var(--kwdc-red-text) !important;
+}
+
+/* Primary Navy / CTA Buttons Upgrade -> Crisp Orange / Elevated Cobalt */
+body.kwdc-dark button.bg-navy,
+body.kwdc-dark a.bg-navy {
+  background-color: var(--kwdc-orange) !important;
+  color: var(--kwdc-orange-ink) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.22);
+}
+body.kwdc-dark button.bg-navy:hover,
+body.kwdc-dark a.bg-navy:hover {
+  background-color: #fb923c !important;
+}
+
+/* Modals (<dialog>) */
+body.kwdc-dark dialog {
+  background-color: var(--kwdc-surface-1) !important;
+  color: var(--kwdc-text-primary) !important;
+  border: 1px solid var(--kwdc-border) !important;
+}
+body.kwdc-dark dialog::backdrop {
+  background: rgba(5, 10, 22, 0.82) !important;
+  backdrop-filter: blur(6px);
+}
+
+/* Inputs, Selects & Textareas */
+body.kwdc-dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+body.kwdc-dark select,
+body.kwdc-dark textarea {
+  background-color: var(--kwdc-bg) !important;
+  color: var(--kwdc-text-primary) !important;
+  border-color: var(--kwdc-border) !important;
+}
+body.kwdc-dark input:focus,
+body.kwdc-dark select:focus,
+body.kwdc-dark textarea:focus {
+  border-color: var(--kwdc-orange) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35) !important;
+}
+body.kwdc-dark input::placeholder,
+body.kwdc-dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Tables */
+body.kwdc-dark table thead {
+  background-color: var(--kwdc-surface-3) !important;
+}
+body.kwdc-dark table thead th {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: var(--kwdc-text-muted) !important;
+}
+body.kwdc-dark table tbody tr:hover {
+  background-color: rgba(34, 42, 61, 0.45) !important;
+}
+
+/* Brand & Accent Utilities */
+.kwdc-card {
+  background-color: var(--kwdc-surface-2);
+  border: 1px solid var(--kwdc-border-subtle);
+  border-radius: 8px;
+}
+.kwdc-card-deep {
+  background-color: var(--kwdc-surface-1);
+  border: 1px solid var(--kwdc-border-subtle);
+  border-radius: 8px;
+}
+.kwdc-btn-orange {
+  background-color: var(--kwdc-orange);
+  color: #0b1326;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.25);
+}
+.kwdc-btn-orange:hover {
+  background-color: #fb923c;
+}
+.kwdc-badge-live {
+  background-color: rgba(78, 222, 163, 0.12);
+  color: var(--kwdc-emerald);
+  font-family: 'JetBrains Mono', monospace;
+}
+.kwdc-badge-info {
+  background-color: var(--kwdc-surface-3);
+  color: var(--kwdc-sky);
+  font-family: 'JetBrains Mono', monospace;
+}
+.kwdc-badge-orange {
+  background-color: rgba(249, 115, 22, 0.18);
+  color: var(--kwdc-orange-soft);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* QR Code White Safe Backing */
+.qr-safe {
+  background-color: #ffffff !important;
+  color: #0b1326 !important;
+}
+
+/* Dark Leaflet Popups */
+body.kwdc-dark .leaflet-popup-content-wrapper,
+body.kwdc-dark .leaflet-popup-tip {
+  background-color: var(--kwdc-surface-2) !important;
+  color: var(--kwdc-text-primary) !important;
+  border: 1px solid var(--kwdc-border);
+}

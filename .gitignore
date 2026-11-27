@@ -47,6 +47,9 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
+# Generated UI Designer Screenshots
+ui_screenshots/
+
 # React Native / Expo Mobile
 node_modules/
 .expo/

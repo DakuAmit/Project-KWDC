@@ -5,42 +5,46 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Heavy Equipment Portal — KTM-WDC Nepal</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/kwdc_obsidian.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            navy: '#0f172a',
-            amber: '#f59e0b',
+            navy: '#0b1326',
+            amber: '#f97316',
           }
         }
       }
     };
   </script>
 </head>
-<body class="bg-slate-50 text-slate-900 font-sans antialiased">
+<body class="kwdc-dark bg-[#0b1326] text-[#dae2fd] font-sans antialiased">
   <div class="min-h-screen flex flex-col">
     <!-- Top Bar -->
-    <header class="bg-navy text-white border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <header class="backdrop-blur-[24px] bg-[rgba(11,19,38,0.9)] text-[#dae2fd] border-b border-[#2d3449]/70 px-6 py-3.5 sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <span class="w-10 h-10 rounded-xl bg-amber text-navy font-black grid place-items-center text-sm shadow">EQ</span>
+        <span class="w-10 h-10 rounded bg-[#f97316] text-[#582200] font-black grid place-items-center text-sm shadow-[0_0_8px_rgba(249,115,22,0.28)]">EQ</span>
         <div>
-          <h1 class="text-base sm:text-lg font-extrabold tracking-tight" data-i18n="header_title">Heavy Equipment Owner Cockpit</h1>
-          <p class="text-[11px] text-slate-400" data-i18n="header_sub">Forklifts • Mobile Cranes • Reach-Stackers • 90/10 Settlement</p>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-[#dae2fd]" data-i18n="header_title">Heavy Equipment Owner Cockpit</h1>
+            <span class="px-1.5 py-0.5 rounded-[2px] bg-[#2d3449] text-[#ffb690] font-mono text-[10px] tracking-[0.4px] uppercase">FLEET OPS</span>
+          </div>
+          <p class="text-[11px] font-mono text-[#e0c0b1]" data-i18n="header_sub">Forklifts • Mobile Cranes • Reach-Stackers • 90/10 Settlement</p>
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2.5">
-        <button onclick="switchEqPortalView('owner')" id="btnEqOwnerView" class="px-3 py-1.5 rounded-full bg-amber text-navy text-xs font-extrabold transition">Owner Fleet</button>
-        <button onclick="switchEqPortalView('operator')" id="btnEqOperatorView" class="px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-bold text-white transition">Operator PIN Terminal</button>
-        <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-bold text-white transition">
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="switchEqPortalView('owner')" id="btnEqOwnerView" class="px-3 py-1.5 rounded bg-[#f97316] text-[#0b1326] text-xs font-extrabold transition">Owner Fleet</button>
+        <button onclick="switchEqPortalView('operator')" id="btnEqOperatorView" class="px-3 py-1.5 rounded border border-[#2d3449] bg-[#131b2e] hover:bg-[#171f33] text-xs font-bold text-[#e0c0b1] transition">Operator PIN Terminal</button>
+        <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#2d3449] bg-[#131b2e] hover:border-[#f97316] text-xs font-mono font-semibold text-[#dae2fd] transition">
           <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
         </button>
-        <button onclick="openRegisterModal()" class="px-4 py-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold text-xs shadow flex items-center gap-1.5 transition">
+        <button onclick="openRegisterModal()" class="px-4 py-2 rounded bg-[#f97316] hover:bg-[#fb923c] text-[#0b1326] font-extrabold text-xs shadow-[0_0_10px_rgba(249,115,22,0.25)] flex items-center gap-1.5 transition">
           <i data-lucide="plus" class="w-4 h-4"></i> <span data-i18n="btn_add_eq">Register Machinery</span>
         </button>
-        <button onclick="handleLogout()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-200 transition">
+        <button onclick="handleLogout()" class="px-3 py-2 rounded border border-[#2d3449] bg-[#171f33] hover:bg-[#222a3d] text-xs font-semibold text-[#e0c0b1] transition">
           Sign Out
         </button>
       </div>

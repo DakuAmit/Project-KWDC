@@ -7,7 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/kwdc_obsidian.css">
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,97 +17,97 @@
       theme: {
         extend: {
           colors: {
-            navy: '#0f172a',
-            amber: '#f59e0b',
+            navy: '#0b1326',
+            amber: '#f97316',
             nepal: '#dc2626'
           },
           fontFamily: {
-            sans: ['Geist', 'system-ui', 'sans-serif'],
-            mono: ['Geist Mono', 'monospace']
+            sans: ['Inter', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
           }
         }
       }
     }
   </script>
-  <style> body { font-family: 'Geist', sans-serif; } </style>
 </head>
-<body class="bg-slate-100 text-slate-900 antialiased font-sans">
+<body class="kwdc-dark bg-[#0b1326] text-[#dae2fd] antialiased font-sans">
   <!-- Mobile Drawer Backdrop -->
-  <div id="drawerBackdrop" onclick="toggleDrawer()" class="fixed inset-0 bg-slate-950/60 z-40 hidden lg:hidden transition-opacity"></div>
+  <div id="drawerBackdrop" onclick="toggleDrawer()" class="fixed inset-0 bg-slate-950/70 z-40 hidden lg:hidden transition-opacity"></div>
 
   <div class="flex h-screen overflow-hidden">
     <!-- Left Drawer (Sidebar) -->
-    <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-navy text-slate-300 flex flex-col border-r border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
+    <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-[#131b2e] text-[#e0c0b1] flex flex-col border-r border-[#2d3449]/70 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
       <!-- Brand & Role Header -->
-      <div class="p-5 border-b border-white/10 flex items-center justify-between">
+      <div class="p-4 border-b border-[#2d3449]/70 flex items-center justify-between bg-[#060e20]/60">
         <a href="/" class="flex items-center gap-2.5">
-          <span class="w-10 h-10 rounded-xl bg-amber text-navy grid place-items-center font-bold shadow-md shadow-amber-500/20">
-            <i data-lucide="home" class="w-6 h-6"></i>
+          <span class="w-9 h-9 rounded bg-[#f97316] text-[#582200] grid place-items-center font-bold shadow-[0_0_8px_rgba(249,115,22,0.28)]">
+            <i data-lucide="home" class="w-5 h-5"></i>
           </span>
           <div>
             <div class="flex items-center gap-1.5">
-              <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
-              <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
+              <span class="font-bold text-[#dae2fd] text-base tracking-[-0.45px]">KTM-WDC</span>
+              <span class="bg-[#2d3449] text-[#ffb690] text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-[2px] tracking-[0.4px] uppercase">OWNER</span>
             </div>
-            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5" data-i18n="drawer_subtitle">Space Owner Cockpit</p>
+            <p class="text-[10px] text-[#e0c0b1] font-mono uppercase tracking-[0.5px] mt-0.5" data-i18n="drawer_subtitle">Space Owner Cockpit</p>
           </div>
         </a>
-        <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+        <button onclick="toggleDrawer()" class="lg:hidden text-[#e0c0b1] hover:text-white p-1 rounded hover:bg-white/5">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
       <!-- Left Drawer Navigation -->
-      <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 text-sm">
-        <button type="button" onclick="switchTab('properties')" id="nav-properties" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-white bg-white/10">
-          <span class="flex items-center gap-3"><i data-lucide="building" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_properties">My Registered Spaces</span></span>
-          <span id="badgePropertyCount" class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white">0</span>
+      <nav class="flex-1 overflow-y-auto p-3 space-y-1 text-[13px]">
+        <p class="px-2 py-1 text-[10px] font-mono uppercase tracking-[0.5px] text-[#e0c0b1]/70">PROPERTY OWNER COCKPIT</p>
+        <button type="button" onclick="switchTab('properties')" id="nav-properties" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-white bg-white/10">
+          <span class="flex items-center gap-2.5"><i data-lucide="building" class="w-4 h-4"></i> <span data-i18n="nav_properties">My Registered Spaces</span></span>
+          <span id="badgePropertyCount" class="text-[10px] font-mono font-semibold bg-[#2d3449] px-1.5 py-0.5 rounded-[2px] text-[#ffb690]">0</span>
         </button>
 
-        <button type="button" onclick="openListingModal()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_register">List New Storage Space</span>
+        <button type="button" onclick="openListingModal()" class="w-full flex items-center gap-2.5 px-3 py-2 rounded font-medium transition text-[#4edea3] hover:text-white hover:bg-[#171f33]">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i> <span data-i18n="nav_register">List New Storage Space</span>
         </button>
 
-        <button type="button" onclick="switchTab('leases')" id="nav-leases" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="calendar" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_leases">Active Tenant Leases</span></span>
-          <span id="badgeLeaseCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">0</span>
+        <button type="button" onclick="switchTab('leases')" id="nav-leases" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+          <span class="flex items-center gap-2.5"><i data-lucide="calendar" class="w-4 h-4 text-[#89ceff]"></i> <span data-i18n="nav_leases">Active Tenant Leases</span></span>
+          <span id="badgeLeaseCount" class="text-[10px] font-mono font-semibold bg-[#4edea3]/15 text-[#4edea3] px-1.5 py-0.5 rounded-[2px]">0</span>
         </button>
 
-        <button type="button" onclick="switchTab('payouts')" id="nav-payouts" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="wallet" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_payouts">Rental Payouts & Settlement</span>
+        <button type="button" onclick="switchTab('payouts')" id="nav-payouts" class="w-full flex items-center gap-2.5 px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+          <i data-lucide="wallet" class="w-4 h-4 text-[#ffb690]"></i> <span data-i18n="nav_payouts">Rental Payouts & Settlement</span>
         </button>
 
-        <button type="button" onclick="switchTab('maintenance')" id="nav-maintenance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="wrench" class="w-4 h-4 text-rose-400"></i> <span data-i18n="nav_maintenance">Maintenance Hold Manager</span>
+        <button type="button" onclick="switchTab('maintenance')" id="nav-maintenance" class="w-full flex items-center gap-2.5 px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+          <i data-lucide="wrench" class="w-4 h-4 text-[#ffb4ab]"></i> <span data-i18n="nav_maintenance">Maintenance Hold Manager</span>
         </button>
 
-        <button type="button" onclick="switchTab('health')" id="nav-health" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i> <span>Facility Health &amp; Audits</span>
+        <button type="button" onclick="switchTab('health')" id="nav-health" class="w-full flex items-center gap-2.5 px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+          <i data-lucide="activity" class="w-4 h-4 text-[#89ceff]"></i> <span>Facility Health &amp; Audits</span>
         </button>
 
-        <button type="button" onclick="switchTab('governance')" id="nav-governance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <i data-lucide="file-check-2" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_governance">Master Legal Covenant</span>
+        <button type="button" onclick="switchTab('governance')" id="nav-governance" class="w-full flex items-center gap-2.5 px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+          <i data-lucide="file-check-2" class="w-4 h-4 text-[#89ceff]"></i> <span data-i18n="nav_governance">Master Legal Covenant</span>
         </button>
 
-        <button type="button" onclick="switchTab('kyc')" id="nav-kyc" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-          <span class="flex items-center gap-3"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_kyc">KYC &amp; Bank Verification</span></span>
-          <span id="badgeKycStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">Pending</span>
+        <button type="button" onclick="switchTab('kyc')" id="nav-kyc" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+          <span class="flex items-center gap-2.5"><i data-lucide="shield-check" class="w-4 h-4 text-[#4edea3]"></i> <span data-i18n="nav_kyc">KYC &amp; Bank Verification</span></span>
+          <span id="badgeKycStatus" class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[2px] bg-[#f97316]/20 text-[#ffb690]">Pending</span>
         </button>
       </nav>
 
       <!-- Drawer Footer: User Profile & Sign Out -->
-      <div class="p-4 border-t border-white/10 bg-black/20">
+      <div class="p-3.5 border-t border-[#2d3449]/70 bg-[#060e20]/40">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3 overflow-hidden cursor-pointer hover:opacity-90 transition" onclick="if(!localStorage.getItem('kwdc_token')) openOwnerAuthModal()" title="Click to Sign In or View Profile">
-            <div class="w-9 h-9 rounded-full bg-slate-700 text-white font-bold grid place-items-center text-sm shrink-0" id="ownerAvatar">
+          <div class="flex items-center gap-2.5 overflow-hidden cursor-pointer hover:opacity-90 transition" onclick="if(!localStorage.getItem('kwdc_token')) openOwnerAuthModal()" title="Click to Sign In or View Profile">
+            <div class="w-8 h-8 rounded-lg bg-[#ffb690] text-[#582200] font-bold grid place-items-center text-xs shrink-0" id="ownerAvatar">
               PO
             </div>
             <div class="truncate">
-              <p class="text-xs font-bold text-white truncate" id="ownerName">Property Owner</p>
-              <p class="text-[11px] text-slate-400 truncate" id="ownerEmail">owner@kwdc.com.np</p>
+              <p class="text-xs font-semibold text-[#dae2fd] truncate" id="ownerName">Property Owner</p>
+              <p class="text-[10px] font-mono text-[#ffb690] truncate" id="ownerEmail">owner@kwdc.com.np</p>
             </div>
           </div>
-          <button onclick="handleLogout()" title="Sign Out" class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/5 transition">
+          <button onclick="handleLogout()" title="Sign Out" class="p-1.5 rounded text-[#e0c0b1] hover:text-[#ffb4ab] hover:bg-white/5 transition">
             <i data-lucide="log-out" class="w-4 h-4"></i>
           </button>
         </div>
@@ -116,24 +117,24 @@
     <!-- Main Content Workspace -->
     <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
       <!-- Top Workspace Bar -->
-      <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+      <header class="h-16 border-b px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
         <div class="flex items-center gap-3">
-          <button onclick="toggleDrawer()" class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100">
+          <button onclick="toggleDrawer()" class="lg:hidden p-2 rounded text-[#e0c0b1] hover:bg-[#171f33]">
             <i data-lucide="menu" class="w-5 h-5"></i>
           </button>
           <div>
-            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle" data-i18n="header_title">Property Owner Cockpit</h1>
-            <p class="text-xs text-slate-500 hidden sm:block" data-i18n="header_sub">Monetize Empty Space • Rs. 0 Holding Liability Covenant • Continuous Sq Ft Accounting</p>
+            <h1 class="text-sm sm:text-base font-bold text-[#dae2fd]" id="pageTitle" data-i18n="header_title">Property Owner Cockpit</h1>
+            <p class="text-[11px] font-mono text-[#e0c0b1] hidden sm:block" data-i18n="header_sub">Monetize Empty Space • Rs. 0 Holding Liability Covenant • Continuous Sq Ft Accounting</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
           <!-- Bilingual Switcher Pill -->
-          <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
+          <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#2d3449] bg-[#131b2e] hover:border-[#f97316] text-xs font-mono font-semibold text-[#dae2fd] transition" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
             <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
           </button>
 
-          <button onclick="openListingModal()" class="inline-flex items-center gap-2 rounded-xl bg-amber hover:bg-amber-400 text-navy font-bold px-4 py-2 text-xs shadow transition">
+          <button onclick="openListingModal()" class="inline-flex items-center gap-1.5 rounded bg-[#f97316] hover:bg-[#fb923c] text-[#0b1326] font-extrabold px-4 py-2 text-xs shadow-[0_0_8px_rgba(249,115,22,0.25)] transition">
             <i data-lucide="plus" class="w-4 h-4"></i> <span data-i18n="btn_list_new">List New Storage</span>
           </button>
         </div>

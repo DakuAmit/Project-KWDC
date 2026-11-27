@@ -7,7 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/kwdc_obsidian.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Leaflet for Fleet Telemetry Radar -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -17,31 +18,31 @@
       theme: {
         extend: {
           colors: {
-            navy: '#0f172a',
-            ink: '#020617',
-            amber: { DEFAULT: '#f59e0b', 500: '#f59e0b' },
-            brand: '#3b82f6',
+            navy: '#0b1326',
+            ink: '#060e20',
+            amber: { DEFAULT: '#f97316', 500: '#f97316' },
+            brand: '#89ceff',
             nepal: '#dc2626'
           },
           fontFamily: {
-            sans: ['Geist', 'system-ui', 'sans-serif'],
-            mono: ['Geist Mono', 'monospace']
+            sans: ['Inter', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
           }
         }
       }
     }
   </script>
   <style>
-    body { font-family: 'Geist', sans-serif; }
+    body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; }
     .radar-pin {
       width: 14px; height: 14px; border-radius: 50%;
-      background: #3b82f6; border: 2px solid #ffffff;
-      box-shadow: 0 0 10px rgba(59,130,246,0.8);
+      background: #4edea3; border: 2px solid #0b1326;
+      box-shadow: 0 0 10px rgba(78,222,163,0.8);
       position: relative;
     }
     .radar-pin::after {
       content: ''; position: absolute; inset: -4px;
-      border-radius: 50%; border: 2px solid #3b82f6;
+      border-radius: 50%; border: 2px solid #4edea3;
       animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
     }
     @keyframes ping {
@@ -49,135 +50,140 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900 antialiased font-sans">
+<body class="kwdc-dark bg-[#0b1326] text-[#dae2fd] antialiased font-sans">
   <div class="min-h-screen flex flex-col lg:flex-row">
 
     <!-- ===================================================================== -->
-    <!-- OPERATIONAL LEFT DRAWER (ENTERPRISE SUPERADMIN CONSOLE) -->
+    <!-- OPERATIONAL LEFT DRAWER (ENTERPRISE SUPERADMIN CONSOLE — FIGMA PARITY) -->
     <!-- ===================================================================== -->
-    <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-72 bg-navy text-slate-300 flex flex-col border-r border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
-      <!-- Brand & Role Header -->
-      <div class="p-5 border-b border-white/10 flex items-center justify-between">
+    <aside id="leftDrawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-[#131b2e] text-[#e0c0b1] flex flex-col border-r border-[#2d3449]/70 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
+      <!-- Brand & Role Header (Figma 1:6605) -->
+      <div class="p-4 border-b border-[#2d3449]/70 flex items-center justify-between bg-[#060e20]/60">
         <a href="/" class="flex items-center gap-2.5">
-          <span class="w-10 h-10 rounded-xl bg-amber text-navy grid place-items-center font-bold shadow-md shadow-amber-500/20">
-            <i data-lucide="shield-check" class="w-6 h-6"></i>
+          <span class="w-9 h-9 rounded bg-[#f97316] text-[#582200] grid place-items-center font-bold shadow-[0_0_8px_rgba(249,115,22,0.28)]">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
           </span>
           <div>
             <div class="flex items-center gap-1.5">
-              <span class="font-extrabold text-white text-base tracking-tight">KTM-WDC</span>
-              <span class="bg-nepal text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider">NEPAL</span>
+              <span class="font-bold text-[#dae2fd] text-base tracking-[-0.45px]">KTM-WDC</span>
+              <span class="bg-[#2d3449] text-[#ffb690] text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-[2px] tracking-[0.4px] uppercase">EXEC</span>
             </div>
-            <p class="text-[11px] text-amber-400 font-bold uppercase tracking-wider mt-0.5"><span data-i18n="drawer_subtitle">SuperAdmin Console</span></p>
+            <p class="text-[10px] text-[#e0c0b1] font-mono uppercase tracking-[0.5px] mt-0.5"><span data-i18n="drawer_subtitle">GOVERNANCE &amp; ASSET OS</span></p>
           </div>
         </a>
-        <button onclick="toggleDrawer()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+        <button onclick="toggleDrawer()" class="lg:hidden text-[#e0c0b1] hover:text-white p-1 rounded hover:bg-white/5">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
       <!-- Navigation Drawer Items (Categorized by Domain) -->
-      <nav class="flex-1 overflow-y-auto p-4 space-y-4 text-sm" id="adminNavList">
+      <nav class="flex-1 overflow-y-auto p-3 space-y-4 text-[13px]" id="adminNavList">
         
         <!-- Group 1: Operations -->
         <div>
-          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5"><span data-i18n="cat_facility_ops">Facility Operations</span></p>
+          <p class="px-2 text-[10px] font-mono font-medium uppercase tracking-[0.5px] text-[#e0c0b1]/70 mb-1.5"><span data-i18n="cat_facility_ops">Facility Operations</span></p>
           <div class="space-y-1">
-            <button type="button" onclick="switchTab('overview')" id="nav-overview" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-white bg-white/10">
-              <span class="flex items-center gap-2.5"><i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_overview">Executive Overview</span></span>
+            <button type="button" onclick="switchTab('overview')" id="nav-overview" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-white bg-white/10">
+              <span class="flex items-center gap-2.5"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> <span data-i18n="nav_overview">Executive Overview</span></span>
             </button>
 
-            <button type="button" onclick="switchTab('pending')" id="nav-pending" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="building-check" class="w-4 h-4 text-sky-400"></i> <span data-i18n="nav_audits">Property Audits</span></span>
-              <span id="badgePendingCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('pending')" id="nav-pending" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="building-check" class="w-4 h-4 text-[#89ceff]"></i> <span data-i18n="nav_audits">Property Audits</span></span>
+              <span id="badgePendingCount" class="text-[10px] font-mono font-semibold bg-[#f97316]/20 text-[#ffb690] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('warehouses')" id="nav-warehouses" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="warehouse" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_warehouses">Total Warehouses</span></span>
-              <span id="badgeTotalWarehouses" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('warehouses')" id="nav-warehouses" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="warehouse" class="w-4 h-4 text-[#ffb690]"></i> <span data-i18n="nav_warehouses">Total Warehouses</span></span>
+              <span id="badgeTotalWarehouses" class="text-[10px] font-mono font-semibold bg-[#f97316]/20 text-[#ffb690] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="calendar-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_leases">Client Leases &amp; Continuous Sq Ft</span></span>
-              <span id="badgeBookingsCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('bookings')" id="nav-bookings" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="calendar-check" class="w-4 h-4 text-[#4edea3]"></i> <span data-i18n="nav_leases">Client Leases &amp; Sq Ft</span></span>
+              <span id="badgeBookingsCount" class="text-[10px] font-mono font-semibold bg-[#4edea3]/15 text-[#4edea3] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('incharges')" id="nav-incharges" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="user-plus" class="w-4 h-4 text-indigo-400"></i> <span data-i18n="nav_incharges">Incharge Staff (Ops)</span></span>
-              <span id="badgeInchargeCount" class="text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('incharges')" id="nav-incharges" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="user-plus" class="w-4 h-4 text-[#89ceff]"></i> <span data-i18n="nav_incharges">Incharge Staff (Ops)</span></span>
+              <span id="badgeInchargeCount" class="text-[10px] font-mono font-semibold bg-[#2d3449] text-[#89ceff] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('logs')" id="nav-logs" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="clipboard-list" class="w-4 h-4 text-blue-400"></i> <span data-i18n="nav_shift_logs">Facility Shift Logs</span></span>
+            <button type="button" onclick="switchTab('logs')" id="nav-logs" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="clipboard-list" class="w-4 h-4 text-[#89ceff]"></i> <span data-i18n="nav_shift_logs">Facility Shift Logs</span></span>
             </button>
           </div>
         </div>
 
         <!-- Group 2: Logistics & Settlement -->
         <div>
-          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5"><span data-i18n="cat_logistics">Logistics &amp; Settlement</span></p>
+          <p class="px-2 text-[10px] font-mono font-medium uppercase tracking-[0.5px] text-[#e0c0b1]/70 mb-1.5"><span data-i18n="cat_logistics">Logistics &amp; Settlement</span></p>
           <div class="space-y-1">
-            <button type="button" onclick="switchTab('fleet-radar')" id="nav-fleet-radar" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="radio" class="w-4 h-4 text-cyan-400 animate-pulse"></i> <span data-i18n="nav_radar">Fleet Telemetry Radar</span></span>
-              <span id="badgeFleetCount" class="text-[11px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('fleet-radar')" id="nav-fleet-radar" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="radio" class="w-4 h-4 text-[#4edea3] animate-pulse"></i> <span data-i18n="nav_radar">Fleet Telemetry Radar</span></span>
+              <span id="badgeFleetCount" class="text-[10px] font-mono font-semibold bg-[#4edea3]/15 text-[#4edea3] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('payouts')" id="nav-payouts" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_payouts">Owner Payouts (90/10)</span></span>
-              <span id="badgePayoutCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('payouts')" id="nav-payouts" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="wallet" class="w-4 h-4 text-[#4edea3]"></i> <span data-i18n="nav_payouts">Owner Payouts (90/10)</span></span>
+              <span id="badgePayoutCount" class="text-[10px] font-mono font-semibold bg-[#4edea3]/15 text-[#4edea3] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="receipt" class="w-4 h-4 text-red-400"></i> <span data-i18n="nav_invoices">IRD VAT Invoices</span></span>
+            <button type="button" onclick="switchTab('invoices')" id="nav-invoices" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="receipt" class="w-4 h-4 text-[#ffb4ab]"></i> <span data-i18n="nav_invoices">IRD VAT Invoices</span></span>
             </button>
 
-            <button type="button" onclick="switchTab('tariff-margin')" id="nav-tariff-margin" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_tariff">Freight Tariff & Margin</span></span>
-              <span id="badgeTariffMargin" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">10%</span>
+            <button type="button" onclick="switchTab('tariff-margin')" id="nav-tariff-margin" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="sliders" class="w-4 h-4 text-[#ffb690]"></i> <span data-i18n="nav_tariff">Freight Tariff & Margin</span></span>
+              <span id="badgeTariffMargin" class="text-[10px] font-mono font-semibold bg-[#f97316]/20 text-[#ffb690] px-1.5 py-0.5 rounded-[2px]">10%</span>
             </button>
           </div>
         </div>
 
         <!-- Group 3: Governance & Risk -->
         <div>
-          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5"><span data-i18n="cat_governance">Governance &amp; Controls</span></p>
+          <p class="px-2 text-[10px] font-mono font-medium uppercase tracking-[0.5px] text-[#e0c0b1]/70 mb-1.5"><span data-i18n="cat_governance">Governance &amp; Controls</span></p>
           <div class="space-y-1">
-            <button type="button" onclick="switchTab('maintenance-holds')" id="nav-maintenance-holds" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="tool" class="w-4 h-4 text-amber-400"></i> <span data-i18n="nav_maintenance_holds">Maintenance Holds</span></span>
-              <span id="badgeHoldsCount" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('maintenance-holds')" id="nav-maintenance-holds" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="tool" class="w-4 h-4 text-[#ffb690]"></i> <span data-i18n="nav_maintenance_holds">Maintenance Holds</span></span>
+              <span id="badgeHoldsCount" class="text-[10px] font-mono font-semibold bg-[#f97316]/20 text-[#ffb690] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('lien-auctions')" id="nav-lien-auctions" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i> <span>Lien Defaults &amp; Auctions</span></span>
-              <span id="badgeAuctionCount" class="text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('lien-auctions')" id="nav-lien-auctions" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="gavel" class="w-4 h-4 text-[#ffb4ab]"></i> <span>Lien Defaults &amp; Auctions</span></span>
+              <span id="badgeAuctionCount" class="text-[10px] font-mono font-semibold bg-[#93000a]/60 text-[#ffb4ab] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('insurance')" id="nav-insurance" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> <span data-i18n="nav_insurance">Stock Insurance</span></span>
-              <span id="badgeInsuranceCount" class="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('insurance')" id="nav-insurance" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="shield-check" class="w-4 h-4 text-[#4edea3]"></i> <span data-i18n="nav_insurance">Stock Insurance</span></span>
+              <span id="badgeInsuranceCount" class="text-[10px] font-mono font-semibold bg-[#4edea3]/15 text-[#4edea3] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('users')" id="nav-users" class="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-300 hover:text-white hover:bg-white/5">
-              <span class="flex items-center gap-2.5"><i data-lucide="users" class="w-4 h-4 text-purple-400"></i> <span data-i18n="nav_users">User Directory &amp; RBAC</span></span>
-              <span id="badgeUserCount" class="text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" onclick="switchTab('users')" id="nav-users" class="w-full flex items-center justify-between px-3 py-2 rounded font-medium transition text-[#e0c0b1] hover:text-white hover:bg-[#171f33]">
+              <span class="flex items-center gap-2.5"><i data-lucide="users" class="w-4 h-4 text-[#89ceff]"></i> <span data-i18n="nav_users">User Directory &amp; RBAC</span></span>
+              <span id="badgeUserCount" class="text-[10px] font-mono font-semibold bg-[#2d3449] text-[#89ceff] px-1.5 py-0.5 rounded-[2px]">0</span>
             </button>
           </div>
         </div>
 
       </nav>
 
-      <!-- Drawer Footer: User Profile & Sign Out -->
-      <div class="p-4 border-t border-white/10 bg-black/20">
+      <!-- Drawer Footer: Regulatory Status + Admin Profile -->
+      <div class="p-3.5 border-t border-[#2d3449]/70 bg-[#060e20]/40 space-y-2.5">
+        <div class="px-2.5 py-2 rounded bg-[#171f33] border border-[#2d3449]/70">
+          <div class="flex items-center gap-1.5 text-[10px] font-mono text-[#4edea3] uppercase">
+            <span class="w-2 h-2 rounded-full bg-[#00b07a]"></span> ALL SYSTEMS OPERATIONAL
+          </div>
+        </div>
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3 overflow-hidden">
-            <div class="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 grid place-items-center font-bold text-sm shrink-0">
+          <div class="flex items-center gap-2.5 overflow-hidden">
+            <div class="w-8 h-8 rounded-lg bg-[#ffb690] text-[#582200] font-bold grid place-items-center text-xs shrink-0">
               SA
             </div>
             <div class="truncate">
-              <p class="text-xs font-bold text-white truncate" id="adminUserName">Master SuperAdmin</p>
-              <p class="text-[11px] text-slate-400 truncate">admin@kwdc.com.np</p>
+              <p class="text-xs font-semibold text-[#dae2fd] truncate" id="adminUserName">Master SuperAdmin</p>
+              <p class="text-[10px] font-mono text-[#ffb690] truncate">admin@kwdc.com.np</p>
             </div>
           </div>
-          <button onclick="handleLogout()" title="Sign Out" class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/5 transition">
+          <button onclick="handleLogout()" title="Sign Out" class="p-1.5 rounded text-[#e0c0b1] hover:text-[#ffb4ab] hover:bg-white/5 transition">
             <i data-lucide="log-out" class="w-4 h-4"></i>
           </button>
         </div>
@@ -188,21 +194,23 @@
     <!-- MAIN WORKSPACE -->
     <!-- ===================================================================== -->
     <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
-      <!-- Top Workspace Bar -->
-      <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+      <!-- Top Workspace Bar (Figma 1:6565) -->
+      <header class="h-16 border-b px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
         <div class="flex items-center gap-3">
-          <button onclick="toggleDrawer()" class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100">
+          <button onclick="toggleDrawer()" class="lg:hidden p-2 rounded text-[#e0c0b1] hover:bg-[#171f33]">
             <i data-lucide="menu" class="w-5 h-5"></i>
           </button>
           <div>
-            <h1 class="text-base sm:text-lg font-bold text-navy" id="pageTitle">Executive Governance Console</h1>
-            <p class="text-xs text-slate-500 hidden sm:block">Zero Holding Liability • Continuous Sq Ft Contracting • 13% IRD VAT Audited</p>
+            <h1 class="text-sm sm:text-base font-bold text-[#dae2fd]" id="pageTitle">Executive Governance Console</h1>
+            <p class="text-[11px] font-mono text-[#e0c0b1] hidden sm:block">Zero Holding Liability • Continuous Sq Ft Contracting • 13% IRD VAT Audited</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <!-- Bilingual Switcher Pill -->
-          <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-bold text-navy transition shadow-sm" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
+        <div class="flex items-center gap-2.5">
+          <div class="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-[#131b2e] border border-[#2d3449] text-[10px] font-mono text-[#4edea3]">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#4edea3]"></span> IRD CBMS SYNCED
+          </div>
+          <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#2d3449] bg-[#131b2e] hover:border-[#f97316] text-xs font-mono font-semibold text-[#dae2fd] transition" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
             <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
           </button>
           <!-- Live DB Health Badge -->

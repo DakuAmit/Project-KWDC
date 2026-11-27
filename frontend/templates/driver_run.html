@@ -7,27 +7,31 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/kwdc_obsidian.css">
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            navy: '#0f172a',
-            amber: '#f59e0b',
+            navy: '#0b1326',
+            surface: '#131b2e',
+            card: '#171f33',
+            card2: '#222a3d',
+            amber: '#f97316',
             nepal: '#dc2626'
           },
           fontFamily: {
-            sans: ['Geist', 'system-ui', 'sans-serif'],
-            mono: ['Geist Mono', 'monospace']
+            sans: ['Inter', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
           }
         }
       }
     }
   </script>
   <style>
-    body { font-family: 'Geist', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; -webkit-tap-highlight-color: transparent; }
     .pulse-ring {
       animation: pulseAnimation 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
     }
@@ -37,187 +41,219 @@
     }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-navy">
+<body class="kwdc-dark bg-[#0b1326] text-[#dae2fd] min-h-screen flex flex-col justify-between selection:bg-[#f97316] selection:text-[#0b1326]">
 
   <!-- Toast Notification HUD -->
   <div id="toastContainer" class="fixed top-4 inset-x-4 z-50 flex flex-col gap-2 max-w-sm mx-auto pointer-events-none"></div>
 
   <!-- Screen 1: Driver Mobile & PIN Sign-In (High-Contrast Cab Login) -->
-  <div id="driverLoginScreen" class="flex-1 flex flex-col justify-center px-5 py-8 max-w-md w-full mx-auto">
+  <div id="driverLoginScreen" class="flex-1 flex flex-col justify-center px-4 py-8 max-w-md w-full mx-auto">
     <div class="text-center mb-6">
-      <div class="w-16 h-16 rounded-2xl bg-amber text-navy font-black grid place-items-center mx-auto mb-3 shadow-lg shadow-amber-500/20">
-        <i data-lucide="truck" class="w-9 h-9"></i>
+      <div class="w-16 h-16 rounded-xl bg-[#f97316] text-[#582200] font-black grid place-items-center mx-auto mb-3 shadow-[0_0_18px_rgba(249,115,22,0.3)]">
+        <i data-lucide="truck" class="w-8 h-8"></i>
       </div>
       <div class="flex items-center justify-center gap-2">
-        <h1 class="text-2xl font-black text-white tracking-tight">KTM-WDC</h1>
-        <span class="bg-nepal text-white text-[10px] font-black px-2 py-0.5 rounded tracking-wider">NEPAL</span>
+        <h1 class="text-2xl font-bold text-[#dae2fd] tracking-[-0.45px]">KTM-WDC</h1>
+        <span class="bg-[#2d3449] text-[#ffb690] text-[10px] font-mono font-semibold px-2 py-0.5 rounded-[2px] tracking-[0.4px] uppercase">CAB OS</span>
       </div>
-      <p class="text-xs text-amber-400 font-bold uppercase tracking-widest mt-1" data-i18n="login_sub">Field Driver Cab Terminal</p>
-      <p class="text-xs text-slate-400 mt-1" data-i18n="login_hint">Enter your mobile phone number and 4-digit PIN provided by your fleet manager.</p>
+      <p class="text-[11px] font-mono text-[#ffb690] font-semibold uppercase tracking-[0.5px] mt-1.5" data-i18n="login_sub">Field Driver Cab Terminal</p>
+      <p class="text-xs text-[#e0c0b1] mt-1" data-i18n="login_hint">Enter your mobile phone number and 4-digit PIN provided by your fleet manager.</p>
     </div>
 
-    <form onsubmit="handleDriverLogin(event)" class="bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4">
+    <form onsubmit="handleDriverLogin(event)" class="bg-[#171f33] border border-[#2d3449]/80 rounded-xl p-6 shadow-2xl space-y-4">
       <div>
-        <label class="block text-xs font-bold text-slate-300 mb-1" data-i18n="label_mobile">Driver Mobile Number *</label>
+        <label class="block text-[11px] font-mono uppercase tracking-[0.4px] font-medium text-[#e0c0b1] mb-1.5" data-i18n="label_mobile">Driver Mobile Number *</label>
         <div class="relative">
-          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-mono text-sm">+977</span>
-          <input type="tel" id="loginPhone" required pattern="[0-9]{10}" maxlength="10" placeholder="98XXXXXXXX" class="w-full pl-16 pr-4 py-3 rounded-2xl border border-slate-600 bg-slate-900/90 text-white font-mono text-base font-semibold focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#ffb690] font-mono text-sm">+977</span>
+          <input type="tel" id="loginPhone" required pattern="[0-9]{10}" maxlength="10" placeholder="98XXXXXXXX" class="w-full pl-16 pr-4 py-3 rounded-lg border border-[#2d3449] bg-[#0b1326] text-[#dae2fd] font-mono text-base font-semibold focus:outline-none focus:border-[#f97316]">
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-bold text-slate-300 mb-1" data-i18n="label_pin">4-Digit Driver Security PIN *</label>
-        <input type="password" id="loginPin" required pattern="[0-9]{4,6}" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full px-4 py-3 rounded-2xl border border-slate-600 bg-slate-900/90 text-white font-mono text-center text-2xl tracking-[0.4em] font-bold focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+        <label class="block text-[11px] font-mono uppercase tracking-[0.4px] font-medium text-[#e0c0b1] mb-1.5" data-i18n="label_pin">4-Digit Driver Security PIN *</label>
+        <input type="password" id="loginPin" required pattern="[0-9]{4,6}" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full px-4 py-3 rounded-lg border border-[#2d3449] bg-[#0b1326] text-[#dae2fd] font-mono text-center text-2xl tracking-[0.4em] font-bold focus:outline-none focus:border-[#f97316]">
       </div>
 
       <div class="pt-2">
-        <button type="submit" id="btnSignIn" class="w-full py-3.5 rounded-2xl bg-amber hover:bg-amber-400 text-navy font-black text-sm tracking-wide shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 transition active:scale-[0.98]">
+        <button type="submit" id="btnSignIn" class="w-full py-3.5 rounded-lg bg-[#f97316] hover:bg-[#fb923c] text-[#0b1326] font-extrabold text-sm tracking-wide shadow-[0_0_14px_rgba(249,115,22,0.28)] flex items-center justify-center gap-2 transition active:scale-[0.98]">
           <i data-lucide="log-in" class="w-5 h-5"></i> <span data-i18n="btn_login">Sign In to Cab Terminal</span>
         </button>
       </div>
 
-      <div class="pt-3 border-t border-slate-700/70 text-center">
-        <p class="text-[11px] text-slate-400">
+      <div class="pt-3 border-t border-[#2d3449]/70 text-center">
+        <p class="text-[11px] text-[#e0c0b1]">
           <span data-i18n="forgot_pin_text">Forgot your PIN? Contact your fleet dispatcher or transport manager to reset it.</span>
         </p>
       </div>
     </form>
 
     <div class="mt-6 flex items-center justify-center gap-3">
-      <button onclick="toggleDriverLang()" id="loginLangBtn" class="px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-800 text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5 shadow-sm">
+      <button onclick="toggleDriverLang()" id="loginLangBtn" class="px-3.5 py-1.5 rounded border border-[#2d3449] bg-[#131b2e] text-xs font-mono font-medium text-[#dae2fd] hover:border-[#f97316] transition flex items-center gap-1.5">
         <span id="loginLangFlag">🇳🇵</span> <span id="loginLangLabel">नेपाली</span>
       </button>
-      <a href="/login" class="text-xs text-slate-500 hover:text-slate-300 transition">Fleet Manager Portal ➔</a>
+      <a href="/fleet" class="text-xs font-mono text-[#89ceff] hover:underline transition">Fleet Manager Console ➔</a>
     </div>
   </div>
 
-  <!-- Screen 2: Active Driver Cab Cockpit (Post-Login) -->
-  <div id="driverCockpitScreen" class="hidden flex-1 flex flex-col max-w-lg w-full mx-auto">
-    <!-- Top Driver HUD Bar -->
-    <header class="bg-slate-800/95 border-b border-slate-700/80 px-4 py-3 sticky top-0 z-30 shadow-md flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-amber text-navy font-black grid place-items-center text-sm shadow">
-          <i data-lucide="truck" class="w-5 h-5"></i>
+  <!-- Screen 2: Active Driver Cab Cockpit (Post-Login — Figma Mobile HUD Parity) -->
+  <div id="driverCockpitScreen" class="hidden flex-1 flex flex-col max-w-md w-full mx-auto pb-20">
+    <!-- Top Frosted Driver Telemetry Bar -->
+    <header class="sticky top-0 z-30 px-3 py-2.5 flex items-center justify-between border-b border-[#2d3449]/70">
+      <div class="min-w-0">
+        <div class="flex items-center gap-1.5 text-[10px] font-mono font-medium tracking-[0.5px] uppercase text-[#4edea3]">
+          <span class="w-2 h-2 rounded-full bg-[#00b07a] animate-pulse shrink-0"></span>
+          <span>ON DUTY &bull; GPS ONLINE</span>
         </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h2 class="text-sm font-bold text-white truncate" id="hudDriverName">Driver Name</h2>
-            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> GPS ONLINE
-            </span>
-          </div>
-          <p class="text-[11px] text-slate-400 font-mono" id="hudVehiclePlate">Vehicle: Ba 2 Kha 4921</p>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <p class="text-xs font-mono font-bold text-[#dae2fd] truncate" id="hudVehiclePlate">Vehicle: Active</p>
+          <span class="px-1.5 py-0.5 rounded-[2px] bg-[#222a3d] text-[#89ceff] font-mono text-[10px] shrink-0">CAB TELEMETRY</span>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <button onclick="toggleDriverLang()" class="px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-xs font-bold text-slate-300 hover:text-white transition">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="toggleDriverLang()" class="px-2.5 py-1.5 rounded-[2px] border border-[#2d3449] bg-[#131b2e] text-[10px] font-mono font-semibold text-[#e0c0b1] hover:text-[#dae2fd] transition">
           <span id="cockpitLangLabel">नेपाली</span>
         </button>
-        <button onclick="handleDriverLogout()" title="Sign Out" class="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-slate-700/60 transition">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
+        <button onclick="handleDriverLogout()" title="Sign Out" class="min-h-[34px] px-2.5 py-1 rounded-[2px] bg-[#93000a]/80 hover:bg-[#93000a] text-[#ffb4ab] font-mono text-[10px] font-semibold flex items-center gap-1 transition">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i> OUT
         </button>
       </div>
     </header>
 
     <!-- Cockpit Main Scroll Area -->
-    <main class="flex-1 p-4 space-y-4 overflow-y-auto">
+    <main class="flex-1 p-3 space-y-3 overflow-y-auto">
 
-      <!-- Mode Pill -->
-      <div id="driverModeBanner" class="bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs">
-        <span class="font-bold text-amber-300" id="driverModeLabel">Driver Mode</span>
-        <span class="font-mono text-[11px] text-slate-400" id="driverVehCatBadge">Loading...</span>
+      <!-- Quick-Status Driver Ribbon (Figma 1:9517) -->
+      <div id="driverModeBanner" class="bg-[#171f33] rounded-lg p-3 shadow-md border border-[#2d3449]/60 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-11 h-11 rounded-xl bg-[#2d3449] text-[#ffb690] font-bold grid place-items-center shrink-0 relative border border-[#2d3449]">
+            <i data-lucide="user-check" class="w-5 h-5"></i>
+            <span class="w-3 h-3 rounded-full bg-[#00b07a] border-2 border-[#171f33] absolute -bottom-0.5 -right-0.5"></span>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <h2 class="text-sm font-semibold text-[#dae2fd] truncate" id="hudDriverName">Driver Name</h2>
+              <span class="px-1.5 py-0.5 rounded-[2px] bg-[#2d3449] text-[#89ceff] font-mono text-[10px] whitespace-nowrap shrink-0" id="driverVehCatBadge">CAB-01</span>
+            </div>
+            <p class="text-[10px] font-mono font-medium uppercase tracking-[0.3px] text-[#4edea3] truncate mt-0.5" id="driverModeLabel">Driver Mode</p>
+          </div>
+        </div>
+        <button onclick="loadDriverCockpit()" class="p-2 rounded bg-[#222a3d] text-[#ffb690] hover:bg-[#2d3449] transition shrink-0" title="Refresh Dispatch">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
       </div>
 
       <!-- Independent Owner-Driver Available Jobs Load Board -->
-      <div id="independentLoadBoardCard" class="hidden space-y-3">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xs font-black uppercase tracking-wider text-amber-400">Available Matching Loads</h3>
-          <button onclick="loadDriverCockpit()" class="text-[11px] font-bold text-slate-300 hover:text-white underline">Refresh</button>
+      <div id="independentLoadBoardCard" class="hidden space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-[10px] font-mono font-semibold uppercase tracking-[0.5px] text-[#ffb690]">Available Matching Loads</h3>
+          <button onclick="loadDriverCockpit()" class="text-[10px] font-mono font-semibold text-[#89ceff] hover:underline">REFRESH</button>
         </div>
-        <div id="driverAvailableJobsList" class="space-y-3"></div>
+        <div id="driverAvailableJobsList" class="space-y-2.5"></div>
       </div>
 
       <!-- Standby Notice (When no trip is assigned) -->
-      <div id="standbyCard" class="hidden bg-slate-800/80 border border-slate-700 rounded-3xl p-6 text-center shadow-lg space-y-4">
-        <div class="w-14 h-14 rounded-2xl bg-slate-700 text-slate-400 grid place-items-center mx-auto">
-          <i data-lucide="coffee" class="w-7 h-7 text-amber-400"></i>
+      <div id="standbyCard" class="hidden bg-[#171f33] border border-[#2d3449]/70 rounded-lg p-5 text-center shadow-lg space-y-3">
+        <div class="w-12 h-12 rounded-lg bg-[#222a3d] text-[#ffb690] grid place-items-center mx-auto">
+          <i data-lucide="coffee" class="w-6 h-6"></i>
         </div>
         <div>
-          <h3 class="font-bold text-base text-white" data-i18n="standby_title">On Standby Duty</h3>
-          <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto" id="standbySubText" data-i18n="standby_sub">
+          <h3 class="font-semibold text-base text-[#dae2fd]" data-i18n="standby_title">On Standby Duty</h3>
+          <p class="text-xs text-[#e0c0b1] mt-1 max-w-xs mx-auto" id="standbySubText" data-i18n="standby_sub">
             No active freight trip assigned right now. Your fleet dispatcher will allocate your next corridor dispatch shortly.
           </p>
         </div>
         <div>
-          <button onclick="loadDriverCockpit()" class="px-5 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs shadow flex items-center gap-2 mx-auto transition">
-            <i data-lucide="refresh-cw" class="w-4 h-4 text-amber-400"></i> <span data-i18n="btn_check_dispatch">Check for New Dispatch</span>
+          <button onclick="loadDriverCockpit()" class="px-4 py-2.5 rounded bg-[#222a3d] hover:bg-[#2d3449] text-[#ffb690] border border-[#2d3449] font-mono font-semibold text-xs flex items-center gap-2 mx-auto transition">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_check_dispatch">Check for New Dispatch</span>
           </button>
         </div>
       </div>
 
-      <!-- Active Assigned Freight Trip Card -->
-      <div id="activeTripCard" class="hidden space-y-4">
+      <!-- Active Assigned Freight Trip Card (Figma Waypoint & Mission Hero) -->
+      <div id="activeTripCard" class="hidden space-y-3">
 
-        <!-- Trip Status Pill & Order Header -->
-        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-[11px] font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full uppercase" id="tripOrderNumber">
-              FRT-2083-0001
-            </span>
-            <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider" id="tripStatusBadge">
-              IN TRANSIT
-            </span>
+        <!-- High-Contrast Corridor Header Card (Figma 1:9541) -->
+        <div class="bg-[#222a3d] rounded-lg p-3 shadow-lg border border-[#2d3449] flex items-center justify-between gap-2.5">
+          <div class="flex items-start gap-2.5 min-w-0">
+            <div class="w-12 h-12 rounded bg-[#f97316] text-[#0b1326] grid place-items-center shrink-0 shadow-[0_0_8px_rgba(249,115,22,0.3)]">
+              <i data-lucide="navigation-2" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="text-[10px] font-mono font-medium uppercase tracking-[0.5px] text-[#ffb690]">NEXT WAYPOINT &bull; DISPATCH</p>
+              <h3 class="text-base font-semibold text-[#dae2fd] truncate mt-0.5" id="tripDeliveryAddressHeading">Active Corridor</h3>
+              <p class="text-[11px] text-[#e0c0b1] truncate" id="tripOrderCorridorSub">Corridor Assignment</p>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <p class="text-2xl font-bold text-[#dae2fd] leading-none" id="tripDistNum">--</p>
+            <p class="text-[10px] font-mono font-medium text-[#e0c0b1] tracking-[0.4px] mt-1">KM</p>
+          </div>
+        </div>
+
+        <!-- Mission Hero Card (Figma 1:9560) -->
+        <div class="bg-[#171f33] border border-[#2d3449]/70 rounded-lg p-3.5 shadow-md space-y-3">
+          <div class="flex items-center justify-between gap-2 pb-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono font-semibold text-sm text-[#ffb690] tracking-[0.28px]" id="tripOrderNumber">
+                FRT-ORDER
+              </span>
+              <span class="px-2 py-0.5 rounded-[2px] text-[10px] font-mono font-medium uppercase tracking-[0.4px]" id="tripStatusBadge">
+                ASSIGNED
+              </span>
+            </div>
+            <span class="text-[10px] font-mono text-[#89ceff]">● LIVE IRD SYNC</span>
           </div>
 
-          <div>
-            <h3 class="text-lg font-black text-white" id="tripCargo">5,000 KG Basmati Rice Cargo</h3>
-            <p class="text-xs text-slate-400 mt-0.5" id="tripCorridorDistance">Corridor Distance: 18.5 KM</p>
-            <div class="mt-2 p-2.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-between">
-              <span class="text-[11px] font-bold text-emerald-300 uppercase">Agreed Trip Fare (COD):</span>
-              <span class="text-base font-black text-emerald-400 font-mono" id="tripAgreedFare">Rs. 0</span>
+          <div class="bg-[#131b2e] rounded p-2.5 border border-[#2d3449]/60 space-y-2">
+            <div>
+              <p class="text-[10px] font-mono uppercase tracking-[0.4px] text-[#e0c0b1]">CARGO CONSIGNMENT</p>
+              <h3 class="text-sm font-semibold text-[#dae2fd] mt-0.5" id="tripCargo">Assigned Freight Cargo</h3>
+              <p class="text-[11px] font-mono text-[#89ceff] mt-0.5" id="tripCorridorDistance">Distance &amp; Weight</p>
+            </div>
+            <div class="pt-2 border-t border-[#2d3449]/60 flex items-center justify-between">
+              <span class="text-[10px] font-mono uppercase text-[#e0c0b1]">AGREED FARE (COD):</span>
+              <span class="text-sm font-mono font-bold text-[#4edea3]" id="tripAgreedFare">Rs. 0</span>
             </div>
           </div>
 
           <!-- Emergency Reassignment Notice if applicable -->
-          <div id="tripRescueAlert" class="hidden p-3 rounded-2xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs flex items-center gap-2.5">
-            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400 shrink-0"></i>
+          <div id="tripRescueAlert" class="hidden p-3 rounded bg-[#93000a]/60 border border-[#ffb4ab]/30 text-[#ffb4ab] text-xs flex items-center gap-2.5">
+            <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
             <span id="tripRescueText">Emergency Rescue Dispatch assigned due to vehicle breakdown.</span>
           </div>
 
           <!-- Corridors: Origin (Pickup) & Destination (Delivery) -->
-          <div class="space-y-3 pt-3 border-t border-slate-700 font-sans">
-            <!-- Pickup Warehouse -->
-            <div class="flex items-start gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/60">
-              <span class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 grid place-items-center shrink-0 mt-0.5">
-                <i data-lucide="warehouse" class="w-4 h-4"></i>
+          <div class="space-y-2 pt-1 font-sans">
+            <div class="flex items-start gap-2.5 bg-[#131b2e] p-2.5 rounded border border-[#2d3449]/60">
+              <span class="w-7 h-7 rounded bg-[#222a3d] text-[#4edea3] grid place-items-center shrink-0 mt-0.5">
+                <i data-lucide="warehouse" class="w-3.5 h-3.5"></i>
               </span>
               <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider" data-i18n="tag_pickup">1. PICKUP WAREHOUSE</span>
-                  <a id="btnCallPickup" href="#" class="inline-flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[10px] font-mono font-medium text-[#4edea3] uppercase tracking-[0.4px]" data-i18n="tag_pickup">1. PICKUP WAREHOUSE</span>
+                  <a id="btnCallPickup" href="#" class="inline-flex items-center gap-1 text-[10px] font-mono text-[#4edea3] bg-[#222a3d] px-2 py-0.5 rounded-[2px] border border-[#2d3449]">
                     <i data-lucide="phone" class="w-3 h-3"></i> Call
                   </a>
                 </div>
-                <h4 class="font-bold text-white text-xs mt-0.5 truncate" id="tripPickupName">Chobhar Dry Port Storage</h4>
-                <p class="text-[11px] text-slate-400 mt-0.5" id="tripPickupAddress">Kirtipur Road, Chobhar Gate 2</p>
+                <h4 class="font-semibold text-[#dae2fd] text-xs mt-0.5 truncate" id="tripPickupName">Origin Hub</h4>
+                <p class="text-[11px] text-[#e0c0b1] mt-0.5" id="tripPickupAddress">Pickup Address</p>
               </div>
             </div>
 
-            <!-- Destination Drop(s) -->
-            <div class="flex items-start gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/60">
-              <span class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 grid place-items-center shrink-0 mt-0.5">
-                <i data-lucide="map-pin" class="w-4 h-4"></i>
+            <div class="flex items-start gap-2.5 bg-[#131b2e] p-2.5 rounded border border-[#2d3449]/60">
+              <span class="w-7 h-7 rounded bg-[#222a3d] text-[#ffb690] grid place-items-center shrink-0 mt-0.5">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
               </span>
               <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider" data-i18n="tag_delivery">2. DELIVERY DESTINATION</span>
-                  <a id="btnCallConsignee" href="#" class="inline-flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/30">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[10px] font-mono font-medium text-[#ffb690] uppercase tracking-[0.4px]" data-i18n="tag_delivery">2. DELIVERY DESTINATION</span>
+                  <a id="btnCallConsignee" href="#" class="inline-flex items-center gap-1 text-[10px] font-mono text-[#ffb690] bg-[#222a3d] px-2 py-0.5 rounded-[2px] border border-[#2d3449]">
                     <i data-lucide="phone" class="w-3 h-3"></i> Call Consignee
                   </a>
                 </div>
-                <h4 class="font-bold text-white text-xs mt-0.5 truncate" id="tripConsigneeName">Nepal Agro Trading Ltd</h4>
-                <p class="text-[11px] text-slate-400 mt-0.5" id="tripDeliveryAddress">Balaju Industrial Area, Sector 4B</p>
+                <h4 class="font-semibold text-[#dae2fd] text-xs mt-0.5 truncate" id="tripConsigneeName">Consignee Receiver</h4>
+                <p class="text-[11px] text-[#e0c0b1] mt-0.5" id="tripDeliveryAddress">Delivery Address</p>
               </div>
             </div>
 
@@ -225,39 +261,37 @@
             <div id="tripMultiStopsBox" class="hidden space-y-2 pt-1"></div>
           </div>
 
-          <!-- Quick Navigation & Gate Pass Buttons -->
-          <div class="grid grid-cols-2 gap-2 pt-2">
-            <button onclick="openGatePassModal()" class="py-2.5 px-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
-              <i data-lucide="qr-code" class="w-4 h-4 text-amber-400"></i> <span data-i18n="btn_qr_pass">QR Gate Pass</span>
+          <!-- Checkpoint Action: Big Orange Gatepass QR + Maps (Figma 1:9675 CTA) -->
+          <div class="space-y-2 pt-1">
+            <button onclick="openGatePassModal()" class="w-full py-3.5 px-4 rounded bg-[#f97316] hover:bg-[#fb923c] text-[#0b1326] font-extrabold text-sm tracking-wide shadow-[0_0_12px_rgba(249,115,22,0.28)] flex items-center justify-center gap-2 transition active:scale-[0.98]">
+              <i data-lucide="qr-code" class="w-5 h-5"></i> <span data-i18n="btn_qr_pass">SHOW GATEPASS QR TO MARSHAL</span>
             </button>
-            <a id="btnGoogleMapsNav" href="#" target="_blank" class="py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
-              <i data-lucide="navigation" class="w-4 h-4"></i> <span data-i18n="btn_gmaps">Navigate (Maps)</span>
+            <a id="btnGoogleMapsNav" href="#" target="_blank" class="w-full py-2.5 px-3 rounded bg-[#222a3d] hover:bg-[#2d3449] text-[#89ceff] border border-[#2d3449] font-mono font-semibold text-xs flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="navigation" class="w-4 h-4"></i> <span data-i18n="btn_gmaps">Navigate Route (Google Maps)</span>
             </a>
           </div>
         </div>
 
         <!-- Dynamic Action Controls: Start Trip vs Complete Delivery -->
-        <div class="space-y-3">
-          <!-- Start Trip Button (Visible when status is requested / assigned) -->
-          <button id="btnStartTrip" onclick="handleStartTrip()" class="w-full py-4 rounded-3xl bg-emerald-500 hover:bg-emerald-400 text-navy font-black text-base shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 transition active:scale-[0.98]">
-            <i data-lucide="play" class="w-6 h-6 fill-current"></i> <span data-i18n="btn_start_trip">START TRANSIT & GPS STREAM</span>
+        <div class="space-y-2.5">
+          <button id="btnStartTrip" onclick="handleStartTrip()" class="w-full py-3.5 rounded-lg bg-[#00b07a] hover:bg-emerald-400 text-[#0b1326] font-extrabold text-sm tracking-wide shadow-lg flex items-center justify-center gap-2 transition active:scale-[0.98]">
+            <i data-lucide="play" class="w-5 h-5 fill-current"></i> <span data-i18n="btn_start_trip">START TRANSIT & GPS STREAM</span>
           </button>
 
-          <!-- Complete Delivery Button (Visible when status is in_transit) -->
-          <div id="inTransitActions" class="hidden space-y-3">
-            <div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl flex items-center justify-between text-xs text-emerald-300">
+          <div id="inTransitActions" class="hidden space-y-2.5">
+            <div class="p-3 bg-[#171f33] border border-[#4edea3]/30 rounded-lg flex items-center justify-between text-xs text-[#4edea3]">
               <span class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#4edea3] animate-pulse"></span>
                 <span>
                   <span data-i18n="telemetry_active_msg">Live GPS Corridors Broadcasting</span>
-                  <span id="gpsAccuracyBadge" class="block text-[10px] font-mono text-amber-300">Acquiring GPS lock...</span>
+                  <span id="gpsAccuracyBadge" class="block text-[10px] font-mono text-[#89ceff]">Acquiring GPS lock...</span>
                 </span>
               </span>
-              <button onclick="pingLiveLocation(true)" class="text-amber-400 underline font-bold" data-i18n="btn_sync_gps">Ping Location</button>
+              <button onclick="pingLiveLocation(true)" class="text-[#ffb690] font-mono underline font-bold text-[11px]" data-i18n="btn_sync_gps">Ping Location</button>
             </div>
 
-            <button onclick="openCompleteDeliveryModal()" class="w-full py-4 rounded-3xl bg-amber hover:bg-amber-400 text-navy font-black text-base shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 transition active:scale-[0.98]">
-              <i data-lucide="check-circle-2" class="w-6 h-6"></i> <span data-i18n="btn_complete_trip">DELIVER CARGO & VERIFY OTP</span>
+            <button onclick="openCompleteDeliveryModal()" class="w-full py-3.5 rounded-lg bg-[#f97316] hover:bg-[#fb923c] text-[#0b1326] font-extrabold text-sm tracking-wide shadow-[0_0_14px_rgba(249,115,22,0.3)] flex items-center justify-center gap-2 transition active:scale-[0.98]">
+              <i data-lucide="check-circle-2" class="w-5 h-5"></i> <span data-i18n="btn_complete_trip">DELIVER CARGO & VERIFY OTP</span>
             </button>
           </div>
         </div>
@@ -266,75 +300,92 @@
 
     </main>
 
-    <!-- Bottom Footer Bar -->
-    <footer class="p-3 text-center text-[10px] text-slate-500 border-t border-slate-800">
-      KTM-WDC Logistics • Driver Safe Operations • Bikram Sambat 2083
-    </footer>
+    <!-- Fixed Mobile Bottom Navigation Bar (Figma 1:9812) -->
+    <nav class="fixed bottom-0 inset-x-0 z-30 max-w-md mx-auto backdrop-blur-[24px] bg-[rgba(11,19,38,0.92)] border-t border-[#2d3449]/70 shadow-[0_-2px_12px_rgba(0,0,0,0.45)]">
+      <div class="grid grid-cols-4 h-16 px-1">
+        <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="flex flex-col items-center justify-center gap-1 rounded-[2px] bg-[#222a3d]/60 text-[#ffb690] font-mono text-[10px]">
+          <i data-lucide="compass" class="w-4 h-4"></i>
+          <span>Trip &amp; Nav</span>
+        </button>
+        <button onclick="document.getElementById('independentLoadBoardCard')?.scrollIntoView({behavior:'smooth'})" class="flex flex-col items-center justify-center gap-1 rounded-[2px] text-[#e0c0b1] hover:text-[#dae2fd] font-mono text-[10px]">
+          <i data-lucide="package" class="w-4 h-4"></i>
+          <span>Loads</span>
+        </button>
+        <button onclick="openGatePassModal()" class="flex flex-col items-center justify-center gap-1 rounded-[2px] text-[#e0c0b1] hover:text-[#dae2fd] font-mono text-[10px]">
+          <i data-lucide="qr-code" class="w-4 h-4"></i>
+          <span>Gatepass</span>
+        </button>
+        <button onclick="loadDriverCockpit()" class="flex flex-col items-center justify-center gap-1 rounded-[2px] text-[#e0c0b1] hover:text-[#dae2fd] font-mono text-[10px]">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          <span>Sync</span>
+        </button>
+      </div>
+    </nav>
   </div>
 
   <!-- Modal 1: Warehouse QR Gate Pass (Full Screen View for Gate Guards) -->
-  <dialog id="gatePassModal" class="rounded-3xl shadow-2xl p-0 w-full max-w-sm border border-slate-700 bg-slate-900 text-white backdrop:bg-black/80">
-    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-800/90 rounded-t-3xl">
+  <dialog id="gatePassModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-sm border border-[#2d3449] bg-[#131b2e] text-[#dae2fd] backdrop:bg-black/80">
+    <div class="p-4 border-b border-[#2d3449] flex items-center justify-between bg-[#171f33] rounded-t-2xl">
       <div class="flex items-center gap-2">
-        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
-        <h3 class="font-bold text-sm text-white" data-i18n="gate_pass_title">Warehouse Security Gate Pass</h3>
+        <i data-lucide="shield-check" class="w-5 h-5 text-[#4edea3]"></i>
+        <h3 class="font-bold text-sm text-[#dae2fd]" data-i18n="gate_pass_title">Warehouse Security Gate Pass</h3>
       </div>
-      <button onclick="document.getElementById('gatePassModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+      <button onclick="document.getElementById('gatePassModal').close()" class="p-1 rounded-lg text-[#e0c0b1] hover:text-white">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
     <div class="p-6 text-center space-y-4">
-      <p class="text-xs text-slate-400" data-i18n="gate_pass_sub">Present this QR Gate Pass to the Warehouse Incharge or Security Guard for inward/outward clearance.</p>
+      <p class="text-xs text-[#e0c0b1]" data-i18n="gate_pass_sub">Present this QR Gate Pass to the Warehouse Incharge or Security Guard for inward/outward clearance.</p>
 
       <!-- QR Code Display Canvas -->
-      <div class="bg-white p-4 rounded-2xl inline-block shadow-inner">
+      <div class="qr-safe bg-white p-4 rounded-xl inline-block shadow-inner">
         <img id="gatePassQrImg" src="" alt="Gate Pass QR" class="w-48 h-48 mx-auto object-contain">
       </div>
 
       <div class="space-y-1 font-mono text-xs">
-        <p class="text-amber-400 font-bold" id="gatePassTokenText">GP-FRT-ORD001</p>
-        <p class="text-slate-400" id="gatePassVehicleText">Cab: Ba 2 Kha 4921</p>
+        <p class="text-[#ffb690] font-bold" id="gatePassTokenText">GP-FRT-ACTIVE</p>
+        <p class="text-[#e0c0b1]" id="gatePassVehicleText">Cab Active</p>
       </div>
 
-      <button type="button" onclick="document.getElementById('gatePassModal').close()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs" data-i18n="btn_close">
+      <button type="button" onclick="document.getElementById('gatePassModal').close()" class="w-full py-2.5 rounded-lg bg-[#222a3d] hover:bg-[#2d3449] text-[#dae2fd] font-bold text-xs" data-i18n="btn_close">
         Close Gate Pass
       </button>
     </div>
   </dialog>
 
   <!-- Modal 2: Delivery Completion & e-POD with Consignee OTP -->
-  <dialog id="completeDeliveryModal" class="rounded-3xl shadow-2xl p-0 w-full max-w-sm border border-slate-700 bg-slate-900 text-white backdrop:bg-black/80">
-    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-emerald-900/40 text-emerald-300 rounded-t-3xl">
+  <dialog id="completeDeliveryModal" class="rounded-2xl shadow-2xl p-0 w-full max-w-sm border border-[#2d3449] bg-[#131b2e] text-[#dae2fd] backdrop:bg-black/80">
+    <div class="p-4 border-b border-[#2d3449] flex items-center justify-between bg-[#171f33] text-[#4edea3] rounded-t-2xl">
       <div class="flex items-center gap-2">
-        <i data-lucide="package-check" class="w-5 h-5 text-emerald-400"></i>
-        <h3 class="font-bold text-sm text-white" data-i18n="modal_epod_title">Complete Delivery (e-POD)</h3>
+        <i data-lucide="package-check" class="w-5 h-5 text-[#4edea3]"></i>
+        <h3 class="font-bold text-sm text-[#dae2fd]" data-i18n="modal_epod_title">Complete Delivery (e-POD)</h3>
       </div>
-      <button onclick="document.getElementById('completeDeliveryModal').close()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+      <button onclick="document.getElementById('completeDeliveryModal').close()" class="p-1 rounded-lg text-[#e0c0b1] hover:text-white">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
-    <form onsubmit="handleDeliveryComplete(event)" class="p-6 space-y-4 text-xs">
-      <div class="p-3 rounded-2xl bg-slate-800 border border-slate-700 space-y-1">
-        <span class="text-[10px] uppercase font-bold text-amber-400" data-i18n="label_otp_step">Step 1: Consignee 4-Digit Handover OTP *</span>
-        <p class="text-[11px] text-slate-400" data-i18n="otp_instruction">Ask the receiving consignee for their secret delivery OTP code sent to their phone.</p>
-        <input type="text" id="deliveryOtpInput" required pattern="[0-9]{4,6}" maxlength="6" inputmode="numeric" placeholder="e.g. 5821" class="w-full mt-2 px-3 py-2.5 rounded-xl border border-amber-400/80 bg-slate-900 text-center font-mono text-xl tracking-[0.3em] font-black text-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400">
+    <form onsubmit="handleDeliveryComplete(event)" class="p-5 space-y-4 text-xs">
+      <div class="p-3 rounded-xl bg-[#171f33] border border-[#2d3449] space-y-1">
+        <span class="text-[10px] font-mono uppercase font-bold text-[#ffb690]" data-i18n="label_otp_step">Step 1: Consignee 4-Digit Handover OTP *</span>
+        <p class="text-[11px] text-[#e0c0b1]" data-i18n="otp_instruction">Ask the receiving consignee for their secret delivery OTP code sent to their phone.</p>
+        <input type="text" id="deliveryOtpInput" required pattern="[0-9]{4,6}" maxlength="6" inputmode="numeric" placeholder="e.g. 5821" class="w-full mt-2 px-3 py-2.5 rounded-lg border border-[#f97316]/70 bg-[#0b1326] text-center font-mono text-xl tracking-[0.3em] font-black text-[#ffb690] focus:outline-none">
       </div>
 
       <div>
-        <label class="block font-bold text-slate-300 mb-1" data-i18n="label_remarks">Receiver Name / Consignee Remarks</label>
-        <input type="text" id="consigneeRemarksInput" placeholder="e.g. Received by Store Incharge Hari Sharma (No damage)" class="w-full px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 text-white text-xs">
+        <label class="block font-bold text-[#e0c0b1] mb-1" data-i18n="label_remarks">Receiver Name / Consignee Remarks</label>
+        <input type="text" id="consigneeRemarksInput" placeholder="e.g. Received by Store Incharge (No damage)" class="w-full px-3 py-2 rounded-lg border border-[#2d3449] bg-[#0b1326] text-[#dae2fd] text-xs">
       </div>
 
       <div>
-        <label class="block font-bold text-slate-300 mb-1" data-i18n="label_proof_photo">Unloading Proof Photo (Doc Ref / URL)</label>
-        <input type="text" id="proofPhotoInput" placeholder="Optional photo URL or invoice reference" class="w-full px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 text-white text-xs font-mono">
+        <label class="block font-bold text-[#e0c0b1] mb-1" data-i18n="label_proof_photo">Unloading Proof Photo (Doc Ref / URL)</label>
+        <input type="text" id="proofPhotoInput" placeholder="Optional photo URL or invoice reference" class="w-full px-3 py-2 rounded-lg border border-[#2d3449] bg-[#0b1326] text-[#dae2fd] text-xs font-mono">
       </div>
 
       <div class="pt-2 flex items-center justify-end gap-2">
-        <button type="button" onclick="document.getElementById('completeDeliveryModal').close()" class="px-4 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-xs font-bold" data-i18n="btn_cancel">
+        <button type="button" onclick="document.getElementById('completeDeliveryModal').close()" class="px-4 py-2 rounded-lg border border-[#2d3449] text-[#e0c0b1] hover:text-white text-xs font-bold" data-i18n="btn_cancel">
           Cancel
         </button>
-        <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-navy font-black text-xs shadow flex items-center gap-1.5 transition">
+        <button type="submit" class="px-5 py-2 rounded-lg bg-[#f97316] hover:bg-[#fb923c] text-[#0b1326] font-extrabold text-xs shadow flex items-center gap-1.5 transition">
           <i data-lucide="check" class="w-4 h-4"></i> <span data-i18n="btn_confirm_delivery">Confirm Delivery</span>
         </button>
       </div>
@@ -580,6 +631,12 @@
         document.getElementById('tripOrderNumber').textContent = trip.order_number;
         document.getElementById('tripCargo').textContent = trip.cargo_description;
         document.getElementById('tripCorridorDistance').textContent = `Corridor Distance: ${trip.total_distance_km || 15} KM • ${Number(trip.cargo_weight_kg || 1000).toLocaleString('en-IN')} KG`;
+        const wayEl = document.getElementById('tripDeliveryAddressHeading');
+        const subEl = document.getElementById('tripOrderCorridorSub');
+        const distEl = document.getElementById('tripDistNum');
+        if (wayEl) wayEl.textContent = trip.delivery_address || trip.destination_address || 'Active Destination';
+        if (subEl) subEl.textContent = `${trip.origin_warehouse || 'Pickup Hub'} → ${trip.consignee_name || 'Consignee'}`;
+        if (distEl) distEl.textContent = String(trip.total_distance_km || '--');
         const fareEl = document.getElementById('tripAgreedFare');
         if (fareEl) {
           const fare = Number(trip.agreed_fare_npr || 0);
@@ -694,18 +751,18 @@
           return;
         }
         list.innerHTML = jobs.map(j => `
-          <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-2.5 text-xs">
-            <div class="flex items-center justify-between">
-              <span class="font-mono font-bold text-amber-400">${j.order_number}</span>
-              <span class="font-mono font-black text-emerald-400">Trip Fare: Rs. ${Number(j.agreed_fare_npr).toLocaleString('en-IN')}</span>
+          <div class="bg-[#171f33] border border-[#2d3449]/80 rounded-lg p-3.5 space-y-2.5 text-xs shadow-md">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono font-bold text-[#ffb690]">${j.order_number}</span>
+              <span class="font-mono font-bold text-[#4edea3] bg-[#222a3d] px-2 py-0.5 rounded-[2px]">Trip Fare: Rs. ${Number(j.agreed_fare_npr).toLocaleString('en-IN')}</span>
             </div>
-            <p class="font-bold text-white">${j.cargo_description}</p>
-            <p class="text-[11px] text-slate-400">${j.pickup_address} &rarr; ${j.delivery_address} (${j.total_distance_km} KM)</p>
-            <p class="text-[10px] text-slate-400 font-mono">Net Retained after 10% Commission: Rs. ${Number(j.net_retained_npr).toLocaleString('en-IN')}</p>
+            <p class="font-semibold text-[#dae2fd] text-sm">${j.cargo_description}</p>
+            <p class="text-[11px] text-[#e0c0b1]">${j.pickup_address} &rarr; ${j.delivery_address} <span class="text-[#89ceff] font-mono">(${j.total_distance_km} KM)</span></p>
+            <p class="text-[10px] text-[#e0c0b1] font-mono">Net Retained after 10% Commission: <span class="text-[#4edea3]">Rs. ${Number(j.net_retained_npr).toLocaleString('en-IN')}</span></p>
             <div class="grid grid-cols-3 gap-2 pt-1">
-              <button onclick="driverAcceptJob(${j.id})" class="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Accept</button>
-              <button onclick="driverBidJob(${j.id}, ${j.agreed_fare_npr})" class="py-2 rounded-xl bg-amber text-navy font-black">Raise Fare</button>
-              <button onclick="driverDeclineJob(${j.id})" class="py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold">Decline</button>
+              <button onclick="driverAcceptJob(${j.id})" class="py-2 rounded bg-[#00b07a] hover:bg-emerald-400 text-[#0b1326] font-extrabold">Accept</button>
+              <button onclick="driverBidJob(${j.id}, ${j.agreed_fare_npr})" class="py-2 rounded bg-[#f97316] hover:bg-[#fb923c] text-[#0b1326] font-extrabold">Raise Fare</button>
+              <button onclick="driverDeclineJob(${j.id})" class="py-2 rounded bg-[#222a3d] hover:bg-[#2d3449] text-[#e0c0b1] border border-[#2d3449] font-semibold">Decline</button>
             </div>
           </div>
         `).join('');

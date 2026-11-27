@@ -7,6 +7,7 @@
 <title>KTM-WDC — Kathmandu Warehousing & Distribution Center</title>
 <meta name="description" content="Nepal's open marketplace for decentralized community storage and smart freight telemetry." />
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/static/css/kwdc_obsidian.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
@@ -15,97 +16,97 @@
   tailwind.config = {
     theme: {
       extend: {
-        colors: { navy: '#0f172a', ink: '#020617', amber: { DEFAULT: '#f59e0b' }, brand: '#3b82f6', nepal: '#dc2626' },
-        fontFamily: { sans: ['Geist', 'system-ui', 'sans-serif'], mono: ['Geist Mono', 'ui-monospace', 'monospace'] }
+        colors: { navy: '#0b1326', ink: '#060e20', amber: { DEFAULT: '#f97316' }, brand: '#89ceff', nepal: '#dc2626' },
+        fontFamily: { sans: ['Inter', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'ui-monospace', 'monospace'] }
       }
     }
   }
 </script>
 <style>
   html { scroll-behavior: smooth; }
-  body { font-family: Geist, system-ui, sans-serif; }
+  body { font-family: 'Inter', 'Noto Sans Devanagari', system-ui, sans-serif; }
   .grid-bg { background-image: linear-gradient(rgba(148,163,184,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.07) 1px, transparent 1px); background-size: 40px 40px; }
-  input[type=range] { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 999px; background: linear-gradient(90deg, #3b82f6 var(--p, 0%), #e2e8f0 var(--p, 0%)); outline: none; }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 4px solid #3b82f6; cursor: grab; box-shadow: 0 2px 6px rgba(15,23,42,.25); }
-  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 4px solid #3b82f6; cursor: grab; }
-  input[type=range]:focus-visible::-webkit-slider-thumb { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 999px; background: linear-gradient(90deg, #f97316 var(--p, 0%), #2d3449 var(--p, 0%)); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #ffb690; border: 3px solid #f97316; cursor: grab; box-shadow: 0 2px 6px rgba(0,0,0,.45); }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #ffb690; border: 3px solid #f97316; cursor: grab; }
+  input[type=range]:focus-visible::-webkit-slider-thumb { outline: 3px solid #f97316; outline-offset: 2px; }
 
-  #map { background: #0b1222; }
-  .leaflet-container { font-family: Geist, system-ui, sans-serif; }
-  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #0f172a; color: #e2e8f0; border: 1px solid #1e293b; }
+  #map { background: #0b1326; }
+  .leaflet-container { font-family: 'Inter', system-ui, sans-serif; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #171f33; color: #dae2fd; border: 1px solid #2d3449; }
   .leaflet-popup-content { margin: 12px 14px; }
-  .leaflet-control-zoom a { background: #0f172a !important; color: #e2e8f0 !important; border-color: #1e293b !important; }
-  .leaflet-control-attribution { background: rgba(15,23,42,.8) !important; color: #64748b !important; }
-  .pin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(245,158,11,.25); }
+  .leaflet-control-zoom a { background: #131b2e !important; color: #dae2fd !important; border-color: #2d3449 !important; }
+  .leaflet-control-attribution { background: rgba(11,19,38,.85) !important; color: #94a3b8 !important; }
+  .pin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(249,115,22,.28); }
   .pin.full { box-shadow: 0 0 0 6px rgba(148,163,184,.2); }
   .pin-pulse { animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 4px rgba(245,158,11,.35); } 50% { box-shadow: 0 0 0 12px rgba(245,158,11,0); } }
-  #signup::backdrop { background: rgba(2,6,23,.72); backdrop-filter: blur(4px); }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 4px rgba(249,115,22,.4); } 50% { box-shadow: 0 0 0 12px rgba(249,115,22,0); } }
+  #signup::backdrop { background: rgba(6,14,32,.8); backdrop-filter: blur(6px); }
   #signup[open] { animation: pop .22s ease-out; }
   @keyframes pop { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
-  .field { width: 100%; border-radius: .6rem; border: 1px solid #cbd5e1; background: #fff; padding: .65rem .8rem; font-size: .9rem; color: #0f172a; transition: border-color .15s, box-shadow .15s; }
-  .field::placeholder { color: #94a3b8; }
-  .field:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
-  .field[aria-invalid="true"] { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
-  .otp { width: 3rem; height: 3.5rem; text-align: center; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 1.5rem; font-weight: 600; border-radius: .7rem; border: 1.5px solid #cbd5e1; background: #fff; color: #0f172a; transition: border-color .15s, box-shadow .15s; }
-  .otp:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
-  .otp.filled { border-color: #0f172a; }
+  .field { width: 100%; border-radius: .5rem; border: 1px solid #2d3449; background: #0b1326; padding: .65rem .8rem; font-size: .9rem; color: #dae2fd; transition: border-color .15s, box-shadow .15s; }
+  .field::placeholder { color: #64748b; }
+  .field:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 2px rgba(249,115,22,.25); }
+  .field[aria-invalid="true"] { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.2); }
+  .otp { width: 3rem; height: 3.5rem; text-align: center; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 1.5rem; font-weight: 600; border-radius: .5rem; border: 1.5px solid #2d3449; background: #0b1326; color: #ffb690; transition: border-color .15s, box-shadow .15s; }
+  .otp:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 2px rgba(249,115,22,.25); }
+  .otp.filled { border-color: #4edea3; }
   @media (max-width: 400px) { .otp { width: 2.5rem; height: 3rem; font-size: 1.25rem; } }
   @media (prefers-reduced-motion: reduce) { .pin-pulse { animation: none; } html { scroll-behavior: auto; } #signup[open] { animation: none; } }
 </style>
 </head>
-<body class="bg-slate-50 text-slate-900 antialiased">
+<body class="kwdc-dark bg-[#0b1326] text-[#dae2fd] antialiased">
 
 <!-- Header -->
-<header class="sticky top-0 z-[1000] bg-navy/95 backdrop-blur border-b border-white/10">
+<header class="sticky top-0 z-[1000] border-b border-[#2d3449]/70">
   <div class="mx-auto max-w-7xl px-4 sm:px-6">
     <div class="flex h-16 items-center justify-between gap-4">
       <a href="#" class="flex items-center gap-2.5 shrink-0" aria-label="KTM-WDC home">
-        <span class="grid h-9 w-9 place-items-center rounded-lg bg-amber text-navy">
+        <span class="grid h-9 w-9 place-items-center rounded bg-[#f97316] text-[#582200] shadow-[0_0_8px_rgba(249,115,22,0.3)]">
           <i data-lucide="warehouse" class="h-5 w-5"></i>
         </span>
         <span class="flex flex-col leading-none">
-          <span class="text-white font-semibold tracking-tight">KTM-WDC</span>
-          <span class="text-[10px] uppercase tracking-widest text-slate-400 mt-1">Warehousing Exchange</span>
+          <span class="text-[#dae2fd] font-bold tracking-[-0.45px]">KTM-WDC</span>
+          <span class="text-[10px] font-mono uppercase tracking-[0.5px] text-[#e0c0b1] mt-1">Warehousing Exchange</span>
         </span>
-        <span class="ml-1 rounded bg-nepal px-1.5 py-0.5 text-[10px] font-bold tracking-widest text-white">NEPAL</span>
+        <span class="ml-1 rounded-[2px] bg-[#2d3449] px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-widest text-[#ffb690]">NEPAL</span>
       </a>
 
       <nav aria-label="Primary" class="hidden lg:flex items-center gap-2 text-sm">
-        <a href="#available-storage" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="building-2" class="h-4 w-4"></i> Available Storage</a>
-        <a href="#calculator" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="calculator" class="h-4 w-4"></i> Storage Calculator</a>
-        <a href="#map-section" class="rounded-md px-3 py-2 text-slate-300 hover:text-white hover:bg-white/5 font-medium flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i> Logistics Network</a>
+        <a href="#available-storage" class="rounded px-3 py-2 text-[#e0c0b1] hover:text-white hover:bg-[#171f33] font-medium flex items-center gap-1.5"><i data-lucide="building-2" class="h-4 w-4 text-[#ffb690]"></i> Available Storage</a>
+        <a href="#calculator" class="rounded px-3 py-2 text-[#e0c0b1] hover:text-white hover:bg-[#171f33] font-medium flex items-center gap-1.5"><i data-lucide="calculator" class="h-4 w-4 text-[#89ceff]"></i> Storage Calculator</a>
+        <a href="#map-section" class="rounded px-3 py-2 text-[#e0c0b1] hover:text-white hover:bg-[#171f33] font-medium flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4 text-[#4edea3]"></i> Logistics Network</a>
       </nav>
 
       <div class="flex items-center gap-2" id="v0AuthArea">
         <!-- Bilingual Switcher Pill -->
-        <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-bold text-white transition shadow-sm mr-1" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
+        <button onclick="toggleLanguage()" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#2d3449] bg-[#131b2e] hover:border-[#f97316] text-xs font-mono font-semibold text-[#dae2fd] transition mr-1" title="भाषा परिवर्तन गर्नुहोस् / Switch Language">
           <span id="langFlag">🇳🇵</span> <span id="langLabel">नेपाली</span>
         </button>
         
-        <button type="button" onclick="openPartnerModal()" data-open-signup class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-navy hover:bg-amber-400">
+        <button type="button" onclick="openPartnerModal()" data-open-signup class="hidden sm:inline-flex items-center gap-2 rounded bg-[#f97316] px-4 py-2 text-xs font-extrabold text-[#0b1326] hover:bg-[#fb923c] shadow-[0_0_8px_rgba(249,115,22,0.25)]">
           <i data-lucide="handshake" class="h-4 w-4"></i> Partner With Us
         </button>
-        <button type="button" onclick="openSignInModal()" data-open-signin class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-navy hover:bg-slate-200">
-          <i data-lucide="log-in" class="h-4 w-4"></i> Sign In
+        <button type="button" onclick="openSignInModal()" data-open-signin class="hidden sm:inline-flex items-center gap-2 rounded border border-[#2d3449] bg-[#171f33] px-4 py-2 text-xs font-bold text-[#dae2fd] hover:bg-[#222a3d]">
+          <i data-lucide="log-in" class="h-4 w-4 text-[#89ceff]"></i> Sign In
         </button>
-        <button id="menuBtn" class="lg:hidden grid h-10 w-10 place-items-center rounded-lg text-slate-200 hover:bg-white/10" aria-expanded="false" aria-controls="mobileNav">
+        <button id="menuBtn" class="lg:hidden grid h-10 w-10 place-items-center rounded text-[#e0c0b1] hover:bg-[#171f33]" aria-expanded="false" aria-controls="mobileNav">
           <span class="sr-only">Toggle menu</span>
           <i data-lucide="menu" class="h-5 w-5"></i>
         </button>
       </div>
     </div>
   </div>
-  <nav id="mobileNav" aria-label="Mobile" class="hidden lg:hidden border-t border-white/10 bg-navy">
+  <nav id="mobileNav" aria-label="Mobile" class="hidden lg:hidden border-t border-[#2d3449] bg-[#131b2e]">
     <div class="mx-auto max-w-7xl px-4 py-3 flex flex-col text-sm gap-1">
-      <a href="#available-storage" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium"><span data-i18n="nav_storage">Available Storage</span></a>
-      <a href="#calculator" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium"><span data-i18n="nav_calculator">Storage Calculator</span></a>
-      <a href="#map-section" class="rounded-md px-3 py-2.5 text-slate-200 hover:bg-white/5 font-medium"><span data-i18n="nav_network">Logistics Network</span></a>
-      <div id="mobileAuthArea" class="pt-2 border-t border-white/10 flex flex-col gap-2 mt-2">
-        <button type="button" onclick="openPartnerModal()" data-open-signup class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber px-4 py-2.5 font-semibold text-navy">
+      <a href="#available-storage" class="rounded px-3 py-2.5 text-[#dae2fd] hover:bg-[#171f33] font-medium"><span data-i18n="nav_storage">Available Storage</span></a>
+      <a href="#calculator" class="rounded px-3 py-2.5 text-[#dae2fd] hover:bg-[#171f33] font-medium"><span data-i18n="nav_calculator">Storage Calculator</span></a>
+      <a href="#map-section" class="rounded px-3 py-2.5 text-[#dae2fd] hover:bg-[#171f33] font-medium"><span data-i18n="nav_network">Logistics Network</span></a>
+      <div id="mobileAuthArea" class="pt-2 border-t border-[#2d3449] flex flex-col gap-2 mt-2">
+        <button type="button" onclick="openPartnerModal()" data-open-signup class="inline-flex items-center justify-center gap-2 rounded bg-[#f97316] px-4 py-2.5 font-extrabold text-[#0b1326]">
           <i data-lucide="handshake" class="h-4 w-4"></i> Partner With Us
         </button>
-        <button type="button" onclick="openSignInModal()" data-open-signin class="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 font-semibold text-navy">
+        <button type="button" onclick="openSignInModal()" data-open-signin class="inline-flex items-center justify-center gap-2 rounded border border-[#2d3449] bg-[#171f33] px-4 py-2.5 font-bold text-[#dae2fd]">
           <i data-lucide="log-in" class="h-4 w-4"></i> Sign In
         </button>
       </div>
@@ -115,7 +116,7 @@
 
 <main>
 <!-- Hero -->
-<section class="relative overflow-hidden bg-gradient-to-br from-navy via-[#13265a] to-[#1e3a8a]">
+<section class="relative overflow-hidden bg-gradient-to-br from-[#0b1326] via-[#131b2e] to-[#171f33]">
   <div class="absolute inset-0 grid-bg" aria-hidden="true"></div>
   <div class="relative mx-auto max-w-7xl px-4 sm:px-6 py-20 sm:py-28 grid lg:grid-cols-[1.25fr_1fr] gap-12 items-center">
     <div>
