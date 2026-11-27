@@ -14,6 +14,7 @@ from backend.database import init_db_if_needed, get_db_info, get_db
 from backend.routers import auth, warehouses, admin, incharge, fleet, insurance, maps, uploads, equipment, security
 from backend.services.overdue_monitor import run_overdue_sweep
 from backend.services.sms_service import get_sms_provider_mode
+from backend.services.cloud_storage import get_storage_status
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -179,6 +180,7 @@ def health_check():
         "is_sqlite_fallback": db_info["is_sqlite"],
         "allow_demo_shortcuts": settings.ALLOW_DEMO_SHORTCUTS,
         "sms_provider": get_sms_provider_mode(),
+        "storage_provider": get_storage_status()["provider"],
         "holding_liability": "Rs. 0 (Enforced)",
         "nepal_vat_rate": "13% Statutory IRD Schedule 13"
     }

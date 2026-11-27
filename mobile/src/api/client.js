@@ -83,14 +83,35 @@ export async function apiRequest(path, { method = 'GET', body = null, token = nu
   return data;
 }
 
-export async function uploadBase64Image({ filename, base64, mimeType = 'image/jpeg' }) {
+export async function uploadBase64Image({ filename, base64, mimeType = 'image/jpeg', category = 'GENERAL' }) {
   const res = await apiRequest('/api/uploads/image-base64', {
     method: 'POST',
     body: {
       filename,
       content_type: mimeType,
+      category,
       data_base64: base64,
     },
   });
-  return res.url; // e.g. /api/uploads/media/12
+  return res.url; // Cloud CDN URL or /api/uploads/media/12
+}
+
+export async function uploadCloudAsset({ uri, filename = 'asset.bin', mimeType = 'application/octet-stream', category = 'GENERAL' }) {
+  const base = await getApiBaseUrl();
+  if (!base) throw new Error('Set Backend Server URL first.');
+  const authToken = await AsyncStorage.getItem(TOKEN_KEY);
+  const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+
+  const form = new FormData();
+  form.append('file', { uri, name: filename, type: mimeType });
+  form.append('category', category);
+
+  const res = await fetch(`${base}/api/uploads/file`, {
+    method: 'POST',
+    headers,
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Cloud file upload failed');
+  return data.url;
 }

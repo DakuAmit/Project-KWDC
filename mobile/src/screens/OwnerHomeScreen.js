@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import { apiRequest, uploadBase64Image } from '../api/client';
+import { apiRequest, uploadBase64Image, uploadCloudAsset } from '../api/client';
 
 export default function OwnerHomeScreen() {
   const [tab, setTab] = useState('list'); // 'list' | 'manage' | 'kyc'
@@ -14,6 +14,7 @@ export default function OwnerHomeScreen() {
   const [lat, setLat] = useState(27.7172);
   const [lng, setLng] = useState(85.3240);
   const [photoUrl, setPhotoUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [listings, setListings] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [kycStatus, setKycStatus] = useState('PENDING');
@@ -52,14 +53,35 @@ export default function OwnerHomeScreen() {
     Alert.alert('GPS Pinned', `Coords: ${loc.coords.latitude.toFixed(5)}, ${loc.coords.longitude.toFixed(5)}`);
   }
 
-  async function snapFacilityPhoto(onDone) {
+  async function snapFacilityPhoto(onDone, category = 'WAREHOUSE_PHOTO') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return Alert.alert('Camera Permission Needed', 'Allow camera access.');
     const shot = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
     if (!shot.canceled && shot.assets?.[0]?.base64) {
-      const url = await uploadBase64Image({ filename: 'doc.jpg', base64: shot.assets[0].base64 });
+      const url = await uploadBase64Image({ filename: 'doc.jpg', base64: shot.assets[0].base64, category });
       onDone(url);
-      Alert.alert('Uploaded!', 'Image stored safely on server.');
+      Alert.alert('Uploaded!', 'Image stored safely in Cloud Storage.');
+    }
+  }
+
+  async function pickWalkthroughVideo() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return Alert.alert('Media Permission Needed', 'Allow gallery/video access.');
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, quality: 0.7 });
+    const asset = !res.canceled && res.assets?.[0];
+    if (asset?.uri) {
+      try {
+        const url = await uploadCloudAsset({
+          uri: asset.uri,
+          filename: asset.fileName || 'warehouse_walkthrough.mp4',
+          mimeType: asset.mimeType || 'video/mp4',
+          category: 'WAREHOUSE_VIDEO',
+        });
+        setVideoUrl(url);
+        Alert.alert('Video Uploaded!', 'Warehouse walkthrough video saved.');
+      } catch (err) {
+        Alert.alert('Video Upload Error', err.message);
+      }
     }
   }
 
@@ -76,7 +98,8 @@ export default function OwnerHomeScreen() {
           monthly_rate_per_sqft: parseFloat(rateSqft) || 25,
           latitude: lat,
           longitude: lng,
-          image_urls: photoUrl ? [photoUrl] : [],
+          photo_urls: photoUrl ? [photoUrl] : [],
+          video_urls: videoUrl ? [videoUrl] : [],
           space_type: 'COMMERCIAL_GODOWN',
           road_access_ft: 20,
           floor_level: 'GROUND',
@@ -165,7 +188,8 @@ export default function OwnerHomeScreen() {
           </View>
           <View style={styles.row}>
             <TouchableOpacity onPress={pinMyLocation} style={[styles.btnDark, { flex: 1 }]}><Text style={styles.btnLight}>Pin GPS ({lat.toFixed(3)}, {lng.toFixed(3)})</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => snapFacilityPhoto(setPhotoUrl)} style={[styles.btnDark, { flex: 1 }]}><Text style={styles.btnLight}>{photoUrl ? 'Photo ✓' : 'Camera Photo'}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => snapFacilityPhoto(setPhotoUrl, 'WAREHOUSE_PHOTO')} style={[styles.btnDark, { flex: 1 }]}><Text style={styles.btnLight}>{photoUrl ? 'Photo ✓' : 'Camera Photo'}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={pickWalkthroughVideo} style={[styles.btnDark, { flex: 1, backgroundColor: '#4338ca' }]}><Text style={styles.btnLight}>{videoUrl ? 'Video ✓' : 'Upload Video'}</Text></TouchableOpacity>
           </View>
           <TouchableOpacity onPress={submitProperty} style={styles.btnAmber}><Text style={styles.btnDarkText}>Submit for Incharge Audit</Text></TouchableOpacity>
         </View>

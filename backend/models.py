@@ -246,6 +246,7 @@ class Warehouse(Base):
     is_on_maintenance_hold = Column(Boolean, default=False)
     hold_reason_note = Column(Text, nullable=True)
     lease_contract_url = Column(String(500), nullable=True)
+    video_urls = Column(Text, nullable=True) # Comma-separated warehouse walkthrough video cloud URLs
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -558,6 +559,7 @@ class StockItem(Base):
     dispatched_quantity = Column(Integer, default=0)   # Cumulative dispatched units cleared outward
     verification_status = Column(String(40), default="PENDING_DOCK_VERIFICATION")
     bay_rack_location = Column(String(100), default="Zone A / Bay-1")
+    packing_list_doc_url = Column(String(500), nullable=True)
     inward_date = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -770,9 +772,14 @@ class MediaAsset(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     uploader_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    category = Column(String(60), default="GENERAL") # WAREHOUSE_PHOTO, WAREHOUSE_VIDEO, KYC_DOCUMENT, INVOICE_PACKING_LIST, EPOD_PROOF
     filename = Column(String(255), nullable=False)
     content_type = Column(String(100), default="image/jpeg")
-    data_base64 = Column(Text, nullable=False)
+    file_size_bytes = Column(Integer, default=0)
+    storage_provider = Column(String(40), default="POSTGRES_FALLBACK") # SUPABASE_STORAGE, POSTGRES_FALLBACK
+    cloud_url = Column(String(500), nullable=True)
+    storage_path = Column(String(500), nullable=True)
+    data_base64 = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

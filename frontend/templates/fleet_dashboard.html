@@ -571,12 +571,18 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
-            <label id="drvDocFrontLabel" class="block text-[10px] font-bold text-slate-600 mb-1">Citizenship Front Side Photo URL *</label>
-            <input type="text" id="drvIdFrontPhoto" required placeholder="https://... (Front Side)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+            <label id="drvDocFrontLabel" class="block text-[10px] font-bold text-slate-600 mb-1">Citizenship Front Side (Photo / PDF) *</label>
+            <div class="flex gap-1">
+              <input type="text" id="drvIdFrontPhoto" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+              <label class="px-2 py-1.5 rounded-lg bg-navy text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvIdFrontPhoto')"></label>
+            </div>
           </div>
           <div>
-            <label id="drvDocBackLabel" class="block text-[10px] font-bold text-slate-600 mb-1">Citizenship Back Side Photo URL *</label>
-            <input type="text" id="drvIdBackPhoto" required placeholder="https://... (Back Side)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+            <label id="drvDocBackLabel" class="block text-[10px] font-bold text-slate-600 mb-1">Citizenship Back Side (Photo / PDF) *</label>
+            <div class="flex gap-1">
+              <input type="text" id="drvIdBackPhoto" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white">
+              <label class="px-2 py-1.5 rounded-lg bg-navy text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvIdBackPhoto')"></label>
+            </div>
           </div>
         </div>
       </div>
@@ -586,12 +592,18 @@
         <label class="block font-bold text-navy">Driving License Document Proofs (Mandatory) *</label>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
-            <label class="block text-[10px] text-slate-500 mb-0.5">License Front Photo URL *</label>
-            <input type="text" id="drvLicensePhotoFront" required placeholder="https://... (License Front)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+            <label class="block text-[10px] text-slate-500 mb-0.5">License Front (Photo / PDF) *</label>
+            <div class="flex gap-1">
+              <input type="text" id="drvLicensePhotoFront" required placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+              <label class="px-2 py-1.5 rounded-lg bg-navy text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvLicensePhotoFront')"></label>
+            </div>
           </div>
           <div>
-            <label class="block text-[10px] text-slate-500 mb-0.5">License Back Photo URL</label>
-            <input type="text" id="drvLicensePhotoBack" placeholder="https://... (License Back)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+            <label class="block text-[10px] text-slate-500 mb-0.5">License Back (Photo / PDF)</label>
+            <div class="flex gap-1">
+              <input type="text" id="drvLicensePhotoBack" placeholder="https://... or upload" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono">
+              <label class="px-2 py-1.5 rounded-lg bg-navy text-white text-[10px] font-bold cursor-pointer shrink-0">Up <input type="file" accept="image/*,.pdf" class="hidden" onchange="uploadFleetKycFile(this, 'drvLicensePhotoBack')"></label>
+            </div>
           </div>
         </div>
       </div>
@@ -1874,6 +1886,28 @@
         }
       } catch (err) {
         showToast('Error recording commission settlement.', true);
+      }
+    }
+
+    async function uploadFleetKycFile(inputEl, targetInputId) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+      showToast(`Uploading ${file.name}...`);
+      const token = localStorage.getItem('kwdc_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('category', 'KYC_DOCUMENT');
+        const res = await fetch('/api/uploads/file', { method: 'POST', headers: authHeader, body: fd });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.detail || 'Upload failed');
+        document.getElementById(targetInputId).value = d.url;
+        showToast(`Uploaded ${file.name} to Cloud Storage!`);
+      } catch (err) {
+        showToast(err.message || 'Upload failed', true);
+      } finally {
+        inputEl.value = '';
       }
     }
 

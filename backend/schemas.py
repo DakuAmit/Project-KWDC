@@ -113,6 +113,7 @@ class WarehouseCreate(BaseModel):
     temp_min_c: Optional[float] = None
     temp_max_c: Optional[float] = None
     photo_urls: Optional[List[str]] = None
+    video_urls: Optional[List[str]] = None
 
 class OwnerChangeRequestCreate(BaseModel):
     request_type: str # DELISTING_15_DAYS, RATE_REVISION
@@ -184,6 +185,7 @@ class StockItemCreate(BaseModel):
     quantity: int = Field(..., gt=0)
     gross_weight_kg: Optional[float] = 25.0
     bay_rack_location: Optional[str] = "Zone A / Bay-1"
+    packing_list_doc_url: Optional[str] = None
 
 class StockDispatchRequest(BaseModel):
     stock_item_id: Optional[int] = None

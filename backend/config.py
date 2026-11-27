@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
     TWILIO_FROM_NUMBER: str = os.getenv("TWILIO_FROM_NUMBER", "").strip()
 
+    # Cloud Object Storage (Supabase Storage CDN for Photos, Videos, KYC PDFs, Invoices/Packing Lists)
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "https://wnecdwukwnqyeiiseotp.supabase.co").strip().rstrip("/")
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    SUPABASE_STORAGE_BUCKET: str = os.getenv("SUPABASE_STORAGE_BUCKET", "kwdc-media").strip()
+    MAX_CLOUD_UPLOAD_MB: int = int(os.getenv("MAX_CLOUD_UPLOAD_MB", "50"))
+
     # Production Security & Cron Automation Controls
     # Set ALLOW_DEMO_SHORTCUTS=false in production to disable test OTP "123456"/PIN "1234" shortcuts
     ALLOW_DEMO_SHORTCUTS: bool = os.getenv("ALLOW_DEMO_SHORTCUTS", "true").lower() in ("true", "1", "yes")

@@ -383,13 +383,23 @@
                     <input type="text" id="ownerCtzNo" required placeholder="e.g. 27-01-78-01234" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_front">Citizenship Front (Photo / Doc URL) *</label>
-                    <input type="text" id="ownerCtzFront" required placeholder="e.g. CTZ-FRONT-IMG-2083" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                    <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_front">Citizenship Front (Photo / PDF) *</label>
+                    <div class="flex gap-1.5">
+                      <input type="text" id="ownerCtzFront" required placeholder="https://... or upload below" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                      <label class="px-3 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+                        Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleOwnerDocUpload(this, 'ownerCtzFront', 'KYC_DOCUMENT')">
+                      </label>
+                    </div>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_back">Citizenship Back (Photo / Doc URL) *</label>
-                  <input type="text" id="ownerCtzBack" required placeholder="e.g. CTZ-BACK-IMG-2083" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                  <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_ctz_back">Citizenship Back (Photo / PDF) *</label>
+                  <div class="flex gap-1.5">
+                    <input type="text" id="ownerCtzBack" required placeholder="https://... or upload below" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                    <label class="px-3 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+                      Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleOwnerDocUpload(this, 'ownerCtzBack', 'KYC_DOCUMENT')">
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -446,9 +456,14 @@
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_bank_proof">Cheque Leaf / Account Statement Proof (URL / Doc Ref) *</label>
-                  <input type="text" id="ownerBankProof" required placeholder="e.g. CHQ-LEAF-PROOF-2083" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
-                  <p class="text-[10px] text-slate-400 mt-1">Upload or provide image reference of crossed cheque or account statement header.</p>
+                  <label class="block text-xs font-bold text-navy mb-1" data-i18n="kyc_label_bank_proof">Cheque Leaf / Account Statement Proof (Photo / PDF) *</label>
+                  <div class="flex gap-1.5">
+                    <input type="text" id="ownerBankProof" required placeholder="e.g. CHQ-LEAF-PROOF-2083 or upload" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-white">
+                    <label class="px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+                      Upload Proof <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleOwnerDocUpload(this, 'ownerBankProof', 'KYC_DOCUMENT')">
+                    </label>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1">Upload crossed cheque photo or bank statement PDF directly to Cloud Storage.</p>
                 </div>
               </div>
 
@@ -716,8 +731,22 @@
         <input type="hidden" id="propLat" value="27.7172">
         <input type="hidden" id="propLng" value="85.3240">
         <div>
-          <label class="block text-[11px] font-bold text-navy mb-1">Facility Photo URLs (Optional — Comma Separated)</label>
-          <input type="text" id="propPhotoUrls" placeholder="https://example.com/godown-front.jpg, https://example.com/loading-bay.jpg" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-mono">
+          <label class="block text-[11px] font-bold text-navy mb-1">Facility Photos (Upload Multiple Images or Paste URLs)</label>
+          <div class="flex gap-1.5">
+            <input type="text" id="propPhotoUrls" placeholder="https://... (auto-filled when you upload)" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-mono">
+            <label class="px-3 py-2 rounded-lg bg-navy hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+              Upload Photos <input type="file" accept="image/*" multiple class="hidden" onchange="handleOwnerMultiUpload(this, 'propPhotoUrls', 'WAREHOUSE_PHOTO')">
+            </label>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-navy mb-1">Warehouse Walkthrough Video (MP4 / MOV / WebM)</label>
+          <div class="flex gap-1.5">
+            <input type="text" id="propVideoUrls" placeholder="https://... (auto-filled when video finishes uploading)" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-mono">
+            <label class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+              Upload Video <input type="file" accept="video/*" class="hidden" onchange="handleOwnerMultiUpload(this, 'propVideoUrls', 'WAREHOUSE_VIDEO')">
+            </label>
+          </div>
         </div>
       </div>
 
@@ -1693,6 +1722,91 @@
       }
     }
 
+    async function uploadKwdcFile(file, category) {
+      const token = localStorage.getItem('kwdc_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      try {
+        const signRes = await fetch('/api/uploads/signed-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({
+            filename: file.name,
+            content_type: file.type || 'application/octet-stream',
+            category: category || 'GENERAL',
+            file_size_bytes: file.size || 0
+          })
+        });
+        if (signRes.ok) {
+          const signData = await signRes.json();
+          if (signData.direct_upload && signData.upload_url) {
+            const putRes = await fetch(signData.upload_url, {
+              method: 'PUT',
+              headers: { 'Content-Type': file.type || 'application/octet-stream' },
+              body: file
+            });
+            if (putRes.ok) {
+              const confRes = await fetch('/api/uploads/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeader },
+                body: JSON.stringify({
+                  filename: file.name,
+                  content_type: file.type || 'application/octet-stream',
+                  category: category || 'GENERAL',
+                  storage_path: signData.storage_path,
+                  cloud_url: signData.cloud_url,
+                  file_size_bytes: file.size || 0
+                })
+              });
+              if (confRes.ok) return (await confRes.json()).url;
+            }
+          }
+        }
+      } catch (e) {}
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('category', category || 'GENERAL');
+      const res = await fetch('/api/uploads/file', { method: 'POST', headers: authHeader, body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Cloud upload failed');
+      return data.url;
+    }
+
+    async function handleOwnerDocUpload(inputEl, targetInputId, category) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+      showToast(`Uploading ${file.name}...`);
+      try {
+        const url = await uploadKwdcFile(file, category);
+        document.getElementById(targetInputId).value = url;
+        showToast(`Uploaded ${file.name} to Cloud Storage!`);
+      } catch (err) {
+        showToast(err.message || 'Upload failed', true);
+      } finally {
+        inputEl.value = '';
+      }
+    }
+
+    async function handleOwnerMultiUpload(inputEl, targetInputId, category) {
+      const files = Array.from(inputEl.files || []);
+      if (!files.length) return;
+      showToast(`Uploading ${files.length} file(s) to Cloud Storage...`);
+      try {
+        const uploaded = [];
+        for (const f of files) {
+          uploaded.push(await uploadKwdcFile(f, category));
+        }
+        const target = document.getElementById(targetInputId);
+        const existing = target.value.split(',').map(s => s.trim()).filter(Boolean);
+        target.value = [...existing, ...uploaded].join(', ');
+        showToast(`${uploaded.length} file(s) uploaded!`);
+      } catch (err) {
+        showToast(err.message || 'Upload failed', true);
+      } finally {
+        inputEl.value = '';
+      }
+    }
+
     async function handleListSpace(e) {
       e.preventDefault();
 
@@ -1751,6 +1865,8 @@
 
       const rawPhotos = document.getElementById('propPhotoUrls')?.value || '';
       const photoUrls = rawPhotos.split(',').map(s => s.trim()).filter(Boolean);
+      const rawVideos = document.getElementById('propVideoUrls')?.value || '';
+      const videoUrls = rawVideos.split(',').map(s => s.trim()).filter(Boolean);
 
       const payload = {
         title: document.getElementById('propTitle').value.trim(),
@@ -1772,7 +1888,8 @@
         has_raised_dock: document.getElementById('propHasDock').checked,
         has_forklift_access: document.getElementById('propHasForklift').checked,
         has_fire_safety: document.getElementById('propHasFire').checked,
-        photo_urls: photoUrls.length ? photoUrls : undefined
+        photo_urls: photoUrls.length ? photoUrls : undefined,
+        video_urls: videoUrls.length ? videoUrls : undefined
       };
 
       try {

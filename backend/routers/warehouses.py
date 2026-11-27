@@ -135,7 +135,8 @@ def list_warehouse_space(
         temp_max_c=payload.temp_max_c,
         is_approved=False, # Strictly pending admin audit
         is_available=False,
-        is_on_maintenance_hold=False
+        is_on_maintenance_hold=False,
+        video_urls=",".join([v.strip() for v in (payload.video_urls or []) if v and v.strip()]) or None,
     )
     db.add(new_warehouse)
     db.commit()
@@ -311,6 +312,7 @@ def get_my_listings(
             "longitude": w.longitude,
             "units": units,
             "photos": photos_list,
+            "video_urls": [v.strip() for v in (getattr(w, "video_urls", None) or "").split(",") if v.strip()],
             "change_requests": cr_list,
             "contract_executed": bool(w.lease_contract_url or w.is_approved)
         })
@@ -439,6 +441,7 @@ def get_public_catalog(
             "has_cold_storage": w.has_cold_storage,
             "units": units,
             "photos": [p.photo_url for p in (w.photos or [])],
+            "video_urls": [v.strip() for v in (getattr(w, "video_urls", None) or "").split(",") if v.strip()],
             "privacy_shield_note": "Direct owner contact is protected. KTM-WDC acts as your verified corporate counterparty."
         })
 
@@ -843,6 +846,7 @@ def get_client_stored_inventory(
             "dispatched_quantity": disp,
             "verification_status": getattr(item, "verification_status", "PENDING_DOCK_VERIFICATION"),
             "bay_rack_location": getattr(item, "bay_rack_location", "Zone A / Bay-1"),
+            "packing_list_doc_url": getattr(item, "packing_list_doc_url", None),
             "inward_date": item.inward_date.strftime("%Y-%m-%d") if item.inward_date else "Today",
             "sample_units": units_list
         })
@@ -924,6 +928,8 @@ def log_client_inventory_stock(
         existing.total_quantity = int(existing.total_quantity or 0) + payload.quantity
         if linked_booking and not existing.booking_id:
             existing.booking_id = linked_booking.id
+        if payload.packing_list_doc_url:
+            existing.packing_list_doc_url = payload.packing_list_doc_url.strip()
         existing.verification_status = "PENDING_DOCK_VERIFICATION"
         item = existing
     else:
@@ -939,7 +945,8 @@ def log_client_inventory_stock(
             reserved_quantity=0,
             dispatched_quantity=0,
             verification_status="PENDING_DOCK_VERIFICATION",
-            bay_rack_location=payload.bay_rack_location or "Zone A / Bay-1"
+            bay_rack_location=payload.bay_rack_location or "Zone A / Bay-1",
+            packing_list_doc_url=payload.packing_list_doc_url.strip() if payload.packing_list_doc_url else None
         )
         db.add(item)
         db.commit()

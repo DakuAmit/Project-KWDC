@@ -131,6 +131,19 @@ def ensure_db_schema_extensions():
         add_col_if_missing("equipment_jobs", "commission_settled", "BOOLEAN DEFAULT 0" if is_sqlite else "BOOLEAN DEFAULT FALSE")
         add_col_if_missing("stock_insurance_policies", "payment_status", "VARCHAR(50) DEFAULT 'UNPAID'")
         add_col_if_missing("stock_insurance_policies", "payment_ref", "VARCHAR(120)")
+        add_col_if_missing("warehouses", "video_urls", "TEXT")
+        add_col_if_missing("stock_items", "packing_list_doc_url", "VARCHAR(500)")
+        add_col_if_missing("media_assets", "category", "VARCHAR(60) DEFAULT 'GENERAL'")
+        add_col_if_missing("media_assets", "file_size_bytes", "INTEGER DEFAULT 0")
+        add_col_if_missing("media_assets", "storage_provider", "VARCHAR(40) DEFAULT 'POSTGRES_FALLBACK'")
+        add_col_if_missing("media_assets", "cloud_url", "VARCHAR(500)")
+        add_col_if_missing("media_assets", "storage_path", "VARCHAR(500)")
+        if not is_sqlite:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE media_assets ALTER COLUMN data_base64 DROP NOT NULL"))
+            except Exception:
+                pass
     except Exception as e:
         print("[DATABASE SCHEMA EXTENSION NOTICE]", e)
 

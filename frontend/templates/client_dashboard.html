@@ -1158,6 +1158,16 @@
         <textarea id="insManifestSummary" required rows="2" placeholder="e.g. 48 Pallets containing 1,200 cartons of imported consumer goods. Factory sealed with tamper tapes." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs"></textarea>
       </div>
 
+      <div>
+        <label class="block font-bold text-navy mb-1">Commercial Invoice / Packing List (PDF, XLSX, Photo)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="insInvoiceDocUrl" placeholder="https://... or upload invoice/packing list" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono">
+          <label class="px-3 py-2 rounded-lg bg-navy hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+            Upload Doc <input type="file" accept="image/*,.pdf,.csv,.xls,.xlsx,.doc,.docx" class="hidden" onchange="handleClientCloudUpload(this, 'insInvoiceDocUrl', 'INVOICE_PACKING_LIST')">
+          </label>
+        </div>
+      </div>
+
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
         <button type="button" onclick="document.getElementById('insuranceModal').close()" class="px-3.5 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50">
           Cancel
@@ -1273,6 +1283,15 @@
         <div>
           <label class="block font-bold text-navy mb-1">Bay / Rack Location</label>
           <input type="text" id="stkBayLoc" value="Zone A / Bay-02" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-navy mb-1">Packing List / Invoice Attachment (PDF / XLSX / CSV / Photo)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="stkPackingListUrl" placeholder="https://... or upload packing list" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <label class="px-3 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+            Upload <input type="file" accept="image/*,.pdf,.csv,.xls,.xlsx,.doc,.docx" class="hidden" onchange="handleClientCloudUpload(this, 'stkPackingListUrl', 'INVOICE_PACKING_LIST')">
+          </label>
         </div>
       </div>
       <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
@@ -1532,12 +1551,22 @@
         <input type="text" id="kycSigName" required placeholder="e.g. Hari Prasad Adhikari (Managing Director)" class="w-full px-3 py-2 rounded-xl border border-slate-300">
       </div>
       <div>
-        <label class="block font-bold text-navy mb-1">Company Reg. Certificate URL / Doc Ref</label>
-        <input type="text" id="kycRegDoc" placeholder="https://... or Document Reference #" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+        <label class="block font-bold text-navy mb-1">Company Reg. Certificate (PDF / Photo / Doc Ref)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="kycRegDoc" placeholder="https://... or upload PDF/image" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <label class="px-3 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+            Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleClientCloudUpload(this, 'kycRegDoc', 'KYC_DOCUMENT')">
+          </label>
+        </div>
       </div>
       <div>
-        <label class="block font-bold text-navy mb-1">PAN / VAT Certificate URL / Doc Ref</label>
-        <input type="text" id="kycPanDoc" placeholder="https://... or IRD PAN Certificate #" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+        <label class="block font-bold text-navy mb-1">PAN / VAT Certificate (PDF / Photo / Doc Ref)</label>
+        <div class="flex gap-1.5">
+          <input type="text" id="kycPanDoc" placeholder="https://... or upload PDF/image" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono">
+          <label class="px-3 py-2 rounded-xl bg-navy hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer shrink-0 flex items-center">
+            Upload <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleClientCloudUpload(this, 'kycPanDoc', 'KYC_DOCUMENT')">
+          </label>
+        </div>
       </div>
       <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
         <button type="button" onclick="document.getElementById('kycModal').close()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold">Cancel</button>
@@ -2769,6 +2798,7 @@
                 <td class="p-3.5">
                   <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-bold">${escapeHtml(u.qr_hash || 'ISO-QR-VERIFIED')}</span>
                   <span class="block text-[10px] text-slate-400 mt-0.5">${escapeHtml(it.bay_rack_location || u.bay_location || 'Zone A')}</span>
+                  ${it.packing_list_doc_url ? `<a href="${escapeHtml(it.packing_list_doc_url)}" target="_blank" class="inline-block mt-1 text-[10px] font-bold text-sky-700 underline">Packing List / Invoice ↗</a>` : ''}
                 </td>
                 <td class="p-3.5 text-right">
                   ${avail > 0 ? `
@@ -2883,7 +2913,8 @@
         item_name: document.getElementById('stkItemName').value.trim(),
         unit_type: document.getElementById('stkUnitType').value,
         quantity: parseInt(document.getElementById('stkQty').value) || 1,
-        bay_rack_location: document.getElementById('stkBayLoc').value.trim() || 'Zone A'
+        bay_rack_location: document.getElementById('stkBayLoc').value.trim() || 'Zone A',
+        packing_list_doc_url: document.getElementById('stkPackingListUrl')?.value.trim() || undefined
       };
       try {
         const res = await fetch('/api/warehouses/my-inventory', {
@@ -3293,6 +3324,68 @@
       document.getElementById('insEstTotal').textContent = 'Rs. ' + total.toLocaleString('en-IN');
     }
 
+    async function handleClientCloudUpload(inputEl, targetInputId, category) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+      showToast(`Uploading ${file.name}...`);
+      const token = localStorage.getItem('kwdc_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      try {
+        const signRes = await fetch('/api/uploads/signed-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({
+            filename: file.name,
+            content_type: file.type || 'application/octet-stream',
+            category: category || 'INVOICE_PACKING_LIST',
+            file_size_bytes: file.size || 0
+          })
+        });
+        if (signRes.ok) {
+          const signData = await signRes.json();
+          if (signData.direct_upload && signData.upload_url) {
+            const putRes = await fetch(signData.upload_url, {
+              method: 'PUT',
+              headers: { 'Content-Type': file.type || 'application/octet-stream' },
+              body: file
+            });
+            if (putRes.ok) {
+              const confRes = await fetch('/api/uploads/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeader },
+                body: JSON.stringify({
+                  filename: file.name,
+                  content_type: file.type || 'application/octet-stream',
+                  category: category || 'INVOICE_PACKING_LIST',
+                  storage_path: signData.storage_path,
+                  cloud_url: signData.cloud_url,
+                  file_size_bytes: file.size || 0
+                })
+              });
+              if (confRes.ok) {
+                const conf = await confRes.json();
+                document.getElementById(targetInputId).value = conf.url;
+                showToast(`Uploaded ${file.name} to Cloud Storage!`);
+                return;
+              }
+            }
+          }
+        }
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('category', category || 'INVOICE_PACKING_LIST');
+        const res = await fetch('/api/uploads/file', { method: 'POST', headers: authHeader, body: fd });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.detail || 'Upload failed');
+        document.getElementById(targetInputId).value = d.url;
+        showToast(`Uploaded ${file.name} successfully!`);
+      } catch (err) {
+        showToast(err.message || 'Upload error', true);
+      } finally {
+        inputEl.value = '';
+      }
+    }
+
     function openInsuranceModal() {
       const select = document.getElementById('insWarehouseId');
       if (select && allWarehousesCache.length > 0) {
@@ -3314,7 +3407,8 @@
         commodity_type: document.getElementById('insCommodityType').value,
         declared_valuation_npr: parseFloat(document.getElementById('insDeclaredValuation').value),
         stock_manifest_summary: document.getElementById('insManifestSummary').value,
-        manifest_summary: document.getElementById('insManifestSummary').value
+        manifest_summary: document.getElementById('insManifestSummary').value,
+        invoice_document_ref: document.getElementById('insInvoiceDocUrl')?.value.trim() || undefined
       };
 
       try {
